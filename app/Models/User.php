@@ -22,6 +22,7 @@ class User extends Authenticatable
         'password',
     ];
 
+    protected $table = 'stp_users';
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -43,5 +44,31 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function role()
+    {
+        return $this->hasOne(stp_core_meta::class, 'id', 'user_role');
+    }
+
+    // public function role()
+    // {
+    //     return $this->belongsTo(stp_core_meta::class, 'user_role', 'core_metaId');
+    // }
+
+    public function detail()
+    {
+        return $this->hasOne(stp_user_detail::class);
+    }
+
+
+    public function media()
+    {
+        return $this->belongsToMany(stp_user_media::class);
+    }
+
+    public function transcript()
+    {
+        return $this->belongsToMany(stp_transcript::class);
     }
 }
