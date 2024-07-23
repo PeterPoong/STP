@@ -14,21 +14,19 @@ return new class extends Migration
         Schema::create('stp_users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
-            $table->integer('ic_Number')->unique();
+            $table->string('email')->unique()->nullable();
+            $table->integer('ic_Number')->unique()->nullable();
             $table->string('country_code');
             $table->string('contact_no');
             // $table->unsignedBigInteger('user_role')->nullable();
             $table->foreignId('user_role')->nullable()->constrained('stp_core_metas')->onDelete('set null');
-
-
-            $table->string('proile_pic');
+            $table->string('proile_pic')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->integer('status')->default(1);
-            $table->integer('updated_by');
-            $table->integer('created_by');
+            $table->integer('updated_by')->nullable();
+            $table->integer('created_by')->nullable();
             $table->timestamps();
 
             // $table->foreign('user_role')->references('core_metaId')->on('stp_core_metas')->onDelete('set null');

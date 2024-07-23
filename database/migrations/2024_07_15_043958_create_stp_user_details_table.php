@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::create('stp_user_details', function (Blueprint $table) {
             $table->id('id');
             $table->foreignId('user_id')->nullable()->constrained('stp_users')->onDelete('set null');
-            $table->string('user_detailFirstName');
-            $table->string('user_detailLastName');
-            $table->string('user_detailAddress');
-            $table->string('user_detailCountry');
-            $table->string('user_detailCity');
+            $table->string('user_detailFirstName')->nullable();
+            $table->string('user_detailLastName')->nullable();
+            $table->string('user_detailAddress')->nullable();
+            $table->string('user_detailCountry')->nullable();
+            $table->string('user_detailCity')->nullable();
             $table->string('user_detailState')->default(1);
-            $table->string('user_detailPostcode');
-            $table->string('user_detailStatus');
+            $table->string('user_detailPostcode')->nullable();
+            $table->string('user_detailStatus')->default(1);
             $table->string('updated_by')->nullable();
             $table->string('created_by')->nullable();
             $table->timestamps();

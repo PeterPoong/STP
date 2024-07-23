@@ -15,17 +15,17 @@ return new class extends Migration
             $table->id('id');
             $table->string('student_userName');
             $table->string('student_password');
-            $table->integer('student_icNumber')->unique();
-            $table->string('student_email')->unique();
+            $table->integer('student_icNumber')->unique()->nullable();
+            $table->string('student_email')->unique()->nullable();
             $table->string('student_countryCode');
             $table->string('student_contactNo');
             $table->foreignId('user_role')->nullable()->constrained('stp_core_metas')->onDelete('set null');
-            $table->string('student_proilePic');
+            $table->string('student_proilePic')->nullable();
             $table->integer('student_status')->default(1);
-            $table->integer('updated_by');
-            $table->integer('created_by');
+            $table->integer('updated_by')->nullable();
+            $table->integer('created_by')->nullable();
             $table->timestamp('email_verified_at')->nullable();
-            $table->rememberToken();
+            $table->rememberToken()->nullable();
             $table->timestamps();
 
             // $table->foreign('user_role')->references('id')->on('stp_core_metas')->onDelete('set null');

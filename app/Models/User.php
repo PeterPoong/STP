@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -20,6 +22,12 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'country_code',
+        'contact_no',
+        'user_role',
+        'profile_pic',
+        'created_by',
+        'updated_by'
     ];
 
     protected $table = 'stp_users';
@@ -46,20 +54,16 @@ class User extends Authenticatable
         ];
     }
 
-    public function role()
+    public function role(): BelongsTo
     {
-        return $this->hasOne(stp_core_meta::class, 'id', 'user_role');
+        return $this->belongsTo(stp_core_meta::class, 'user_role', 'id');
     }
 
-    // public function role()
+
+    // public function detail()
     // {
-    //     return $this->belongsTo(stp_core_meta::class, 'user_role', 'core_metaId');
+    //     return $this->hasOne(stp_user_detail::class);
     // }
-
-    public function detail()
-    {
-        return $this->hasOne(stp_user_detail::class);
-    }
 
 
     public function media()
@@ -70,5 +74,10 @@ class User extends Authenticatable
     public function transcript()
     {
         return $this->belongsToMany(stp_transcript::class);
+    }
+
+    public function detail(): HasOne
+    {
+        return $this->hasOne(stp_user_detail::class, 'user_id', 'id');
     }
 }

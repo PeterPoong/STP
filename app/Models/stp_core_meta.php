@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class stp_core_meta extends Model
 {
@@ -16,9 +17,13 @@ class stp_core_meta extends Model
         return $this->belongsToMany(stp_student::class);
     }
 
-    public function users()
+    public function users(): HasMany
     {
-        return $this->belongsToMany(User::class);
+        // return $this->belongsToMany(User::class);
+
+        // return $this->belongsToMany(User::class);
+        // return $this->belongsToMany(User::class);
+        return $this->hasMany(User::class, 'user_role', 'id');
     }
 
     public function uniStaff()
