@@ -21,6 +21,10 @@ return new class extends Migration
             $table->string('school_fullDesc')->nullable();
             $table->string('school_shortDesc')->nullable();
             $table->string('school_address')->nullable();
+            $table->foreignId('country_id')->nullable()->constrained('stp_countries')->onDelete('set null');
+            $table->foreignId('state_id')->nullable()->constrained('stp_states')->onDelete('set null');
+            $table->foreignId('city_id')->nullable()->constrained('stp_cities')->onDelete('set null');
+            $table->foreignId('institue_category')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->decimal('school_lg')->nullable();
             $table->decimal('school_lat')->nullable();
             $table->string('school_officalWebsite')->nullable();

@@ -15,10 +15,10 @@ class stp_user_detail extends Model
         'user_detailFirstName',
         'user_detailLastName',
         'user_detailAddress',
-        'user_detailCountry',
-        'user_detailCity',
+        'country_id',
+        'city_id',
         'user_contactNo',
-        'user_detailState',
+        'state_id',
         'user_detailPostcode',
         'user_detailStatus',
         'created_by',
@@ -33,5 +33,10 @@ class stp_user_detail extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(stp_country::class, 'country_id', 'id');
     }
 }

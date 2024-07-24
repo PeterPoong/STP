@@ -19,7 +19,6 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends Controller
 {
-
     public function test()
     {
         $user = User::find(1);
@@ -233,6 +232,19 @@ class AuthController extends Controller
                 ]);
             }
 
+            switch ($user->school_status) {
+                case 0:
+                    throw ValidationException::withMessages([
+                        'account' => ['Account had been disable. Please contact our support'],
+                    ]);
+                    break;
+                case 2:
+                    throw ValidationException::withMessages([
+                        'account' => ['Account still in pending waiting for approval from admin'],
+                    ]);
+            }
+
+
             $token = $user->createToken('authToken')->plainTextToken;
 
             return response()->json([
@@ -252,7 +264,6 @@ class AuthController extends Controller
         }
     }
 
-
     public function schoolRegister(Request $request)
     {
 
@@ -262,11 +273,30 @@ class AuthController extends Controller
                 'password' => 'required|string|min:8',
                 'confirm_password' => 'required|string|min:8|same:password',
                 'country_code' => 'required',
+                'country' => 'required|integer',
+                'state' => 'required|integer',
+                'city' => 'required|integer',
                 'contact_number' => 'required|numeric|digits_between:1,15',
-                'email' => 'required|string|email|max:255|unique:stp_schools,school_email',
+                'email' => 'required|string|email|max:255|',
+                'school_fullDesc' => 'required|string|max:255',
+                'school_shortDesc' => 'required|string|max:255',
+                'school_address' => 'required|string|max:255',
+                'school_website' => 'required|string|max:255',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
             ]);
+
+            //check email
+            $checkingEmail = stp_school::where('school_email', $request->email)->where('school_status', 1)->exists();
+            if ($checkingEmail) {
+                throw ValidationException::withMessages([
+                    'email' => ['email has been used'],
+                ]);
+            }
+
+
             $checkingUser = stp_school::where('school_countryCode', $request->country_code)
                 ->where('school_contactNo', $request->contact_number)
+                ->where('school_status', 1)
                 ->exists();
 
 
@@ -276,12 +306,29 @@ class AuthController extends Controller
                 ]);
             }
 
+            if ($request->hasFile('logo')) {
+                $image = $request->file('logo');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+
+                $imagePath = $image->storeAs('schoolLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+
             $data = [
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->country_code,
                 'school_contactNo' => $request->contact_number,
                 'school_password' => Hash::make($request->password),
+                'school_fullDesc' => $request->school_fullDesc,
+                'country_id' => $request->country,
+                'state_id' => $request->state,
+                'city_id' => $request->city,
+                'institue_category' => $request->institue_category,
+                'school_shortDesc' => $request->school_shortDesc,
+                'school_address' => $request->school_address,
+                'school_officialWebsite' => $request->school_website,
+                'school_logo' => $imagePath ?? null,
+                'school_status' => 2
             ];
             stp_school::create($data);
             return response()->json(
@@ -313,7 +360,6 @@ class AuthController extends Controller
                 'name' => 'required|string|max:255',
                 'password' => 'required|string|min:8',
                 'confirm_password' => 'required|string|min:8|same:password',
-                'type' => 'required',
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255|unique:stp_students,student_email',

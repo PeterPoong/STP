@@ -17,9 +17,9 @@ return new class extends Migration
             $table->string('student_detailFirstName')->nullable();
             $table->string('student_detailLastName')->nullable();
             $table->string('student_detailAddress')->nullable();
-            $table->string('student_detailCountry')->nullable();
-            $table->string('student_detailCity')->nullable();
-            $table->string('student_detailState')->default(1);
+            $table->foreignId('country_id')->nullable()->constrained('stp_countries')->onDelete('set null');
+            $table->foreignId('state_id')->nullable()->constrained('stp_states')->onDelete('set null');
+            $table->foreignId('city_id')->nullable()->constrained('stp_cities')->onDelete('set null');
             $table->string('student_detailPostcode')->nullable();
             $table->string('student_detailStatus')->default(1);
             $table->string('updated_by')->nullable();

@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\studentController;
 
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 Route::post('/admin/register', [AuthController::class, 'adminRegister']);
@@ -17,6 +18,7 @@ Route::post('/school/register', [AuthController::class, 'schoolRegister']);
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::prefix('student')->group(function () {
+    Route::post('/schoolList', [studentController::class, 'schoolList']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -24,6 +26,14 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/studentList', [AdminController::class, 'studentList']);
     Route::post('/editStudent', [AdminController::class, 'editStudent']);
     Route::post('/editStatus', [AdminController::class, 'editStudentStatus']);
+
+    Route::post('/schoolList', [AdminController::class, 'schoolList']);
+    Route::post('/addSchool', [AdminController::class, 'addSchool']);
+    Route::post('/editSchool', [AdminController::class, 'editSchool']);
+    Route::post('/editSchoolStatus', [AdminController::class, 'editSchoolStatus']);
+    Route::post('/schoolDetail', [AdminController::class, 'schoolDetail']);
+
+    Route::post('/editSchoolFeatured', [AdminController::class, 'editSchoolFeatured']);
 });
 
 Route::prefix('school')->group(function () {

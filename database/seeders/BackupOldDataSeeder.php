@@ -20,5 +20,8 @@ class BackupOldDataSeeder extends Seeder
 
         $oldCoreMetaData = DB::table('stp_core_metas')->get()->toArray();
         file_put_contents(database_path('backups/old_coreMetaData.json'), json_encode($oldCoreMetaData));
+
+        $oldSchoolData = DB::table('stp_schools')->get()->toArray();
+        file_put_contents(database_path('backups/old_schoolData.json'), json_encode($oldSchoolData));
     }
 }

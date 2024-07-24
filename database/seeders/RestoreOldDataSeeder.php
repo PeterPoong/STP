@@ -15,5 +15,8 @@ class RestoreOldDataSeeder extends Seeder
     {
         $oldData = json_decode(file_get_contents(database_path('backups/old_coreMetaData.json')), true);
         DB::table('stp_core_metas')->insert($oldData);
+
+        $oldSchoolData = json_decode(file_get_contents(database_path('backups/old_schoolData.json')), true);
+        DB::table('stp_schools')->insert($oldSchoolData);
     }
 }

@@ -16,10 +16,10 @@ class stp_student_detail extends Model
         'student_detailFirstName',
         'student_detailLastName',
         'student_detailAddress',
-        'student_detailCountry',
-        'student_detailCity',
+        'country_id',
+        'city_id',
         'student_contactNo',
-        'student_detailState',
+        'state_id',
         'student_detailPostcode',
         'student_detailStatus',
         'created_by',
@@ -29,5 +29,20 @@ class stp_student_detail extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(stp_student::class, 'student_id', 'id');
+    }
+
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(stp_country::class, 'country_id', 'id');
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(stp_city::class, 'city_id', 'id');
+    }
+
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(stp_state::class, 'state_id', 'id');
     }
 }

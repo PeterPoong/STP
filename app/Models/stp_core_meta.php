@@ -66,4 +66,9 @@ class stp_core_meta extends Model
     {
         return $this->belongsToMany(stp_transcript::class);
     }
+
+    public function schoolInstitueCategory(): HasMany
+    {
+        return $this->hasMany(stp_school::class, 'institue_category', 'id');
+    }
 }
