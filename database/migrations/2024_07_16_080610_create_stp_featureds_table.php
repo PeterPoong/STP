@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('course_id')->nullable()->constrained('stp_courses')->onDelete('set null');
             $table->foreignId('school_id')->nullable()->constrained('stp_schools')->onDelete('set null');
-            $table->dateTime('featured_startTime');
-            $table->dateTime('featured_endTime');
+            $table->dateTime('featured_startTime')->nullable();
+            $table->dateTime('featured_endTime')->nullable();
             $table->foreignId('featured_type')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->integer('featured_status')->default(1);
             $table->integer('updated_by')->nullable();

@@ -4,18 +4,31 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class stp_featured extends Model
 {
     use HasFactory;
 
-    public function courses()
+    protected $fillable = [
+        'course_id',
+        'school_id',
+        'featured_startTime',
+        'featured_endTime',
+        'featured_type',
+        'featured_status',
+        'updated_by',
+        'created_by'
+    ];
+
+    public function courses(): BelongsTo
     {
-        return $this->hasMany(stp_course::class, 'id', 'course_id');
+        return $this->belongsTo(stp_course::class, 'course_id', 'id');
     }
 
-    public function school()
+    public function school(): BelongsTo
     {
-        return $this->hasMany(stp_school::class, 'id', 'school_id');
+        return $this->belongsTo(stp_school::class, 'school_id', 'id');
     }
 }

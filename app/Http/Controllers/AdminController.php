@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use App\Models\stp_student;
 
 use App\Models\stp_country;
+use App\Models\stp_course;
+use App\Models\stp_courses_category;
+use App\Models\stp_featured;
 use App\Models\stp_school;
 use App\Models\stp_state;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
 
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
-
+use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 
 class AdminController extends Controller
 {
@@ -514,5 +517,595 @@ class AdminController extends Controller
 
     public function editSchoolFeatured(Request $request)
     {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                '*.featureType' => 'required|integer'
+            ]);
+
+            $hp = stp_featured::where('featured_type', 28)->where('featured_status', 1)->get();
+            $secondPage = stp_featured::where('featured_type', 30)->where('featured_status', 1)->get();
+            $thirdPage = stp_featured::where('featured_type', 31)->where('featured_status', 1)->get();
+
+
+            $hpArray = $hp->pluck('school_id')->toArray();
+            if (empty($hpArray)) {
+                $hpArray = [];
+            }
+
+            $secondArray = $secondPage->pluck('school_id')->toArray();
+            if (empty($secondArray)) {
+                $secondArray = [];
+            }
+
+            $thirdArray = $thirdPage->pluck('school_id')->toArray();
+            if (empty($thirdArray)) {
+                $thirdArray = [];
+            }
+
+            $addhp = array_diff($request[0]['schoolID'], $hpArray);
+            $addSecond = array_diff($request[1]['schoolID'], $secondArray);
+            $addThird = array_diff($request[2]['schoolID'], $thirdArray);
+
+
+
+            $removehp = array_diff($hpArray, $request[0]['schoolID']);
+            $removeSecond = array_diff($secondArray, $request[1]['schoolID']);
+            $removeThird = array_diff($secondArray, $request[2]['schoolID']);
+
+
+
+            $newFeaturedData = [];
+            foreach ($addhp as $newData) {
+                $checkhp = stp_featured::where('school_id', $newData)->where('featured_type', 28)->first();
+
+                if (!empty($checkhp)) {
+                    $checkhp->update(['featured_status' => 1]);
+                } else {
+                    $newFeaturedData[] = [
+                        'school_id' => $newData,
+                        'featured_type' => 28,
+                        'created_by' => $authUser->id
+                    ];
+                }
+            }
+
+            $newSecondData = [];
+            foreach ($addSecond as $secondData) {
+
+                $checkSecond = stp_featured::where('school_id', $secondData)->where('featured_type', 30)->first();
+
+                if (!empty($checkSecond) > 0) {
+                    $checkSecond->update(['featured_status' => 1]);
+                } else {
+                    $newSecondData[] = [
+                        'school_id' => $secondData,
+                        'featured_type' => 30,
+                        'created_by' => $authUser->id
+                    ];
+                }
+            }
+
+            $newThirdData = [];
+            foreach ($addThird as $thirdData) {
+
+                $checkThird = stp_featured::where('school_id', $thirdData)->where('featured_type', 31)->first();
+
+                if (!empty($checkThird) > 0) {
+                    $checkThird->update(['featured_status' => 1]);
+                } else {
+                    $newThirdData[] = [
+                        'school_id' => $thirdData,
+                        'featured_type' => 31,
+                        'created_by' => $authUser->id
+                    ];
+                }
+            }
+
+
+            $addNewFeaturedSchool = stp_featured::insert($newFeaturedData);
+            $addNewSecondFeaturedCourses = stp_featured::insert($newSecondData);
+            $addNewThiedFeaturedCourses = stp_featured::insert($newThirdData);
+
+            $removeFeaturedCourse = stp_featured::whereIn('school_id', $removehp)->where('featured_type', 28)->update(['featured_status' => 0]);
+            $removeSecondFeaturedCourse = stp_featured::whereIn('school_id', $removeSecond)->where('featured_type', 30)->update(['featured_status' => 0]);
+            $removeThirdFeaturedCourse = stp_featured::whereIn('school_id', $removeThird)->where('featured_type', 31)->update(['featured_status' => 0]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'successfully edit the school featured']
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'errors' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function addCourse(Request $request)
+    {
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'schoolID' => 'required|integer',
+                'description' => 'string|max:255',
+                'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
+                'period' => 'required|string|max:255',
+                'intake' => 'required|string|max:255',
+                'category' => 'required|integer',
+                'qualification' => 'required|integer',
+            ]);
+            $authUser = Auth::user();
+            $checkingCourse = stp_course::where('school_id', $request->schoolID)
+                ->where('course_name', $request->name)
+                ->exists();
+            if ($checkingCourse) {
+                throw ValidationException::withMessages([
+                    "courses" => ['Courses already exist in the school']
+                ]);
+            }
+
+            stp_course::create([
+                'school_id' => $request->schoolID,
+                'course_name' => $request->name,
+                'course_description' => $request->description ?? null,
+                'course_requirement' => $request->requiremnt ?? null,
+                'course_cost' => $request->cost,
+                'course_period' => $request->period,
+                'course_intake' => $request->intake,
+                'category_id' => $request->category,
+                'qualification_id' => $request->qualification,
+                'course_requirement' => $request->requirement,
+                'created_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Added the Courses']
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function coursesList(Request $request)
+    {
+        try {
+            // $test = stp_course::find(1);
+            // return $test->category;
+            $courseList = stp_course::when($request->filled('category'), function ($query) use ($request) {
+                $query->where('category_id', $request->category);
+            })
+                ->when($request->filled('qualification'), function ($query) use ($request) {
+                    $query->orWhere('qualification_id', $request->qualification);
+                })
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->orWhere('course_status', $request->status);
+                })
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('course_name', 'like', $request->search . '%');
+                })
+                ->paginate(10)
+                ->through(function ($courses) {
+                    $status = ($courses->course_status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $courses->course_name,
+                        "school" => $courses->school->school_name,
+                        "category" => $courses->category->category_name,
+                        "qualification" => $courses->qualification->qualification_name,
+                        "status" => $status
+                    ];
+                });
+
+            return $courseList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editCourse(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string|max:255',
+                'schoolID' => 'required|integer',
+                'description' => 'string|max:255',
+                'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
+                'period' => 'required|string|max:255',
+                'intake' => 'required|string|max:255',
+                'category' => 'required|integer',
+                'qualification' => 'required|integer',
+            ]);
+
+            $checkingCourse = stp_course::where('school_id', $request->schoolID)
+                ->where('course_name', $request->name)
+                ->where('id', '!=', $request->id)
+                ->exists();
+
+            if ($checkingCourse) {
+                throw ValidationException::withMessages([
+                    "courses" => ['Courses already exist in the school']
+                ]);
+            }
+
+            $courses = stp_course::find($request->id);
+
+            $courses->update([
+                'school_id' => $request->schoolID,
+                'course_name' => $request->name,
+                'course_description' => $request->description ?? null,
+                'course_requirement' => $request->requiremnt ?? null,
+                'course_cost' => $request->cost,
+                'course_period' => $request->period,
+                'course_intake' => $request->intake,
+                'category_id' => $request->category,
+                'qualification_id' => $request->qualification,
+                'course_requirement' => $request->requirement,
+                'updated_by' => $authUser->id
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validaion Error",
+                'errors' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                "success" => true,
+                "message" => "Internal Server Error",
+                "errors" => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function editCourseStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string|max:255'
+            ]);
+            $authUser = Auth::user();
+
+            if ($request->type == 'disable') {
+                $status = 0;
+                $message = "Successfully Disable";
+            } else {
+                $status = 1;
+                $message = "Successfully Enable";
+            }
+
+            $course = stp_course::find($request->id);
+
+            $course->update([
+                'course_status' => $status,
+                'updated_by' => $authUser->id,
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => $message]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editCoursesFeatured(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                '*.featureType' => 'required|integer'
+            ]);
+
+            $hp = stp_featured::where('featured_type', 29)->where('featured_status', 1)->get();
+            $secondPage = stp_featured::where('featured_type', 30)->where('featured_status', 1)->get();
+            $thirdPage = stp_featured::where('featured_type', 31)->where('featured_status', 1)->get();
+
+            $hpArray = $hp->pluck('course_id')->toArray();
+            if (empty($hpArray)) {
+                $hpArray = [];
+            }
+
+            $secondArray = $secondPage->pluck('course_id')->toArray();
+            if (empty($secondArray)) {
+                $secondArray = [];
+            }
+
+            $thirdArray = $thirdPage->pluck('course_id')->toArray();
+            if (empty($thirdArray)) {
+                $thirdArray = [];
+            }
+
+
+            $addhp = array_diff($request[0]['courseID'], $hpArray);
+            $addSecond = array_diff($request[1]['courseID'], $secondArray);
+            $addThird = array_diff($request[2]['courseID'], $thirdArray);
+
+
+
+            $removehp = array_diff($hpArray, $request[0]['courseID']);
+            $removeSecond = array_diff($secondArray, $request[1]['courseID']);
+            $removeThird = array_diff($secondArray, $request[2]['courseID']);
+
+
+
+            $newFeaturedData = [];
+            foreach ($addhp as $newData) {
+                $checkhp = stp_featured::where('course_id', $newData)->where('featured_type', 29)->first();
+                if (!empty($checkhp)) {
+                    $checkhp->update(['featured_status' => 1]);
+                } else {
+                    $newFeaturedData[] = [
+                        'course_id' => $newData,
+                        'featured_type' => 29,
+                        'created_by' => $authUser->id
+                    ];
+                }
+            }
+
+            $newSecondData = [];
+            foreach ($addSecond as $secondData) {
+
+                $checkSecond = stp_featured::where('course_id', $secondData)->where('featured_type', 30)->first();
+
+                if (!empty($checkSecond) > 0) {
+                    $checkSecond->update(['featured_status' => 1]);
+                } else {
+                    $newSecondData[] = [
+                        'course_id' => $secondData,
+                        'featured_type' => 30,
+                        'created_by' => $authUser->id
+                    ];
+                }
+            }
+
+            $newThirdData = [];
+            foreach ($addThird as $thirdData) {
+
+                $checkThird = stp_featured::where('course_id', $thirdData)->where('featured_type', 31)->first();
+
+                if (!empty($checkThird) > 0) {
+                    $checkThird->update(['featured_status' => 1]);
+                } else {
+                    $newThirdData[] = [
+                        'course_id' => $thirdData,
+                        'featured_type' => 31,
+                        'created_by' => $authUser->id
+                    ];
+                }
+            }
+
+            $addNewFeaturedCourses = stp_featured::insert($newFeaturedData);
+            $addNewSecondFeaturedCourses = stp_featured::insert($newSecondData);
+            $addNewThiedFeaturedCourses = stp_featured::insert($newThirdData);
+
+
+            $removeFeaturedCourse = stp_featured::whereIn('course_id', $removehp)->where('featured_type', 29)->update(['featured_status' => 0]);
+            $removeSecondFeaturedCourse = stp_featured::whereIn('course_id', $removeSecond)->where('featured_type', 30)->update(['featured_status' => 0]);
+            $removeThirdFeaturedCourse = stp_featured::whereIn('course_id', $removeThird)->where('featured_type', 31)->update(['featured_status' => 0]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'successfully edit the courses featured']
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function addCategory(Request $request)
+    {
+        try {
+            $request->validate([
+                'name' => 'required|string|unique:stp_courses_categories,category_name',
+                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+            ]);
+            $authUser = Auth::user();
+
+            if ($request->hasFile('icon')) {
+                $image = $request->file('icon');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('courseCategoryIcon', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+
+            $data = [
+                "category_name" => $request->name,
+                "category_icon" => $imagePath ?? null,
+                "created_by" => $authUser->id
+            ];
+
+            stp_courses_category::create($data);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Successfully added the category"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid Validation',
+                'error' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editCategory(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string|max:255',
+                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+            ]);
+            $authUser = Auth::user();
+
+            $checkName = stp_courses_category::where('category_name', $request->name)
+                ->where('id', '!=', $request->id)
+                ->exists();
+            if ($checkName) {
+                throw ValidationException::withMessages(['category' => 'Category name had been used']);
+            }
+
+            $category = stp_courses_category::find($request->id);
+
+
+            if ($request->hasFile('icon')) {
+                if (!empty($category->category_icon)) {
+                    Storage::delete('public/' . $category->category_icon);
+                }
+                $image = $request->file('icon');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('courseCategoryIcon', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+
+            $updateData = [
+                'category_name' => $request->name,
+                'category_icon' => $imagePath,
+                'updated_by' => $authUser->id
+            ];
+
+            $category->update($updateData);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid Validation',
+                'error' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editHotPick(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string'
+            ]);
+            $authUser = Auth::user();
+            $category = stp_courses_category::find($request->id);
+            if ($request->type == 'enable') {
+                $hotpick = 1;
+            } else {
+                $hotpick = 0;
+            }
+
+            $category->update(
+                [
+                    'course_hotPick' => $hotpick,
+                    'updated_by' => $authUser->id
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Update HotPick successfully']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Internal Server Error',
+                    'error' => $e->getMessage()
+                ]
+            );
+        }
+    }
+
+    public function editCategoryStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string'
+            ]);
+
+            if ($request->type == 'disable') {
+                $status = 0;
+            } else {
+                $status = 1;
+            }
+            $authUser = Auth::user();
+            $category = stp_courses_category::find($request->id);
+            $category->update([
+                'category_status' => $status,
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully updated Status']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Imterna'
+            ]);
+        }
     }
 }

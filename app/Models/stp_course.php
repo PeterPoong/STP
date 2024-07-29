@@ -4,19 +4,37 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class stp_course extends Model
 {
     use HasFactory;
 
-    public function school()
+    protected $fillable = [
+        'school_id',
+        'course_name',
+        'course_description',
+        'course_requirement',
+        'course_cost',
+        'course_period',
+        'course_intake',
+        'category_id',
+        'qualification_id',
+        'course_logo',
+        'course_status',
+        'updated_by',
+        'created_by'
+    ];
+
+    public function school(): BelongsTo
     {
-        return $this->hasOne(stp_school::class, 'id', 'school_id');
+        return $this->belongsTo(stp_school::class, 'school_id', 'id');
     }
 
-    public function category()
+    public function category(): BelongsTo
     {
-        return $this->hasOne(stp_core_meta::class, 'id', 'course_category');
+        return $this->belongsTo(stp_courses_category::class, 'category_id', 'id');
     }
 
     public  function tag()
@@ -29,13 +47,13 @@ class stp_course extends Model
         return $this->belongsToMany(stp_course_media::class);
     }
 
-    public function qualification()
+    public function qualification(): BelongsTo
     {
-        return $this->hasOne(stp_qualification::class, 'id', 'course_qualification');
+        return $this->belongsTo(stp_qualification::class, 'qualification_id', 'id');
     }
 
-    public function featured()
+    public function featured(): HasMany
     {
-        return $this->belongsToMany(stp_featured::class);
+        return $this->hasMany(stp_featured::class, 'course_id', 'id');
     }
 }

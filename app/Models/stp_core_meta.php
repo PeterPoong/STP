@@ -37,10 +37,10 @@ class stp_core_meta extends Model
     }
 
 
-    public function courses()
-    {
-        return $this->belongsToMany(stp_course::class);
-    }
+    // public function courses(): HasMany
+    // {
+    //     return $this->hasMany(stp_course::class, 'category_id', 'id');
+    // }
 
     public function schoolMedia()
     {

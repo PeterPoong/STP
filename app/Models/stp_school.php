@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 
 
@@ -40,9 +41,9 @@ class stp_school extends Model
         return $this->belongsToMany(stp_school_media::class);
     }
 
-    public function courses()
+    public function courses(): HasMany
     {
-        return $this->belongsToMany(stp_course::class);
+        return $this->hasMany(stp_course::class, 'school_id', 'id');
     }
 
     public function media()
@@ -50,9 +51,9 @@ class stp_school extends Model
         return $this->belongsToMany(stp_school_media::class);
     }
 
-    public function featured()
+    public function featured(): HasMany
     {
-        return $this->belongsToMany(stp_featured::class);
+        return $this->hasMany(stp_featured::class, 'school_id', 'id');
     }
 
     public function country(): BelongsTo

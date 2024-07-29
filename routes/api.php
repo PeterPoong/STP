@@ -18,7 +18,11 @@ Route::post('/school/register', [AuthController::class, 'schoolRegister']);
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::prefix('student')->group(function () {
+    Route::post('/hpFeaturedSchoolList', [studentController::class, 'hpFeaturedSchoolList']);
+    Route::post('/hpFeaturedCoursesList', [studentController::class, 'hpFeaturedCoursesList']);
     Route::post('/schoolList', [studentController::class, 'schoolList']);
+    Route::post('/categoryList', [studentController::class, 'categoryList']);
+    Route::post('/courseList', [studentController::class, 'courseList']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -32,8 +36,18 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editSchool', [AdminController::class, 'editSchool']);
     Route::post('/editSchoolStatus', [AdminController::class, 'editSchoolStatus']);
     Route::post('/schoolDetail', [AdminController::class, 'schoolDetail']);
-
     Route::post('/editSchoolFeatured', [AdminController::class, 'editSchoolFeatured']);
+
+    Route::post('/courseList', [AdminController::class, 'coursesList']);
+    Route::post('/addCourses', [AdminController::class, 'addCourse']);
+    Route::post('/editCourse', [AdminController::class, 'editCourse']);
+    Route::post('/editCourseStatus', [AdminController::class, 'editCourseStatus']);
+    Route::post('/editCoursesFeatured', [AdminController::class, 'editCoursesFeatured']);
+
+    Route::post('/addCategory', [AdminController::class, 'addCategory']);
+    Route::post('/editCategory', [AdminController::class, 'editCategory']);
+    Route::post('/editHotPick', [AdminController::class, 'editHotPick']);
+    Route::post('/editCategoryStatus', [AdminController::class, 'editCategoryStatus']);
 });
 
 Route::prefix('school')->group(function () {
