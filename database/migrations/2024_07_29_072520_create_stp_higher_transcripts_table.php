@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stp_tags', function (Blueprint $table) {
+        Schema::create('stp_higher_transcripts', function (Blueprint $table) {
             $table->id();
-            $table->string('tag_name');
-            $table->integer('tag_status')->default(1);
+            $table->string('highTranscript_name');
+            $table->foreignId('category_id')->nullable()->constrained('stp_core_metas')->onDelete('set null');
+            $table->foreignId('student_id')->nullable()->constrained('stp_students')->onDelete('set null');
+            $table->integer('highTranscript_status');
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();
             $table->timestamps();
@@ -26,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('stp_tags');
+        Schema::dropIfExists('stp_higher_transcripts');
     }
 };

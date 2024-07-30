@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('userMedia_location');
             $table->foreignId('userMedia_type')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->string('userMedia_format');
-            $table->integer('userMedia_status');
-            $table->integer('updated_by');
-            $table->integer('created_by');
+            $table->integer('userMedia_status')->default(1);
+            $table->integer('updated_by')->nullable();
+            $table->integer('created_by')->nullable();
             $table->timestamps();
 
             // $table->foreign('user_id')->references('id')->on('Users')->onDelete('set null');

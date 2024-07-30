@@ -22,8 +22,8 @@ return new class extends Migration
             $table->foreignId('user_role')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->string('uniStaff_proilePic');
             $table->integer('uniStaff_status')->default(1);
-            $table->integer('updated_by');
-            $table->integer('created_by');
+            $table->integer('updated_by')->nullable();
+            $table->integer('created_by')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();

@@ -28,6 +28,18 @@ class RestoreOldDataSeeder extends Seeder
         $oldSchoolData = json_decode(file_get_contents(database_path('backups/old_schoolData.json')), true);
         DB::table('stp_schools')->insert($oldSchoolData);
 
+        $oldCoursesCategoryData = json_decode(file_get_contents(database_path('backups/old_courses_categories.json')), true);
+        DB::table('stp_courses_categories')->insert($oldCoursesCategoryData);
+
+        $oldCoursesQualification = json_decode(file_get_contents(database_path('backups/old_stp_qualifications.json')), true);
+        DB::table('stp_qualifications')->insert($oldCoursesQualification);
+
+        $oldCoursesData = json_decode(file_get_contents(database_path('backups/old_coursesData.json')), true);
+        DB::table('stp_courses')->insert($oldCoursesData);
+
+        $oldTag = json_decode(file_get_contents(database_path('backups/old_tags.json')), true);
+        DB::table('stp_tags')->insert($oldTag);
+
         $oldFeaturedData = json_decode(file_get_contents(database_path('backups/old_featuredsData.json')), true);
         DB::table('stp_featureds')->insert($oldFeaturedData);
     }

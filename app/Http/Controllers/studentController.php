@@ -7,6 +7,7 @@ use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use Illuminate\Http\Request;
 use App\Models\stp_school;
+use App\Models\stp_tag;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 
@@ -65,7 +66,11 @@ class studentController extends Controller
                     'schoolLogo' => $school->school->school_logo
                 ]);
             });
-            return $hpFeaturedSchoolList;
+            return response()->json([
+                'success' => true,
+                'data' => $hpFeaturedSchoolList
+            ]);
+            // return $hpFeaturedSchoolList;
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,

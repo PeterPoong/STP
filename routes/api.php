@@ -43,6 +43,11 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCourse', [AdminController::class, 'editCourse']);
     Route::post('/editCourseStatus', [AdminController::class, 'editCourseStatus']);
     Route::post('/editCoursesFeatured', [AdminController::class, 'editCoursesFeatured']);
+    Route::post('/addTag', [AdminController::class, 'addTag']);
+    Route::post('/searchTag', [AdminController::class, 'searchTag']);
+    Route::post('courseTag', [AdminController::class, 'courseTag']);
+
+
 
     Route::post('/addCategory', [AdminController::class, 'addCategory']);
     Route::post('/editCategory', [AdminController::class, 'editCategory']);

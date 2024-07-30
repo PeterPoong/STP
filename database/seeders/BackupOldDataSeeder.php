@@ -35,5 +35,18 @@ class BackupOldDataSeeder extends Seeder
 
         $oldFeaturedData = DB::table('stp_featureds')->get()->toArray();
         file_put_contents(database_path('backups/old_featuredsData.json'), json_encode($oldFeaturedData));
+
+
+        $oldCoursesData = DB::table('stp_courses')->get()->toArray();
+        file_put_contents(database_path('backups/old_coursesData.json'), json_encode($oldCoursesData));
+
+        $oldCoursesCategoryData = DB::table('stp_courses_categories')->get()->toArray();
+        file_put_contents(database_path('backups/old_courses_categories.json'), json_encode($oldCoursesCategoryData));
+
+        $oldCoursesQualification = DB::table('stp_qualifications')->get()->toArray();
+        file_put_contents(database_path('backups/old_stp_qualifications.json'), json_encode($oldCoursesQualification));
+
+        $oldTag = DB::table('stp_tags')->get()->toArray();
+        file_put_contents(database_path('backups/old_tags.json'), json_encode($oldTag));
     }
 }

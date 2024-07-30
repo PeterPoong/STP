@@ -9,6 +9,12 @@ class stp_course_tag extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'course_id',
+        'tag_id',
+        'courseTag_status'
+    ];
+
     public function courses()
     {
         return $this->hasMany(stp_course::class, 'id', 'course_id');

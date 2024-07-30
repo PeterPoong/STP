@@ -8,10 +8,12 @@ use App\Models\stp_student;
 
 use App\Models\stp_country;
 use App\Models\stp_course;
+use App\Models\stp_course_tag;
 use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use App\Models\stp_school;
 use App\Models\stp_state;
+use App\Models\stp_tag;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Intervention\Image\Facades\Image as Image;
@@ -1106,6 +1108,46 @@ class AdminController extends Controller
                 'success' => false,
                 'message' => 'Imterna'
             ]);
+        }
+    }
+
+    public function addTag(Request $request)
+    {
+        try {
+            $request->validate([
+                'newTag' => 'required|array',
+                'courseID' => 'required|integer'
+            ]);
+
+
+            foreach ($request->newTag as $tag) {
+                //checking need to create new tag or not
+                $checkTag = stp_tag::where('tag_name', 'like', $request->tag)
+                    ->where('tag_status', 1)
+                    ->exists();
+
+                if ($checkTag) {
+                } else {
+                    $createNewTag = stp_tag::create([
+                        'tag_name' => $tag
+                    ]);
+                    stp_course_tag::create([
+                        'course_id' => $request->courseID,
+                        'tag_id' => $createNewTag->id
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'success added the tag']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

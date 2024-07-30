@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class stp_tag extends Model
 {
     use HasFactory;
+    protected $fillable = [
+        'tag_name'
+    ];
 
     public function coursesTag()
     {

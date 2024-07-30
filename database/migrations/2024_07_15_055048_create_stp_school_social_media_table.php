@@ -23,10 +23,10 @@ return new class extends Migration
             $table->foreignId('school_id')->nullable()->constrained('stp_schools')->onDelete('set null');
 
 
-
-            $table->integer('schoolSocialMedia_status');
-            $table->integer('updated_by');
-            $table->integer('created_by');
+            $table->foreignId('media_category')->nullable()->constrained('stp_core_metas')->onDelete('set null');
+            $table->integer('schoolSocialMedia_status')->default(1);
+            $table->integer('updated_by')->nullable();
+            $table->integer('created_by')->nullable();
             $table->timestamps();
 
             // $table->foreign('schoolSocialMedia_type')->references('id')->on('stp_core_metas')->onDelete('set null');

@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('studentMedia_location');
             $table->foreignId('studentMedia_type')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->string('studentMedia_format');
-            $table->integer('studentMedia_status');
-            $table->integer('updated_by');
-            $table->integer('created_by');
+            $table->integer('studentMedia_status')->default(1);
+            $table->integer('updated_by')->nullable();
+            $table->integer('created_by')->nullable();
             $table->timestamps();
 
             // $table->foreign('student_id')->references('id')->on('stp_students')->onDelete('set null');
