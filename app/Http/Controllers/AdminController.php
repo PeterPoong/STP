@@ -13,6 +13,7 @@ use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use App\Models\stp_school;
 use App\Models\stp_state;
+use App\Models\stp_subject;
 use App\Models\stp_tag;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -727,6 +728,58 @@ class AdminController extends Controller
         }
     }
 
+    public function courseDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'courseID' => 'required|integer'
+            ]);
+
+            $courseList = stp_course::find($request->courseID);
+
+            if (empty($courseList->course_logo)) {
+                $logo = $courseList->school->school_logo;
+            } else {
+                $logo = $courseList->course_logo;
+            }
+
+            $courseTag = $courseList->tag;
+            $tagList = [];
+            foreach ($courseTag as $tag) {
+                $tagList[] = [
+                    "id" => $tag->tag['id'],
+                    "tagName" => $tag->tag['tag_name']
+                ];
+            }
+
+            $courseListDetail = [
+                'id' => $courseList->id,
+                'course' => $courseList->course_name,
+                'description' => $courseList->course_description,
+                'requirement' => $courseList->course_requirement,
+                'cost' => $courseList->course_cost,
+                'period' => $courseList->course_period,
+                'intake' => $courseList->course_intake,
+                'category' => $courseList->category->category_name,
+                'school' => $courseList->school->school_name,
+                'qualification' => $courseList->qualification->qualifiation_name,
+                'logo' => $logo,
+                'tag' => $tagList
+            ];
+            return response()->json([
+                'success' => true,
+                'data' => $courseListDetail
+            ]);
+            return $courseListDetail;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     public function editCourse(Request $request)
     {
         try {
@@ -1115,25 +1168,60 @@ class AdminController extends Controller
     {
         try {
             $request->validate([
-                'newTag' => 'required|array',
+                'tagID' => 'array',
+                'newTag' => 'array',
                 'courseID' => 'required|integer'
             ]);
 
+            //create new tag and assign to the course
+            if (isset($request->newTag)) {
+                foreach ($request->newTag as $tag) {
+                    //checking need to create new tag or not
+                    $checkTag = stp_tag::where('tag_name', 'like', $tag)
+                        ->where('tag_status', 1)->get()->first();
 
-            foreach ($request->newTag as $tag) {
-                //checking need to create new tag or not
-                $checkTag = stp_tag::where('tag_name', 'like', $request->tag)
-                    ->where('tag_status', 1)
-                    ->exists();
+                    if (empty($checkTag)) {
+                        $createNewTag = stp_tag::create([
+                            'tag_name' => $tag
+                        ]);
+                        stp_course_tag::create([
+                            'course_id' => $request->courseID,
+                            'tag_id' => $createNewTag->id
+                        ]);
+                    }
+                }
+            }
 
-                if ($checkTag) {
-                } else {
-                    $createNewTag = stp_tag::create([
-                        'tag_name' => $tag
-                    ]);
-                    stp_course_tag::create([
+            //assign exisitng tag to course
+            if (isset($request->tagID)) {
+                $getCourseTag = stp_course_tag::where('course_id', $request->courseID)
+                    ->where('courseTag_status', 1)
+                    ->pluck('tag_id')
+                    ->toArray();
+
+
+                $newTag = array_diff($request->tagID, $getCourseTag);
+                $removeTag = array_diff($getCourseTag, $request->tagID);
+
+
+                $newTagData = [];
+                foreach ($newTag as $tag) {
+                    $newTagData[] = [
                         'course_id' => $request->courseID,
-                        'tag_id' => $createNewTag->id
+                        'tag_id' => $tag
+                    ];
+                };
+
+
+                $createNewCourseTag = stp_course_tag::insert($newTagData);
+
+                foreach ($removeTag as $disableTag) {
+                    $findData = stp_course_tag::where('course_id', $request->courseID)
+                        ->where('tag_id', $disableTag)
+                        ->first();
+
+                    $disableData = $findData->update([
+                        'courseTag_status' => 0
                     ]);
                 }
             }
@@ -1148,6 +1236,166 @@ class AdminController extends Controller
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function searchTag(Request $request)
+    {
+        try {
+            $request->validate(
+                [
+                    'search' => 'required|string|max:255'
+                ]
+            );
+
+            $searchTag = stp_tag::where('tag_name', 'like', $request->search . '%')
+                ->where('tag_status', 1)
+                ->get();
+            return response()->json([
+                'success' => true,
+                'data' => $searchTag
+            ]);
+            return $searchTag;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function courseTag(Request $request)
+    {
+        try {
+            $request->validate([
+                'courseID' => 'required|integer'
+            ]);
+
+            $course = stp_course::find($request->courseID);
+            $courseTag = $course->tag;
+
+            $tagList = [];
+            foreach ($courseTag as $tag) {
+                $tagList[] = [
+                    "id" => $tag->tag['id'],
+                    "tagName" => $tag->tag['tag_name']
+                ];
+            }
+            return response()->json([
+                'success' => true,
+                'data' => $tagList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addSubject(Request $request)
+    {
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'category' => 'required|integer'
+            ]);
+
+            $authUser = Auth::user();
+
+            stp_subject::create([
+                'subject_name' => $request->name,
+                'subject_category' => $request->category,
+                'created_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ["message" => "successfully created subject"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editSubject(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string',
+                'category' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            $findSubject = stp_subject::find($request->id);
+            $findSubject->update([
+                'subject_name' => $request->name,
+                'subject_category' => $request->category,
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Successfully"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editSubjectStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string'
+            ]);
+            if ($request->type == 'disable') {
+                $status = 0;
+                $message = "Successfully disable the subject";
+            } else {
+                $status = 1;
+                $message = "Successfully enable the subject";
+            }
+            $authUser = Auth::user();
+            $findSubject = stp_subject::find($request->id);
+            $findSubject->update([
+                'subject_status' => $status,
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => $message]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function subjectList(Request $request)
+    {
+        try {
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

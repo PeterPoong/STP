@@ -37,9 +37,9 @@ class stp_course extends Model
         return $this->belongsTo(stp_courses_category::class, 'category_id', 'id');
     }
 
-    public  function tag()
+    public  function tag(): HasMany
     {
-        return $this->belongsToMany(stp_course_tag::class);
+        return $this->hasMany(stp_course_tag::class, 'course_id', 'id');
     }
 
     public function media()

@@ -23,6 +23,9 @@ Route::prefix('student')->group(function () {
     Route::post('/schoolList', [studentController::class, 'schoolList']);
     Route::post('/categoryList', [studentController::class, 'categoryList']);
     Route::post('/courseList', [studentController::class, 'courseList']);
+
+    Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
+    Route::middleware('auth:sanctum')->post('/editDetail', [AdminController::class, 'editStudent']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -39,20 +42,25 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editSchoolFeatured', [AdminController::class, 'editSchoolFeatured']);
 
     Route::post('/courseList', [AdminController::class, 'coursesList']);
+    Route::post('/courseDetail', [AdminController::class, 'courseDetail']);
     Route::post('/addCourses', [AdminController::class, 'addCourse']);
     Route::post('/editCourse', [AdminController::class, 'editCourse']);
     Route::post('/editCourseStatus', [AdminController::class, 'editCourseStatus']);
     Route::post('/editCoursesFeatured', [AdminController::class, 'editCoursesFeatured']);
+    Route::post('/courseTag', [AdminController::class, 'courseTag']);
+
     Route::post('/addTag', [AdminController::class, 'addTag']);
     Route::post('/searchTag', [AdminController::class, 'searchTag']);
-    Route::post('courseTag', [AdminController::class, 'courseTag']);
-
-
 
     Route::post('/addCategory', [AdminController::class, 'addCategory']);
     Route::post('/editCategory', [AdminController::class, 'editCategory']);
     Route::post('/editHotPick', [AdminController::class, 'editHotPick']);
     Route::post('/editCategoryStatus', [AdminController::class, 'editCategoryStatus']);
+
+    Route::post('/addSubject', [AdminController::class, 'addSubject']);
+    Route::post('/editSubject', [AdminController::class, 'editSubject']);
+    Route::post('/editSubjectStatus', [AdminController::class, 'editSubjectStatus']);
+    Route::post('/subjectList', [AdminController::class, 'subjectList']);
 });
 
 Route::prefix('school')->group(function () {

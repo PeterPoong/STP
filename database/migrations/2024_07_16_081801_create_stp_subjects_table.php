@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('stp_subjects', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('country_id')->nullable()->constrained('stp_countries')->onDelete('set null');
+            $table->string('subject_name');
+            $table->foreignId('subject_category')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->integer('subject_status')->default(1);
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();

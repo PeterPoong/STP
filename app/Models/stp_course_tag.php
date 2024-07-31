@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class stp_course_tag extends Model
 {
@@ -15,13 +16,13 @@ class stp_course_tag extends Model
         'courseTag_status'
     ];
 
-    public function courses()
+    public function courses(): BelongsTo
     {
-        return $this->hasMany(stp_course::class, 'id', 'course_id');
+        return $this->belongsTo(stp_course::class, 'course_id', 'id');
     }
 
-    public function tag()
+    public function tag(): BelongsTo
     {
-        return $this->hasMany(stp_tag::class, 'id', 'tag_id');
+        return $this->belongsTo(stp_tag::class, 'tag_id', 'id');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class stp_tag extends Model
 {
@@ -12,8 +13,8 @@ class stp_tag extends Model
         'tag_name'
     ];
 
-    public function coursesTag()
+    public function coursesTag(): HasMany
     {
-        return $this->belongsToMany(stp_course_tag::class);
+        return $this->hasMany(stp_tag::class, 'tag_id', 'id');
     }
 }

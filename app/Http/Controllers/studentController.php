@@ -7,6 +7,7 @@ use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use Illuminate\Http\Request;
 use App\Models\stp_school;
+use App\Models\stp_student;
 use App\Models\stp_tag;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
@@ -170,6 +171,42 @@ class studentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function studentDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $student = stp_student::find($request->id);
+            // return $student->detail;
+            $stduentDetail = [
+                'id' => $student->id,
+                'username' => $student->student_userName,
+                'firstName' => $student->detail->student_detailFirstName,
+                'lastName' => $student->detail->student_detailLastName,
+                'ic' => $student->student_icNumber,
+                'email' => $student->student_email,
+                'contact' => $student->student_countryCode . $student->student_contactNo,
+                'profilePic' => $student->student_proilePic,
+                'address' => $student->detail->student_detailAddress,
+                'country' => $student->detail->country->country_name,
+                'state' => $student->detail->state->state_name,
+                'city' => $student->detail->city->city_name,
+                'postcode' => $student->detail->student_detailPostcode,
+            ];
+            return response()->json([
+                'success' => true,
+                'data' => $stduentDetail
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ], 500);
         }

@@ -9,6 +9,14 @@ class stp_subject extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'subject_name',
+        'subject_category',
+        'subject_status',
+        'updated_by',
+        'created_by'
+    ];
+
     public function country()
     {
         return $this->hasOne(stp_country::class, 'id', 'country_id');
