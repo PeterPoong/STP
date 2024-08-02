@@ -23,9 +23,14 @@ Route::prefix('student')->group(function () {
     Route::post('/schoolList', [studentController::class, 'schoolList']);
     Route::post('/categoryList', [studentController::class, 'categoryList']);
     Route::post('/courseList', [studentController::class, 'courseList']);
+    Route::post('/courseDetail', [AdminController::class, 'courseDetail']);
+    Route::post('/schoolDetail', [AdminController::class, 'schoolDetail']);
+
 
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
     Route::middleware('auth:sanctum')->post('/editDetail', [AdminController::class, 'editStudent']);
+    Route::middleware('auth:sanctum')->post('/subjectList', [studentController::class, 'subjectList']);
+    Route::middleware('auth:sanctum')->post('/addTranscript', [studentController::class, 'addTranscript']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {

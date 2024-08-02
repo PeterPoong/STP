@@ -9,6 +9,16 @@ class stp_transcript extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'subject_id',
+        'transcript_grade',
+        'user_id',
+        'transcript_category',
+        'stp_status',
+        'updated_by',
+        'created_by'
+    ];
+
     public function subject()
     {
         return $this->hasOne(stp_subject::class, 'id', 'subject_id');

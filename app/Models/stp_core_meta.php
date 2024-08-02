@@ -71,4 +71,9 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_school::class, 'institue_category', 'id');
     }
+
+    public function courseStudyMode(): HasMany
+    {
+        return $this->hasMany(stp_course::class, 'study_mode', 'id');
+    }
 }

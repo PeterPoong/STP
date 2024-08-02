@@ -763,6 +763,7 @@ class AdminController extends Controller
                 'category' => $courseList->category->category_name,
                 'school' => $courseList->school->school_name,
                 'qualification' => $courseList->qualification->qualifiation_name,
+                'mode' => $courseList->studyMode->core_metaName ?? null,
                 'logo' => $logo,
                 'tag' => $tagList
             ];
@@ -1303,6 +1304,16 @@ class AdminController extends Controller
                 'category' => 'required|integer'
             ]);
 
+            $checkSubject = stp_subject::where('subject_name', $request->name)
+                ->where('subject_category', $request->category)
+                ->exists();
+
+            if ($checkSubject) {
+                throw validationException::withMessages([
+                    'subject' => 'Subject already exist in the category'
+                ]);
+            }
+
             $authUser = Auth::user();
 
             stp_subject::create([
@@ -1314,6 +1325,12 @@ class AdminController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => ["message" => "successfully created subject"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1390,6 +1407,19 @@ class AdminController extends Controller
     public function subjectList(Request $request)
     {
         try {
+            $subjectList = stp_subject::where('subject_status', 1)->get();
+            foreach ($subjectList as $subject) {
+                $list[] = [
+                    'id' => $subject->id,
+                    'name' => $subject->subject_name,
+                    'category' => $subject->category,
+                ];
+            }
+            return response()->json([
+                'success' => true,
+                'data' => $list
+            ]);
+            return $list;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

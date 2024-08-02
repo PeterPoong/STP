@@ -8,7 +8,10 @@ use App\Models\stp_featured;
 use Illuminate\Http\Request;
 use App\Models\stp_school;
 use App\Models\stp_student;
+use App\Models\stp_subject;
 use App\Models\stp_tag;
+use App\Models\stp_transcript;
+use Illuminate\Support\Facades\Auth;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 
@@ -149,7 +152,9 @@ class studentController extends Controller
                 'category' => 'integer',
             ]);
 
-            $courseList = stp_course::when($request->filled('qualification'), function ($query) use ($request) {
+            // $test = stp_course::find(1);
+            // return $test->studyMode->core_metaName;
+            $getCourses = stp_course::when($request->filled('qualification'), function ($query) use ($request) {
                 $query->orWhere('qualification_id', $request->qualification);
             })
                 ->when($request->filled('category'), function ($query) use ($request) {
@@ -165,8 +170,34 @@ class studentController extends Controller
                 })
                 ->paginate(10);
 
+            $cousesList = [];
 
-            return $courseList;
+            foreach ($getCourses as $course) {
+                if (empty($course->course_logo)) {
+                    $logo = $course->school->school_logo;
+                } else {
+                    $logo = $course->course_logo;
+                }
+                $coursesList[] = [
+                    'id' => $course->id,
+                    'school_id' => $course->school->school_name,
+                    'name' => $course->course_name,
+                    'description' => $course->course_description,
+                    'requirement' => $course->course_requirement,
+                    'cost' => $course->course_cost,
+                    'period' => $course->course_period,
+                    'intake' => $course->course_intake,
+                    'category' => $course->category->category_name,
+                    'qualification' => $course->qualification->qualification_name,
+                    'mode' => $course->studyMode->core_metaName ?? null,
+                    'logo' => $logo,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $coursesList
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -210,5 +241,125 @@ class studentController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function subjectList(Request $request)
+    {
+        try {
+            $request->validate([
+                'search' => 'string|max:255',
+                'selectedSubject' => 'array',
+                'category' => 'required|integer'
+            ]);
+
+            $list = stp_subject::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('subject_name', 'like', '%' . $request->search . '%');
+            })
+                ->when($request->filled('selectedSubject'), function ($query) use ($request) {
+                    $query->whereNotIn('id', $request->selectedSubject);
+                })
+                ->where('subject_status', 1)
+                ->where('subject_category', $request->category)
+                ->get();
+
+            $subjectList = [];
+            foreach ($list as $subject) {
+                $subjectList[] = [
+                    'id' => $subject->id,
+                    'name' => $subject->subject_name,
+                ];
+            }
+            return response()->json([
+                'success' => true,
+                'data' => $subjectList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addTranscript(Request $request)
+    {
+        $request->validate([
+            'category' => 'required|integer',
+            'data' => 'required|array',
+            'data.*.grade' => 'required|integer',
+            'data.*.subjectID' => 'required|integer'
+        ]);
+
+        $authUser = Auth::user();
+        $existingSubject = stp_transcript::where('transcript_category', $request->category)
+            ->where('user_id', $authUser->id)
+            ->where('transcript_status', 1)
+            ->pluck('subject_id')
+            ->toArray();
+
+        $requestSubject = collect($request->data)->pluck('subjectID')->toArray();
+        $newArray = array_diff($requestSubject, $existingSubject);
+        $removeArray = array_diff($existingSubject, $requestSubject);
+
+        foreach ($newArray as $new) {
+        }
+
+
+
+
+
+
+
+
+
+        return array_values($removeArray);
+
+
+
+
+
+
+
+        return $newArray;
+
+
+
+
+
+
+        $getAllUserSubject = stp_transcript::where('user_id', $authUser->id)->get();
+        return $getAllUserSubject;
+
+        $requestBody = $request->all();
+        foreach ($requestBody as $requestData) {
+            try {
+                $checkSubject = stp_transcript::where('subject_id', $requestData['subjectID'])
+                    ->where('transcript_category', $requestData['category'])
+                    ->get()->first();
+                if (empty($checkSubject)) {
+                }
+
+                return $checkSubject;
+
+
+                stp_transcript::create([
+                    'subject_id' => $requestData['subjectID'],
+                    'transcript_grade' => $requestData['grade'],
+                    'transcript_category' => $requestData['category'],
+                    'user_id' => $authUser->id
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Internal Server Error',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+        }
+        return  response()->json([
+            'success' => true,
+            'data' => ['message' => 'Successfully update the transcript']
+        ]);
     }
 }

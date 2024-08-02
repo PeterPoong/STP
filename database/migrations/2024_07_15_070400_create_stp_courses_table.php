@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string('course_intake');
             $table->foreignId('category_id')->nullable()->constrained('stp_courses_categories')->onDelete('set null');
             $table->foreignId('qualification_id')->nullable()->constrained('stp_qualifications')->onDelete('set null');
+            $table->foreignId('study_mode')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->string('course_logo')->nullable();
             $table->integer('course_status')->default(1);
             $table->integer('updated_by')->nullable();

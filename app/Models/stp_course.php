@@ -56,4 +56,9 @@ class stp_course extends Model
     {
         return $this->hasMany(stp_featured::class, 'course_id', 'id');
     }
+
+    public function studyMode(): BelongsTo
+    {
+        return $this->belongsTo(stp_core_meta::class, 'study_mode', 'id');
+    }
 }
