@@ -998,7 +998,6 @@ class AdminController extends Controller
         }
     }
 
-
     public function addCategory(Request $request)
     {
         try {

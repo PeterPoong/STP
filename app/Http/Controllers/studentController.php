@@ -284,82 +284,70 @@ class studentController extends Controller
 
     public function addTranscript(Request $request)
     {
-        $request->validate([
-            'category' => 'required|integer',
-            'data' => 'required|array',
-            'data.*.grade' => 'required|integer',
-            'data.*.subjectID' => 'required|integer'
-        ]);
+        try {
+            $request->validate([
+                'category' => 'required|integer',
+                'data' => 'required|array',
+                'data.*.grade' => 'required|integer',
+                'data.*.subjectID' => 'required|integer'
+            ]);
 
-        $authUser = Auth::user();
-        $existingSubject = stp_transcript::where('transcript_category', $request->category)
-            ->where('user_id', $authUser->id)
-            ->where('transcript_status', 1)
-            ->pluck('subject_id')
-            ->toArray();
+            $authUser = Auth::user();
+            $existingSubject = stp_transcript::where('transcript_category', $request->category)
+                ->where('user_id', $authUser->id)
+                ->where('transcript_status', 1)
+                ->pluck('subject_id')
+                ->toArray();
 
-        $requestSubject = collect($request->data)->pluck('subjectID')->toArray();
-        $newArray = array_diff($requestSubject, $existingSubject);
-        $removeArray = array_diff($existingSubject, $requestSubject);
+            $requestSubject = collect($request->data)->pluck('subjectID')->toArray();
+            // $newArray = array_diff($requestSubject, $existingSubject);
+            $removeArray = array_diff($existingSubject, $requestSubject);
 
-        foreach ($newArray as $new) {
-        }
-
-
-
-
-
-
-
-
-
-        return array_values($removeArray);
-
-
-
-
-
-
-
-        return $newArray;
-
-
-
-
-
-
-        $getAllUserSubject = stp_transcript::where('user_id', $authUser->id)->get();
-        return $getAllUserSubject;
-
-        $requestBody = $request->all();
-        foreach ($requestBody as $requestData) {
-            try {
-                $checkSubject = stp_transcript::where('subject_id', $requestData['subjectID'])
-                    ->where('transcript_category', $requestData['category'])
-                    ->get()->first();
-                if (empty($checkSubject)) {
+            if (!empty($removeArray)) {
+                foreach (array_values($removeArray) as $new) {
+                    $data = stp_transcript::where('subject_id', $new)
+                        ->where('transcript_category', $request->category)
+                        ->where('user_id', $authUser->id)
+                        ->update(['transcript_status' => 0]);
                 }
-
-                return $checkSubject;
-
-
-                stp_transcript::create([
-                    'subject_id' => $requestData['subjectID'],
-                    'transcript_grade' => $requestData['grade'],
-                    'transcript_category' => $requestData['category'],
-                    'user_id' => $authUser->id
-                ]);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Internal Server Error',
-                    'error' => $e->getMessage()
-                ], 500);
             }
+
+            foreach ($request->data as $requestData) {
+                $findExist = stp_transcript::where('subject_id', $requestData['subjectID'])
+                    ->where('transcript_category', $request->category)
+                    ->where('user_id', $authUser->id)
+                    ->exists();
+                if ($findExist) {
+                    $updateData = [
+                        'subject_id' => $requestData['subjectID'],
+                        'transcript_grade' => $requestData['grade'],
+                        'transcript_status' => 1
+                    ];
+                    $findExist = stp_transcript::where('subject_id', $requestData['subjectID'])
+                        ->where('transcript_category', $request->category)
+                        ->where('user_id', $authUser->id)
+                        ->update($updateData);
+                } else {
+                    // return $requestData;
+                    stp_transcript::create([
+                        'subject_id' => $requestData['subjectID'],
+                        'transcript_grade' => $requestData['grade'],
+                        'transcript_category' => $request->category,
+                        'user_id' => $authUser->id
+                    ]);
+                }
+            }
+
+            return  response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully update the transcript']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'messsage' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
-        return  response()->json([
-            'success' => true,
-            'data' => ['message' => 'Successfully update the transcript']
-        ]);
     }
 }

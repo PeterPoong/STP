@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\countryController;
 use App\Http\Controllers\studentController;
 
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
@@ -17,6 +18,8 @@ Route::post('/school/register', [AuthController::class, 'schoolRegister']);
 
 Route::post('/register', [AuthController::class, 'register']);
 
+Route::get('/countryCode', [countryController::class, 'countryCode']);
+
 Route::prefix('student')->group(function () {
     Route::post('/hpFeaturedSchoolList', [studentController::class, 'hpFeaturedSchoolList']);
     Route::post('/hpFeaturedCoursesList', [studentController::class, 'hpFeaturedCoursesList']);
@@ -26,11 +29,11 @@ Route::prefix('student')->group(function () {
     Route::post('/courseDetail', [AdminController::class, 'courseDetail']);
     Route::post('/schoolDetail', [AdminController::class, 'schoolDetail']);
 
-
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
     Route::middleware('auth:sanctum')->post('/editDetail', [AdminController::class, 'editStudent']);
     Route::middleware('auth:sanctum')->post('/subjectList', [studentController::class, 'subjectList']);
     Route::middleware('auth:sanctum')->post('/addTranscript', [studentController::class, 'addTranscript']);
+    Route::middleware('auth:sanctum')->post('/addTranscripts', [studentController::class, 'addTranscript']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
