@@ -14,7 +14,7 @@ class stp_transcript extends Model
         'transcript_grade',
         'user_id',
         'transcript_category',
-        'stp_status',
+        'transcript_status',
         'updated_by',
         'created_by'
     ];

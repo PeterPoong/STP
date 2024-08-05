@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -41,5 +42,10 @@ class stp_student extends Model
     public function detail(): HasOne
     {
         return $this->hasOne(stp_student_detail::class, 'student_id', 'id');
+    }
+
+    public function higherTranscript(): HasMany
+    {
+        return $this->hasMany(stp_higher_transcript::class, 'student_id', 'id');
     }
 }

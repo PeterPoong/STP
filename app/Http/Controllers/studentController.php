@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\stp_core_meta;
+use App\Models\stp_country;
 use App\Models\stp_course;
 use App\Models\stp_courses_category;
 use App\Models\stp_featured;
+use App\Models\stp_higher_transcript;
 use Illuminate\Http\Request;
 use App\Models\stp_school;
 use App\Models\stp_student;
@@ -14,6 +17,7 @@ use App\Models\stp_transcript;
 use Illuminate\Support\Facades\Auth;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
+use App\Rules\UniqueInArray;
 
 use Exception;
 
@@ -282,84 +286,167 @@ class studentController extends Controller
         }
     }
 
-    public function addTranscript(Request $request)
+    public function addEditTranscript(Request $request)
     {
-        $request->validate([
-            'category' => 'required|integer',
-            'data' => 'required|array',
-            'data.*.grade' => 'required|integer',
-            'data.*.subjectID' => 'required|integer'
-        ]);
+        try {
+            $request->validate([
+                'category' => 'required|integer',
+                'data' => 'required|array',
+                'data.*.grade' => 'required|integer',
+                'data.*.subjectID' => 'required|integer'
+            ]);
 
-        $authUser = Auth::user();
-        $existingSubject = stp_transcript::where('transcript_category', $request->category)
-            ->where('user_id', $authUser->id)
-            ->where('transcript_status', 1)
-            ->pluck('subject_id')
-            ->toArray();
+            $authUser = Auth::user();
+            $existingSubject = stp_transcript::where('transcript_category', $request->category)
+                ->where('user_id', $authUser->id)
+                ->where('transcript_status', 1)
+                ->pluck('subject_id')
+                ->toArray();
 
-        $requestSubject = collect($request->data)->pluck('subjectID')->toArray();
-        $newArray = array_diff($requestSubject, $existingSubject);
-        $removeArray = array_diff($existingSubject, $requestSubject);
+            $requestSubject = collect($request->data)->pluck('subjectID')->toArray();
+            // $newArray = array_diff($requestSubject, $existingSubject);
+            $removeArray = array_diff($existingSubject, $requestSubject);
 
-        foreach ($newArray as $new) {
+            if (!empty($removeArray)) {
+                foreach (array_values($removeArray) as $new) {
+                    $data = stp_transcript::where('subject_id', $new)
+                        ->where('transcript_category', $request->category)
+                        ->where('user_id', $authUser->id)
+                        ->update(['transcript_status' => 0]);
+                }
+            }
+
+            foreach ($request->data as $requestData) {
+                $findExist = stp_transcript::where('subject_id', $requestData['subjectID'])
+                    ->where('transcript_category', $request->category)
+                    ->where('user_id', $authUser->id)
+                    ->exists();
+                if ($findExist) {
+                    $updateData = [
+                        'subject_id' => $requestData['subjectID'],
+                        'transcript_grade' => $requestData['grade'],
+                        'transcript_status' => 1
+                    ];
+                    $findExist = stp_transcript::where('subject_id', $requestData['subjectID'])
+                        ->where('transcript_category', $request->category)
+                        ->where('user_id', $authUser->id)
+                        ->update($updateData);
+                } else {
+                    // return $requestData;
+                    stp_transcript::create([
+                        'subject_id' => $requestData['subjectID'],
+                        'transcript_grade' => $requestData['grade'],
+                        'transcript_category' => $request->category,
+                        'user_id' => $authUser->id
+                    ]);
+                }
+            }
+
+            return  response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully update the transcript']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'messsage' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
+    }
 
+    public function addEditHigherTranscript(Request $request)
+    {
+        try {
+            $request->validate([
+                'category' => 'required|integer',
+                'data' => ['required', 'array', new UniqueInArray('name')],
+                'data.*.name' => 'required|string|max:255',
+                'data.*.grade' => 'required|integer'
+            ]);
 
+            $authUser = Auth::user();
+            $data = $request->data;
 
+            $existData = stp_higher_transcript::get();
+            foreach ($data as $new) {
+                $newdata = false;
 
-
-
-
-
-
-        return array_values($removeArray);
-
-
-
-
-
-
-
-        return $newArray;
-
-
-
-
-
-
-        $getAllUserSubject = stp_transcript::where('user_id', $authUser->id)->get();
-        return $getAllUserSubject;
-
-        $requestBody = $request->all();
-        foreach ($requestBody as $requestData) {
-            try {
-                $checkSubject = stp_transcript::where('subject_id', $requestData['subjectID'])
-                    ->where('transcript_category', $requestData['category'])
-                    ->get()->first();
-                if (empty($checkSubject)) {
+                if (empty(count($existData))) {
+                    $newdata = true;
+                } else {
+                    foreach ($existData as $exist) {
+                        return $new['name'];
+                        if ($new['name'] == $exist->highTranscript_name) {
+                            $newdata = false;
+                            $exist->update([
+                                'higherTranscript_grade' => $new['grade'],
+                                'updated_by' => $authUser->id
+                            ]);
+                        } else {
+                            $newdata = true;
+                        }
+                    }
                 }
 
-                return $checkSubject;
-
-
-                stp_transcript::create([
-                    'subject_id' => $requestData['subjectID'],
-                    'transcript_grade' => $requestData['grade'],
-                    'transcript_category' => $requestData['category'],
-                    'user_id' => $authUser->id
-                ]);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Internal Server Error',
-                    'error' => $e->getMessage()
-                ], 500);
+                if ($newdata == true) {
+                    stp_higher_transcript::create([
+                        'highTranscript_name' => $new['name'],
+                        'category_id' => $request->category,
+                        'student_id' => $authUser->id,
+                        'higherTranscript_grade' => $new['grade'],
+                        'created_by' => $authUser->id,
+                    ]);
+                }
             }
+
+            return 'success';
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
         }
-        return  response()->json([
-            'success' => true,
-            'data' => ['message' => 'Successfully update the transcript']
-        ]);
+    }
+
+    public function countryList(Request $request)
+    {
+        try {
+            $countryList = stp_country::get();
+            return response()->json([
+                'success' => true,
+                'data' => $countryList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function instituteType(Request $request)
+    {
+        try {
+            $institueList = stp_core_meta::where('core_metaType', 'institute')->get();
+            return response()->json([
+                'success' => true,
+                'data' => $institueList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id('id');
             $table->string('country_name');
             $table->string('country_code');
+            $table->string('country_flag')->nullable();
             $table->string('country_status')->default(1);
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();
