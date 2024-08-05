@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\stp_core_meta;
+use App\Models\stp_country;
 use App\Models\stp_course;
 use App\Models\stp_courses_category;
 use App\Models\stp_featured;
+use App\Models\stp_higher_transcript;
 use Illuminate\Http\Request;
 use App\Models\stp_school;
 use App\Models\stp_student;
@@ -14,6 +17,7 @@ use App\Models\stp_transcript;
 use Illuminate\Support\Facades\Auth;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
+use App\Rules\UniqueInArray;
 
 use Exception;
 
@@ -282,7 +286,7 @@ class studentController extends Controller
         }
     }
 
-    public function addTranscript(Request $request)
+    public function addEditTranscript(Request $request)
     {
         try {
             $request->validate([
@@ -346,6 +350,101 @@ class studentController extends Controller
             return response()->json([
                 'success' => false,
                 'messsage' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function addEditHigherTranscript(Request $request)
+    {
+        try {
+            $request->validate([
+                'category' => 'required|integer',
+                'data' => ['required', 'array', new UniqueInArray('name')],
+                'data.*.name' => 'required|string|max:255',
+                'data.*.grade' => 'required|integer'
+            ]);
+
+            $authUser = Auth::user();
+            $data = $request->data;
+
+            $existData = stp_higher_transcript::get();
+            foreach ($data as $new) {
+                $newdata = false;
+
+                if (empty(count($existData))) {
+                    $newdata = true;
+                } else {
+                    foreach ($existData as $exist) {
+                        return $new['name'];
+                        if ($new['name'] == $exist->highTranscript_name) {
+                            $newdata = false;
+                            $exist->update([
+                                'higherTranscript_grade' => $new['grade'],
+                                'updated_by' => $authUser->id
+                            ]);
+                        } else {
+                            $newdata = true;
+                        }
+                    }
+                }
+
+                if ($newdata == true) {
+                    stp_higher_transcript::create([
+                        'highTranscript_name' => $new['name'],
+                        'category_id' => $request->category,
+                        'student_id' => $authUser->id,
+                        'higherTranscript_grade' => $new['grade'],
+                        'created_by' => $authUser->id,
+                    ]);
+                }
+            }
+
+            return 'success';
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function countryList(Request $request)
+    {
+        try {
+            $countryList = stp_country::get();
+            return response()->json([
+                'success' => true,
+                'data' => $countryList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function instituteType(Request $request)
+    {
+        try {
+            $institueList = stp_core_meta::where('core_metaType', 'institute')->get();
+            return response()->json([
+                'success' => true,
+                'data' => $institueList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ]);
         }

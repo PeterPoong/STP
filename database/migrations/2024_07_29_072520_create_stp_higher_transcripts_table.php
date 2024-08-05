@@ -16,7 +16,8 @@ return new class extends Migration
             $table->string('highTranscript_name');
             $table->foreignId('category_id')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->foreignId('student_id')->nullable()->constrained('stp_students')->onDelete('set null');
-            $table->integer('highTranscript_status');
+            $table->foreignId('higherTranscript_grade')->nullable()->constrained('stp_core_metas')->onDelete('set null');
+            $table->integer('highTranscript_status')->default(1);
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();
             $table->timestamps();
