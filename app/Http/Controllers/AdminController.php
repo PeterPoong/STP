@@ -644,7 +644,7 @@ class AdminController extends Controller
                 'period' => 'required|string|max:255',
                 'intake' => 'required|string|max:255',
                 'category' => 'required|integer',
-                'qualification' => 'required|integer',
+                'qualification' => 'required|integer'
             ]);
             $authUser = Auth::user();
             $checkingCourse = stp_course::where('school_id', $request->schoolID)
@@ -853,10 +853,10 @@ class AdminController extends Controller
 
             if ($request->type == 'disable') {
                 $status = 0;
-                $message = "Successfully Disable";
+                $message = "Successfully Disable the Course";
             } else {
                 $status = 1;
-                $message = "Successfully Enable";
+                $message = "Successfully Enable the Course";
             }
 
             $course = stp_course::find($request->id);
@@ -864,6 +864,7 @@ class AdminController extends Controller
             $course->update([
                 'course_status' => $status,
                 'updated_by' => $authUser->id,
+                'updated_at' => now(),
             ]);
             return response()->json([
                 'success' => true,

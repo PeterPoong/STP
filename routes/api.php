@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SchoolController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -68,7 +69,12 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/subjectList', [AdminController::class, 'subjectList']);
 });
 
-Route::prefix('school')->group(function () {
+Route::prefix('school')->middleware('auth:sanctum')->group(function () {
+    Route::post('/courseList', [SchoolController::class, 'coursesList']);
+    Route::post('/addCourses', [SchoolController::class, 'addCourse']);
+    Route::post('/editCourses', [SchoolController::class, 'editCourse']);
+    Route::post('/editCourseStatus', [SchoolController::class, 'editCourseStatus']);
+    Route::post('/editSchool', [SchoolController::class, 'editSchoolDetail']);
 });
 
 Route::middleware('auth:sanctum')->get('/test', [AuthController::class, 'test']);
