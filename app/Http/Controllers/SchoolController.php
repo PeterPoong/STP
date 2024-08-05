@@ -28,17 +28,15 @@ class SchoolController extends Controller
     {
         try {
             $courseList = stp_course::query()
+                ->where('course_status',1)
                 ->when($request->filled('category'), function ($query) use ($request) {
                     $query->where('category_id', $request->category);
                 })
                 ->when($request->filled('qualification'), function ($query) use ($request) {
                     $query->orWhere('qualification_id', $request->qualification);
                 })
-                ->when($request->filled('status'), function ($query) use ($request) {
-                    $query->orWhere('course_status', $request->status);
-                })
                 ->when($request->filled('search'), function ($query) use ($request) {
-                    $query->orWhere('course_name', 'like', '%' . $request->search . '%');
+                    $query->where('course_name', 'like', '%' . $request->search . '%');
                 })
                 ->paginate(10)
                 ->through(function ($courses) {
@@ -48,7 +46,7 @@ class SchoolController extends Controller
                         "school" => $courses->school->school_name,
                         "category" => $courses->category->category_name,
                         "qualification" => $courses->qualification->qualification_name ?? null,
-                        "status" => $status
+                        "status" => "Active"
                     ];
                 });
 
