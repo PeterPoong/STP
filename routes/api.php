@@ -48,6 +48,10 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/subjectList', [studentController::class, 'subjectList']);
     Route::middleware('auth:sanctum')->post('/addEditTranscript', [studentController::class, 'addEditTranscript']);
     Route::middleware('auth:sanctum')->post('/addEditHigherTranscript', [studentController::class, 'addEditHigherTranscript']);
+    Route::middleware('auth:sanctum')->post('/addTranscript', [studentController::class, 'addTranscript']);
+    Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
+    Route::middleware('auth:sanctum')->get('/pendingAppList', [studentController::class, 'pendingAppList']);
+    Route::middleware('auth:sanctum')->get('/historyAppList', [studentController::class, 'historyAppList']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
