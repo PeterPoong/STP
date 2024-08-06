@@ -32,6 +32,8 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/editDetail', [AdminController::class, 'editStudent']);
     Route::middleware('auth:sanctum')->post('/subjectList', [studentController::class, 'subjectList']);
     Route::middleware('auth:sanctum')->post('/addTranscript', [studentController::class, 'addTranscript']);
+    Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
+
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {

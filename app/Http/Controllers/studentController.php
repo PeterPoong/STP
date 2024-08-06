@@ -11,6 +11,7 @@ use App\Models\stp_student;
 use App\Models\stp_subject;
 use App\Models\stp_tag;
 use App\Models\stp_transcript;
+use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
@@ -362,4 +363,50 @@ class studentController extends Controller
             'data' => ['message' => 'Successfully update the transcript']
         ]);
     }
+
+    public function applyCourse(Request $request)
+    {
+        try{
+            $request->validate([
+                'courseID' => 'required|integer', 
+            ]);
+            $authUser = Auth::user();
+            $studentID = $authUser->id;
+
+            $checkingCourse = stp_submited_form::where('courses_id', $request->courseID)
+                ->where('student_id',$studentID)
+                ->exists();
+            if($checkingCourse){
+                throw ValidationException::withMessages([
+                    "courses" => ['This Student applied for this course']
+                ]);
+            }
+
+            stp_submited_form::create([
+                'student_id'=>$studentID,
+                'courses_id'=>$request->courseID,
+                'form_status'=>2,
+                'created_by' => $authUser->id,
+                'created_at' => now(),
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Applied for the Course']
+            ]);
+        }catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+    }catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ]);
+    }
+
+    }
+
 }
