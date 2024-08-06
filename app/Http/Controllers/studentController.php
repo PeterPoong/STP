@@ -8,6 +8,7 @@ use App\Models\stp_course;
 use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use App\Models\stp_higher_transcript;
+use App\Models\stp_qualification;
 use Illuminate\Http\Request;
 use App\Models\stp_school;
 use App\Models\stp_student;
@@ -52,7 +53,10 @@ class studentController extends Controller
                         'description' => $school->school_shortDesc
                     ];
                 });
-            return response()->json($schoolList);
+            return response()->json([
+                'success' => true,
+                'data' => $schoolList
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -101,6 +105,7 @@ class studentController extends Controller
             // $test = stp_featured::find(10);
             // return $test->courses->qualification;
             // return stp_featured::whereNotNull('course_id')->get();
+
             $hpFeaturedCoursesList = stp_featured::whereNotNull('course_id')->get()->map(function ($courses) {
                 if (empty($courses->courses->course_logo)) {
                     $logo = $courses->courses->school->school_logo;
@@ -116,7 +121,10 @@ class studentController extends Controller
                 ];
             });
 
-            return response()->json($hpFeaturedCoursesList);
+            return response()->json([
+                'success' => true,
+                'data' => $hpFeaturedCoursesList
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 "success" => false,
@@ -440,6 +448,133 @@ class studentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $institueList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function qualificationFilterList(Request $request)
+    {
+        try {
+            $qualificationList = stp_qualification::where('qualification_status', 1)
+                ->get()
+                ->map(function ($qualiList) {
+                    return [
+                        'id' => $qualiList->id,
+                        'qualification_name' => $qualiList->qualification_name
+                    ];
+                });
+            return response()->json([
+                'success' => true,
+                'data' => $qualificationList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function studyModeFilterlist(Request $request)
+    {
+        try {
+            $studyModeListing = stp_core_meta::where('core_metaType', 'study_mode')
+                ->where('core_metaStatus', 1)
+                ->get()
+                ->map(function ($studyMode) {
+                    return [
+                        'id' => $studyMode->id,
+                        'studyMode_name' => $studyMode->core_metaName
+                    ];
+                });
+            return response()->json([
+                'success' => true,
+                'data' => $studyModeListing
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function locationFilterList(Request $request)
+    {
+        try {
+
+            $request->validate([
+                'countryID' => 'required|integer'
+            ]);
+
+            $country = stp_country::find(1);
+            $states = $country->state;
+            $stateList = [];
+            foreach ($states as $state) {
+                $stateList[] = [
+                    'id' => $state->id,
+                    'state_name' => $state->state_name
+                ];
+            }
+
+
+            return  $stateList;
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function categoryFilterList(Request $request)
+    {
+        try {
+            $categoryList = stp_courses_category::get()
+                ->map(function ($categories) {
+                    return [
+                        'id' => $categories->id,
+                        'category_name' => $categories->category_name
+                    ];
+                });
+            return response()->json([
+                'success' => true,
+                'data' => $categoryList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function tuitionFeeFilterRange(Request $request)
+    {
+        try {
+            $maxCost = stp_course::where('course_status', 1)
+                ->max('course_cost');
+
+
+            return response()->json([
+                'success' => true,
+                'data' => $maxCost
             ]);
         } catch (\Exception $e) {
             return response()->json([

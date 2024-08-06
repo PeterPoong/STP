@@ -20,4 +20,9 @@ class stp_state extends Model
     {
         return $this->hasMany(stp_school::class, 'state_id', 'id');
     }
+
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(stp_country::class, 'country_id', 'id');
+    }
 }
