@@ -420,7 +420,6 @@ class AuthController extends Controller
                 'email' => 'required|string|email|max:255|unique:stp_users,email',
                 'password' => 'required|string|min:8',
                 'confirm_password' => 'required|string|min:8|same:password',
-                'type' => 'required',
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
             ]);

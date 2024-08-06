@@ -31,6 +31,14 @@ Route::prefix('student')->group(function () {
     Route::post('/schoolDetail', [AdminController::class, 'schoolDetail']);
     Route::get('/countryList', [studentController::class, 'countryList']);
     Route::get('/instituteType', [studentController::class, 'instituteType']);
+    Route::get('/qualificationFilterList', [studentController::class, 'qualificationFilterList']);
+    Route::get('/studyModeFilterlist', [studentController::class, 'studyModeFilterlist']);
+    Route::post('/locationFilterList', [studentController::class, 'locationFilterList']);
+    Route::get('/categoryFilterList', [studentController::class, 'categoryFilterList']);
+    Route::get('/tuitionFeeFilterRange', [studentController::class, 'tuitionFeeFilterRange']);
+
+
+
 
 
 
