@@ -6,17 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class stp_cgpa extends Model
+class stp_achievement extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'student_id',
-        'transcript_category',
-        'cgpa',
-        'cgpa_status',
-        'created_by',
-        'updated_by'
+        'achievement_name',
+        'title_obtained',
+        'achievement_media',
+        'date',
+        'updated_by',
+        'created_by'
     ];
 
     public function student():BelongsTo
@@ -25,10 +26,9 @@ class stp_cgpa extends Model
 
     }
 
-    public function category():BelongsTo
+    public function title():BelongsTo
     {
-        return $this->belongsTo(stp_core_meta::class, 'transcript_category', 'id');
+        return $this->belongsTo(stp_core_meta::class, 'title_obtained', 'id');
 
     }
-
 }

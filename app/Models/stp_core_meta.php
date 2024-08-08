@@ -86,4 +86,14 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_higher_transcript::class, 'higherTranscript_grade', 'id');
     }
+
+    public function cgpa(): HasMany
+    {
+        return $this->hasMany(stp_cgpa::class, 'transcript_category', 'id');
+    }
+
+    public function achievement(): HasMany
+    {
+        return $this->hasMany(stp_achievement::class, 'title_obtained', 'id');
+    }
 }

@@ -48,4 +48,20 @@ class stp_student extends Model
     {
         return $this->hasMany(stp_higher_transcript::class, 'student_id', 'id');
     }
+
+    public function cgpa(): HasMany
+    {
+        return $this->hasMany(stp_cgpa::class, 'student_id', 'id');
+    }
+
+    public function cocurriculum(): HasMany
+    {
+        return $this->hasMany(stp_cocurriculum::class, 'student_id', 'id');
+    }
+
+    public function achievement(): HasMany
+    {
+        return $this->hasMany(stp_core_meta::class, 'student_id', 'id');
+    }
+
 }
