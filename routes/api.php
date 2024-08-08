@@ -39,10 +39,6 @@ Route::prefix('student')->group(function () {
     Route::get('/tuitionFeeFilterRange', [studentController::class, 'tuitionFeeFilterRange']);
 
 
-
-
-
-
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
     Route::middleware('auth:sanctum')->post('/editDetail', [AdminController::class, 'editStudent']);
     Route::middleware('auth:sanctum')->post('/subjectList', [studentController::class, 'subjectList']);

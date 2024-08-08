@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('stp_user_details', function (Blueprint $table) {
             $table->id('id');
             $table->foreignId('user_id')->nullable()->constrained('stp_users')->onDelete('set null');
+            $table->foreignId('gender')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->string('user_detailFirstName')->nullable();
             $table->string('user_detailLastName')->nullable();
             $table->string('user_detailAddress')->nullable();

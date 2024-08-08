@@ -17,6 +17,7 @@ class stp_student_detail extends Model
         'student_detailLastName',
         'student_detailAddress',
         'country_id',
+        'gender',
         'city_id',
         'student_contactNo',
         'state_id',
@@ -44,5 +45,10 @@ class stp_student_detail extends Model
     public function state(): BelongsTo
     {
         return $this->belongsTo(stp_state::class, 'state_id', 'id');
+    }
+
+    public function gender(): BelongsTo
+    {
+        return $this->belongsTo(stp_core_meta::class, 'gender', 'id');
     }
 }

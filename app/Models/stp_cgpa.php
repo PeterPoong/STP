@@ -19,16 +19,13 @@ class stp_cgpa extends Model
         'updated_by'
     ];
 
-    public function student():BelongsTo
+    public function student(): BelongsTo
     {
         return $this->belongTo(stp_student::class, 'student_id', 'id');
-
     }
 
-    public function category():BelongsTo
+    public function category(): BelongsTo
     {
         return $this->belongsTo(stp_core_meta::class, 'transcript_category', 'id');
-
     }
-
 }

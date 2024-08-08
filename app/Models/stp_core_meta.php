@@ -96,4 +96,9 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_achievement::class, 'title_obtained', 'id');
     }
+
+    public function studentGender(): HasMany
+    {
+        return $this->hasMany(stp_student_detail::class, 'gender', 'id');
+    }
 }
