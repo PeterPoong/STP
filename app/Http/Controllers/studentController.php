@@ -378,20 +378,38 @@ class studentController extends Controller
             $data = $request->data;
 
             $existData = stp_higher_transcript::get();
+            $existName = $existData->map(function ($test) {
+                return $test->highTranscript_name;
+            });
+            $dataNames = collect(array_column($data, 'name'));
+            $missingItems = array_diff($existName->toArray(), $dataNames->toArray());
+            $missingItemsValue = array_values($missingItems);
+
+            if (count($missingItemsValue) > 0) {
+                foreach ($missingItemsValue as $removeData) {
+                    stp_higher_transcript::where('highTranscript_name', $removeData)
+                        ->where('highTranscript_status', 1)
+                        ->update([
+                            'highTranscript_status' => 0,
+                            'updated_by' => $authUser->id
+                        ]);
+                }
+            }
+
             foreach ($data as $new) {
                 $newdata = false;
-
                 if (empty(count($existData))) {
                     $newdata = true;
                 } else {
                     foreach ($existData as $exist) {
-                        return $new['name'];
                         if ($new['name'] == $exist->highTranscript_name) {
                             $newdata = false;
                             $exist->update([
                                 'higherTranscript_grade' => $new['grade'],
+                                'highTranscript_status' => 1,
                                 'updated_by' => $authUser->id
                             ]);
+                            break;
                         } else {
                             $newdata = true;
                         }
@@ -526,8 +544,10 @@ class studentController extends Controller
                 ];
             }
 
-
-            return  $stateList;
+            return response()->json([
+                'success' => true,
+                'data' => $stateList
+            ]);
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -572,7 +592,6 @@ class studentController extends Controller
             $maxCost = stp_course::where('course_status', 1)
                 ->max('course_cost');
 
-
             return response()->json([
                 'success' => true,
                 'data' => $maxCost
@@ -588,9 +607,9 @@ class studentController extends Controller
 
     public function applyCourse(Request $request)
     {
-        try{
+        try {
             $request->validate([
-                'courseID' => 'required|integer', 
+                'courseID' => 'required|integer',
             ]);
             $authUser = Auth::user();
             $studentID = $authUser->id;
@@ -599,15 +618,15 @@ class studentController extends Controller
                 ->where('student_id', $studentID)
                 ->where('form_status', '!=', 3)
                 ->exists();
-            if($checkingCourse){
+            if ($checkingCourse) {
                 throw ValidationException::withMessages([
                     "courses" => ['This Student applied for this course']
                 ]);
             }
             stp_submited_form::create([
-                'student_id'=>$studentID,
-                'courses_id'=>$request->courseID,
-                'form_status'=>2,
+                'student_id' => $studentID,
+                'courses_id' => $request->courseID,
+                'form_status' => 2,
                 'created_by' => $authUser->id,
                 'created_at' => now(),
             ]);
@@ -615,20 +634,19 @@ class studentController extends Controller
                 'success' => true,
                 'data' => ['message' => 'Successfully Applied for the Course']
             ]);
-        }catch (ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation Error',
                 'error' => $e->errors()
             ]);
-    }catch (Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ]);
-    }
-
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     public function pendingAppList(Request $request)
@@ -640,16 +658,16 @@ class studentController extends Controller
 
             // Query the stp_submited_form model
             $courseList = stp_submited_form::with([
-                'course', 
-                'course.school', 
-                'course.category', 
+                'course',
+                'course.school',
+                'course.category',
                 'course.qualification',
                 'course.studyMode',
                 'course.school.country',
                 'course.school.state',
                 'course.school.city'
 
-                ])
+            ])
                 ->where('form_status', 2)
                 ->where('student_id', $studentID)
                 ->when($request->filled('course_name'), function ($query) use ($request) {
@@ -693,69 +711,68 @@ class studentController extends Controller
 
     public function historyAppList(Request $request)
     {
-        try{
+        try {
             // Get the authenticated user
             $authUser = Auth::user();
             $studentID = $authUser->id;
-       // Query the stp_submited_form model
-       $courseList = stp_submited_form::with([
-        'course', 
-        'course.school', 
-        'course.category', 
-        'course.qualification',
-        'course.studyMode',
-        'course.school.country',
-        'course.school.state',
-        'course.school.city'
+            // Query the stp_submited_form model
+            $courseList = stp_submited_form::with([
+                'course',
+                'course.school',
+                'course.category',
+                'course.qualification',
+                'course.studyMode',
+                'course.school.country',
+                'course.school.state',
+                'course.school.city'
 
-        ])
-        ->whereIn('form_status', [0,3,4])
-        ->where('student_id', $studentID)
-        ->when($request->filled('course_name'), function ($query) use ($request) {
-            $query->whereHas('course', function ($query) use ($request) {
-                $query->where('course_name', 'like', '%' . $request->course_name . '%');
-            });
-        })
-        ->paginate(10)
-        ->through(function ($submittedForm) {
-            $course = $submittedForm->course;
-            $school = $course->school;
+            ])
+                ->whereIn('form_status', [0, 3, 4])
+                ->where('student_id', $studentID)
+                ->when($request->filled('course_name'), function ($query) use ($request) {
+                    $query->whereHas('course', function ($query) use ($request) {
+                        $query->where('course_name', 'like', '%' . $request->course_name . '%');
+                    });
+                })
+                ->paginate(10)
+                ->through(function ($submittedForm) {
+                    $course = $submittedForm->course;
+                    $school = $course->school;
 
-            // Determine the status message based on form_status
-            $status = match ($submittedForm->form_status) {
-                0 => "Deleted",
-                3 => "Rejected",
-                4 => "Accepted",
-                default => "Unknown"
-            };
-            return [
-                "course_name" => $course->course_name,
-                "school_name" => $course->school->school_name,
-                "course_period" => $course->course_period,
-                "course_intake" => $course->course_intake,
-                "qualification" => $course->qualification->qualification_name,
-                "course_logo" => $course->course_logo ?: $course->school->school_logo,
-                "category_name" => $course->category->category_name,
-                "study_mode" => $course->studyMode->core_metaName ?? 'Not Available',
-                "country_name" => $school->country->country_name,
-                "state_name" => $school->state->state_name,
-                "city_name" => $school->city->city_name,
-                "status" => $status,
-                'student_id' => $submittedForm->student_id,
-            ];
-        });
+                    // Determine the status message based on form_status
+                    $status = match ($submittedForm->form_status) {
+                        0 => "Deleted",
+                        3 => "Rejected",
+                        4 => "Accepted",
+                        default => "Unknown"
+                    };
+                    return [
+                        "course_name" => $course->course_name,
+                        "school_name" => $course->school->school_name,
+                        "course_period" => $course->course_period,
+                        "course_intake" => $course->course_intake,
+                        "qualification" => $course->qualification->qualification_name,
+                        "course_logo" => $course->course_logo ?: $course->school->school_logo,
+                        "category_name" => $course->category->category_name,
+                        "study_mode" => $course->studyMode->core_metaName ?? 'Not Available',
+                        "country_name" => $school->country->country_name,
+                        "state_name" => $school->state->state_name,
+                        "city_name" => $school->city->city_name,
+                        "status" => $status,
+                        'student_id' => $submittedForm->student_id,
+                    ];
+                });
 
-    return response()->json([
-        'success' => true,
-        'data' => $courseList
-    ]);
-} catch (Exception $e) {
-    return response()->json([
-        'success' => false,
-        'message' => 'Internal Server Error',
-        'errors' => $e->getMessage()
-    ], 500);
-}
-}
-
+            return response()->json([
+                'success' => true,
+                'data' => $courseList
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -86,4 +86,9 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_higher_transcript::class, 'higherTranscript_grade', 'id');
     }
+
+    public function studentGender(): HasMany
+    {
+        return $this->hasMany(stp_student_detail::class, 'gender', 'id');
+    }
 }

@@ -13,6 +13,7 @@ class stp_higher_transcript extends Model
         'category_id',
         'student_id',
         'higherTranscript_grade',
+        'highTranscript_status',
         'updated_by',
         'created_by'
     ];
