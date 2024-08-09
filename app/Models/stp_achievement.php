@@ -16,6 +16,7 @@ class stp_achievement extends Model
         'title_obtained',
         'achievement_media',
         'date',
+        'achivements_status',
         'updated_by',
         'created_by'
     ];

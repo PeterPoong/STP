@@ -9,6 +9,8 @@ use App\Models\stp_country;
 use App\Models\stp_course;
 use App\Models\stp_course_tag;
 use App\Models\stp_courses_category;
+use App\Models\stp_submited_form;
+use Illuminate\Support\Facades\DB;
 use App\Models\stp_featured;
 use App\Models\stp_school;
 use App\Models\stp_state;
@@ -20,6 +22,7 @@ use Intervention\Image\Facades\Image as Image;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Validator;
 
 class SchoolController extends Controller
@@ -342,4 +345,111 @@ class SchoolController extends Controller
 
         }
     }
+
+    public function applicantDetailList(Request $request)
+{
+    try {
+        // Get the authenticated user
+        $authUser = Auth::user();
+        $schoolID = $authUser->id;
+
+        // Log the school ID for debugging
+        \Log::info('School ID: ' . $schoolID);
+        $formStatus = $request->input('form_status');
+        $category = $request->input('category_id');
+        $courseApplied = $request->input('courses_id');
+        $searchTerm = $request->input('search');
+         // Ensure formStatus is an array
+         if (!is_array($formStatus) && $formStatus !== null) {
+            $formStatus = [$formStatus];
+        }
+
+        // Ensure category is an array
+        if (!is_array($category) && $category !== null) {
+            $category = [$category];
+        }
+
+         // Ensure category is an array
+         if (!is_array($courseApplied) && $courseApplied !== null) {
+            $courseApplied = [$courseApplied];
+        }
+        // Get the total count of applicants for the school form status pending
+        $totalApplicantsCount = stp_submited_form::where('form_status', 2)
+        ->whereHas('course', function($query) use ($schoolID) {
+            $query->where('school_id', $schoolID);
+        })
+        ->count();
+        $studentList = stp_submited_form::with([
+            'student.detail', // Relationship to student detail
+            'student.higherTranscript', // Relationship to higherTranscript
+            'student.cgpa', // Relationship to cgpa
+            'student.achievement', // Relationship to achievement
+            'student.cocurriculum', // Relationship to cocurriculum
+            'course' // Ensure the course relationship is loaded
+        ])
+          // Apply form_status filter if provided
+          ->when($formStatus, function($query) use ($formStatus) {
+            return $query->whereIn('form_status', $formStatus);
+        })
+        // Apply category_id filter if provided
+        ->when($category, function($query) use ($category) {
+            return $query->whereHas('student.higherTranscript', function($query) use ($category) {
+                return $query->whereIn('category_id', $category);
+            });
+        })
+        // Apply courses_id filter if provided
+        ->when($courseApplied, function($query) use ($courseApplied) {
+            return $query->whereIn('courses_id', $courseApplied);
+        })
+        // Apply search filter if provided
+        ->when($request->filled('search'), function($query) use ($searchTerm) {
+            return $query->whereHas('student.detail', function($query) use ($searchTerm) {
+                $query->where(DB::raw("CONCAT(student_detailFirstName, ' ', student_detailLastName)"), 'like', '%' . $searchTerm . '%');
+            });
+        })
+        // Apply school_id filter
+        ->whereHas('course', function($query) use ($schoolID) {
+            $query->where('school_id', $schoolID); // Filter by school_id in the course
+        })
+
+        
+        ->paginate(10)
+        ->through(function ($submittedForm) {
+            $student = $submittedForm->student;
+            $course = $submittedForm->course;
+            $categoryName = $student->higherTranscript->pluck('category.core_metaName')->first() ?? 'Unknown';
+            return [
+                "courses_id" => $submittedForm->courses_id,
+                "course_name" => $course->course_name,
+                "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
+                "category" => $categoryName,
+                "highTranscript_name" => $student->higherTranscript->pluck('highTranscript_name')->first() ?? 'N/A',
+                "cgpa" => $student->cgpa->pluck('cgpa')->first() ?? 'N/A',
+                "achievement_total" => $student->achievement->count(), // Count achievements
+                "cocurriculum_total" => $student->cocurriculum->count(), // Count cocurriculums
+                "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
+                "country_code" => $student->student_countryCode ?? 'N/A',
+                "contact_number" => $student->student_contactNo ?? 'N/A',
+                'school_id' => $course->school_id,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $studentList,
+            'total_applicants_count' => $totalApplicantsCount, // Return the total count (form_status = Pending only)
+        ]);
+    } catch (\Exception $e) {
+        // Log the error message for debugging
+        \Log::error('Error: ' . $e->getMessage());
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'errors' => $e->getMessage()
+        ], 500);
+    }
 }
+
+}
+    

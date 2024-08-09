@@ -12,9 +12,9 @@ class stp_core_meta extends Model
 {
     use HasFactory;
 
-    public function studentRole()
+    public function studentRole(): BelongsToMany
     {
-        return $this->belongsToMany(stp_student::class);
+        return $this->belongsToMany(stp_student::class, 'student_role_pivot_table', 'core_meta_id', 'student_id');
     }
 
     public function users(): HasMany

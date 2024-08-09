@@ -14,6 +14,7 @@ class stp_cocurriculum extends Model
         'club_name',
         'student_position',
         'year',
+        'cocurriculums_status',
         'updated_by',
         'created_by',
     ];

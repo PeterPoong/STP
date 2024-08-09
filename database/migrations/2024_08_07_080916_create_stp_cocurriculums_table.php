@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('club_name')->nullable();
             $table->string('student_position')->nullable();
             $table->integer('year')->nullable();
+            $table->integer('cocurriculums_status')->default('1');
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();
             $table->timestamps();

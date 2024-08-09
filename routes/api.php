@@ -90,11 +90,14 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCourses', [SchoolController::class, 'editCourse']);
     Route::post('/editCourseStatus', [SchoolController::class, 'editCourseStatus']);
     Route::post('/editSchool', [SchoolController::class, 'editSchoolDetail']);
+    Route::post('/applicantDetailList', [SchoolController::class, 'applicantDetailList']);
+
 });
 
 Route::middleware('auth:sanctum')->get('/test', [AuthController::class, 'test']);
 Route::middleware('auth:sanctum')->get('/test5', [AuthController::class, 'test']);
 Route::middleware('auth:sanctum')->get('/test6', [AdminController::class, 'studentList']);
+
 
 
 

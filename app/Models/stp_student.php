@@ -61,7 +61,7 @@ class stp_student extends Model
 
     public function achievement(): HasMany
     {
-        return $this->hasMany(stp_core_meta::class, 'student_id', 'id');
+        return $this->hasMany(stp_achievement::class, 'student_id', 'id');
     }
 
 }
