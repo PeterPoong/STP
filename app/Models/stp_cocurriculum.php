@@ -15,6 +15,7 @@ class stp_cocurriculum extends Model
         'student_position',
         'year',
         'cocurriculums_status',
+        'location',
         'updated_by',
         'created_by',
     ];

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('student_id')->nullable()->constrained('stp_students')->onDelete('set null');
             $table->string('club_name')->nullable();
             $table->string('student_position')->nullable();
+            $table->string('location')->nullable();
             $table->integer('year')->nullable();
             $table->integer('cocurriculums_status')->default('1');
             $table->integer('updated_by')->nullable();

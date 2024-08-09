@@ -430,6 +430,7 @@ class SchoolController extends Controller
                 "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
                 "country_code" => $student->student_countryCode ?? 'N/A',
                 "contact_number" => $student->student_contactNo ?? 'N/A',
+                "email" => $student->student_email ?? 'N/A',
                 'school_id' => $course->school_id,
             ];
         });
@@ -438,6 +439,97 @@ class SchoolController extends Controller
             'success' => true,
             'data' => $studentList,
             'total_applicants_count' => $totalApplicantsCount, // Return the total count (form_status = Pending only)
+        ]);
+    } catch (\Exception $e) {
+        // Log the error message for debugging
+        \Log::error('Error: ' . $e->getMessage());
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'errors' => $e->getMessage()
+        ], 500);
+    }
+}
+public function applicantDetailStudentInfo(Request $request){
+    try {
+        // Get the authenticated user
+        $authUser = Auth::user();
+        $schoolID = $authUser->id;
+        $studentID = $request->input('student_id');
+        $formStatus = $request->input('form_status');
+        // Ensure formStatus is an array
+        if (!is_array($formStatus) && $formStatus !== null) {
+            $formStatus = [$formStatus];
+        }
+        // Ensure $studentID is an array
+        if ($studentID && !is_array($studentID)) {
+            $studentID = [$studentID];
+        }
+
+        $applicantDetailStudentInfo = stp_submited_form::with([
+                'student.detail', // Relationship to student detail
+                'student.achievement', // Relationship to achievement
+                'student.cocurriculum', // Relationship to cocurriculum
+                'course' // Ensure the course relationship is loaded
+            ])
+             // Apply form_status filter if provided
+            ->when($formStatus, function($query) use ($formStatus) {
+                return $query->whereIn('form_status', $formStatus);
+            })
+            ->when($studentID, function($query) use ($studentID) {
+                return $query->whereIn('student_id', $studentID);
+            })
+            // Apply school_id filter
+            ->whereHas('course', function($query) use ($schoolID) {
+                $query->where('school_id', $schoolID); // Filter by school_id in the course
+            })
+            ->paginate(10)
+            ->through(function ($submittedForm) {
+                $student = $submittedForm->student;
+                $course = $submittedForm->course;
+
+                 // Handle achievements (multiple achievements)
+                 $achievements = $student->achievement->map(function($achievement) {
+                    return [
+                        'achievement_name' => $achievement->achievement_name,
+                        'awarded_by' => $achievement->awarded_by,
+                        'award_date' => $achievement->date,
+                        'title_obtained' => $achievement->title ? $achievement->title->core_metaName : 'N/A',
+                    ];
+                });
+
+                // Handle cocurriculars (multiple cocurriculums)
+                $cocurriculums = $student->cocurriculum->map(function($cocurriculum) {
+                    return [
+                        'club_name' => $cocurriculum->club_name,
+                        'student_position' => $cocurriculum->student_position,
+                        'join_year' => $cocurriculum->year,
+                        'club_location' => $cocurriculum->location,
+                    ];
+                });
+
+                return [
+                    "course_name" => $course->course_name,
+                    "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
+                    "achievements" => $achievements, // List of achievements
+                    "cocurriculums" => $cocurriculums, // List of cocurriculums
+                    "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
+                    "student_address" => $student->detail->student_detailaddress ?? 'N/A',
+                    "student_country" => $student->detail->country_id->country->country_name ?? 'N/A',
+                    "student_state" => $student->detail->state_id->state->state_name ?? 'N/A',
+                    "student_city" => $student->detail->city_id->city->city_name ?? 'N/A',
+                    "country_code" => $student->student_countryCode ?? 'N/A',
+                    "contact_number" => $student->student_contactNo ?? 'N/A',
+                    "email" => $student->student_email ?? 'N/A',
+                    "student_icNumber" => $student->student_icNumber ?? 'N/A',
+                    'school_id' => $course->school_id,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $applicantDetailStudentInfo
         ]);
     } catch (\Exception $e) {
         // Log the error message for debugging

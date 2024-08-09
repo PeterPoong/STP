@@ -14,6 +14,7 @@ class stp_achievement extends Model
         'student_id',
         'achievement_name',
         'title_obtained',
+        'awarded_by',
         'achievement_media',
         'date',
         'achivements_status',
