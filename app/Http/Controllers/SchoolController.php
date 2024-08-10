@@ -348,136 +348,144 @@ class SchoolController extends Controller
 
         }
     }
-    
     public function applicantDetailRelatedDocument(Request $request)
-{
-    try {
-        // Get the authenticated user
-        $authUser = Auth::user();
-        $schoolID = $authUser->id;
-
-        // Validate request inputs
-        $request->validate([
-            'search' => 'string|nullable',
-            'category' => 'integer|nullable',
-            'form_status' => 'integer|nullable',
-            'student_id' => 'integer|nullable',
-            'date' => 'date|nullable' // timestamp
-        ]);
-
-        // Fetch basic information
-        $studentInfoQuery = stp_submited_form::with('student', 'course')
-            ->whereHas('course', function ($query) use ($schoolID) {
-                $query->where('school_id', $schoolID);
-            })
-            ->when($request->filled('student_id'), function ($query) use ($request) {
-                $query->where('student_id', $request->student_id);
-            })
-            ->when($request->filled('form_status'), function ($query) use ($request) {
-                $query->where('form_status', $request->form_status);
-            });
-
-        // Execute the query for basic info
-        $studentInfo = $studentInfoQuery->get();
-
-        // Fetch media and achievement details
-        $studentIds = $studentInfo->pluck('student_id')->toArray();
-
-        $mediaListQuery = stp_student_media::whereIn('student_id', $studentIds)
-            ->when($request->filled('category'), function ($query) use ($request) {
-                $query->where('studentMedia_type', $request->category);
-            })
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('studentMedia_name', 'like', '%' . $request->search . '%');
-            });
-
-        $mediaList = $mediaListQuery->get();
-
-        $achievementsQuery = stp_achievement::whereIn('student_id', $studentIds)
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('achievement_name', 'like', '%' . $request->search . '%');
-            });
-
-        $achievements = $achievementsQuery->get();
-
-        // Format the student info
-        $formattedStudentInfo = $studentInfo->map(function ($submittedForm) {
-            $student = $submittedForm->student;
-            $course = $submittedForm->course;
-
-            return [
-                "courses_id" => $course->id ?? 'N/A',
-                "course_name" => $course->course_name ?? 'N/A',
-                "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
-                "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
-                "country_code" => $student->student_countryCode ?? 'N/A',
-                "contact_number" => $student->student_contactNo ?? 'N/A',
-                'school_id' => $course->school_id ?? 'N/A',
-                'student_id' => $student->id ?? 'N/A', // Add student_id to the result
-            ];
-        });
-
-        // Format the media list
-        $formattedMediaList = $mediaList->map(function ($media) {
-            return [
-                'student_id' => $media->student_id ?? 'N/A',
-                'studentMedia_name' => $media->studentMedia_name,
-                'studentMedia_location' => $media->studentMedia_location,
-                'studentMedia_type_id' => $media->studentMedia_type, // Return the ID
-            ];
-        });
-
-        // Format the achievements
-        $formattedAchievements = $achievements->map(function ($achievement) {
-            return [
-                'student_id' => $achievement->student_id ?? 'N/A',
-                'achievement_name' => $achievement->achievement_name,
-                'achievement_media' => $achievement->achievement_media,
-            ];
-        });
-
-        // Combine student info and media list
-        $combinedResults = $formattedStudentInfo->map(function ($info) use ($formattedMediaList, $formattedAchievements) {
-            // Filter media and achievements for this student
-            $mediaDetails = $formattedMediaList->filter(function ($media) use ($info) {
-                return $media['student_id'] == $info['student_id'];
-            });
-
-            $achievementDetails = $formattedAchievements->filter(function ($achievement) use ($info) {
-                return $achievement['student_id'] == $info['student_id'];
-            });
-
-            // Calculate total count (media + achievements)
-            $totalCount = $mediaDetails->count() + $achievementDetails->count();
-
-            // Format the achievements into strings
-            $achievementName = $achievementDetails->pluck('achievement_name')->implode(', ');
-            $achievementMedia = $achievementDetails->pluck('achievement_media')->implode(', ');
-
-            return array_merge($info, [
-                "media_total" => $totalCount, // Total count of both media and achievements
-                "studentMedia_details" => $mediaDetails->isNotEmpty() ? $mediaDetails : null,
-                "achievement_name" => $achievementName ?: null,
-                "achievement_media" => $achievementMedia ?: null,
+    {
+        try {
+            // Get the authenticated user
+            $authUser = Auth::user();
+            $schoolID = $authUser->id;
+    
+            // Validate request inputs
+            $request->validate([
+                'search' => 'string|nullable',
+                'category' => 'integer|nullable',
+                'form_status' => 'integer|nullable',
+                'student_id' => 'integer|nullable',
+                'date' => 'date|nullable' // timestamp
             ]);
-        });
-
-        // Return response
-        return response()->json([
-            'success' => true,
-            'data' => $combinedResults
-        ]);
-    } catch (\Exception $e) {
-        // Log the error message for debugging
-        \Log::error('Error: ' . $e->getMessage());
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'errors' => $e->getMessage()
-        ], 500);
+    
+            // Fetch basic information
+            $studentInfoQuery = stp_submited_form::with('student', 'course')
+                ->whereHas('course', function ($query) use ($schoolID) {
+                    $query->where('school_id', $schoolID);
+                })
+                ->when($request->filled('student_id'), function ($query) use ($request) {
+                    $query->where('student_id', $request->student_id);
+                })
+                ->when($request->filled('form_status'), function ($query) use ($request) {
+                    $query->where('form_status', $request->form_status);
+                });
+    
+            // Execute the query for basic info
+            $studentInfo = $studentInfoQuery->get();
+    
+            // Fetch media details
+            $studentIds = $studentInfo->pluck('student_id')->toArray();
+    
+            $mediaListQuery = stp_student_media::whereIn('student_id', $studentIds)
+                ->when($request->filled('category'), function ($query) use ($request) {
+                    $query->where('studentMedia_type', $request->category);
+                })
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('studentMedia_name', 'like', '%' . $request->search . '%');
+                });
+    
+            $mediaList = $mediaListQuery->get();
+    
+            // Fetch achievements
+            $achievementsQuery = stp_achievement::whereIn('student_id', $studentIds)
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('achievement_name', 'like', '%' . $request->search . '%');
+                });
+    
+            $achievements = $achievementsQuery->get();
+    
+            // Format the student info
+            $formattedStudentInfo = $studentInfo->map(function ($submittedForm) {
+                $student = $submittedForm->student;
+                $course = $submittedForm->course;
+    
+                return [
+                    "courses_id" => $course->id ?? 'N/A',
+                    "course_name" => $course->course_name ?? 'N/A',
+                    "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
+                    "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
+                    "country_code" => $student->student_countryCode ?? 'N/A',
+                    "contact_number" => $student->student_contactNo ?? 'N/A',
+                    'school_id' => $course->school_id ?? 'N/A',
+                    'student_id' => $student->id ?? 'N/A', // Add student_id to the result
+                ];
+            });
+    
+            // Format the media list
+            $formattedMediaList = $mediaList->map(function ($media) {
+                return [
+                    'student_id' => $media->student_id ?? 'N/A',
+                    'studentMedia_name' => $media->studentMedia_name,
+                    'studentMedia_location' => $media->studentMedia_location,
+                    'studentMedia_type_id' => $media->studentMedia_type, // Return the ID
+                ];
+            });
+    
+            // Format the achievements
+            $formattedAchievements = $achievements->map(function ($achievement) {
+                return [
+                    'student_id' => $achievement->student_id ?? 'N/A',
+                    'achievement_name' => $achievement->achievement_name,
+                    'achievement_media' => $achievement->achievement_media,
+                ];
+            });
+    
+            // Combine student info and media list
+            $combinedResults = $formattedStudentInfo->map(function ($info) use ($formattedMediaList, $formattedAchievements, $request) {
+                // Filter media and achievements for this student
+                $mediaDetails = $formattedMediaList->filter(function ($media) use ($info) {
+                    return $media['student_id'] == $info['student_id'];
+                });
+    
+                $achievementDetails = $formattedAchievements->filter(function ($achievement) use ($info) {
+                    return $achievement['student_id'] == $info['student_id'];
+                });
+    
+                // Calculate total count (media + achievements)
+                $totalCount = $mediaDetails->count() + $achievementDetails->count();
+    
+                // Format the achievements into strings
+                $achievementName = $achievementDetails->pluck('achievement_name')->implode(', ');
+                $achievementMedia = $achievementDetails->pluck('achievement_media')->implode(', ');
+    
+                // Nullify achievements if category filter is applied
+                if ($request->filled('category')) {
+                    $achievementName = null;
+                    $achievementMedia = null;
+                }
+    
+                return array_merge($info, [
+                    "media_total" => $totalCount, // Total count of both media and achievements
+                    "studentMedia_details" => $mediaDetails->isNotEmpty() ? $mediaDetails : null,
+                    "achievement_name" => $achievementName,
+                    "achievement_media" => $achievementMedia,
+                ]);
+            });
+    
+            // Return response
+            return response()->json([
+                'success' => true,
+                'data' => $combinedResults
+            ]);
+        } catch (\Exception $e) {
+            // Log the error message for debugging
+            \Log::error('Error: ' . $e->getMessage());
+    
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
     }
-}
+    
+    
     
 }
 
