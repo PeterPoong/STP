@@ -64,4 +64,8 @@ class stp_student extends Model
         return $this->hasMany(stp_achievement::class, 'student_id', 'id');
     }
 
+    public function studentMedia(): HasMany
+    {
+        return $this->hasMany(stp_student_media::class, 'student_id', 'id');
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\stp_city;
+use App\Models\stp_transcript;
 use Illuminate\Http\Request;
 use App\Models\stp_student;
 use App\Models\stp_country;
@@ -10,6 +11,8 @@ use App\Models\stp_course;
 use App\Models\stp_course_tag;
 use App\Models\stp_courses_category;
 use App\Models\stp_submited_form;
+use App\Models\stp_achievement;
+use App\Models\stp_student_media;
 use Illuminate\Support\Facades\DB;
 use App\Models\stp_featured;
 use App\Models\stp_school;
@@ -279,10 +282,10 @@ class SchoolController extends Controller
                 ]);
             }
         
-        $checkingUserContact = stp_school::where('school_countryCode', $request->country_code)
-        ->where('school_contactNo', $request->contact_number)
-        ->where('id', '!=', $request->id)
-        ->exists();
+            $checkingUserContact = stp_school::where('school_countryCode', $request->countryCode)
+            ->where('school_contactNo', $request->contact)
+            ->where('id', '!=', $request->id)
+            ->exists();
 
             if ($checkingUserContact) {
                 throw ValidationException::withMessages([
@@ -345,191 +348,124 @@ class SchoolController extends Controller
 
         }
     }
-
-    public function applicantDetailList(Request $request)
+    
+    public function applicantDetailRelatedDocument(Request $request)
 {
     try {
         // Get the authenticated user
         $authUser = Auth::user();
         $schoolID = $authUser->id;
 
-        // Log the school ID for debugging
-        \Log::info('School ID: ' . $schoolID);
-        $formStatus = $request->input('form_status');
-        $category = $request->input('category_id');
-        $courseApplied = $request->input('courses_id');
-        $searchTerm = $request->input('search');
-         // Ensure formStatus is an array
-         if (!is_array($formStatus) && $formStatus !== null) {
-            $formStatus = [$formStatus];
-        }
+        // Validate request inputs
+        $request->validate([
+            'search' => 'string|nullable',
+            'category' => 'integer|nullable',
+            'form_status' => 'integer|nullable',
+            'student_id' => 'integer|nullable',
+            'date' => 'date|nullable' // timestamp
+        ]);
 
-        // Ensure category is an array
-        if (!is_array($category) && $category !== null) {
-            $category = [$category];
-        }
-
-         // Ensure category is an array
-         if (!is_array($courseApplied) && $courseApplied !== null) {
-            $courseApplied = [$courseApplied];
-        }
-        // Get the total count of applicants for the school form status pending
-        $totalApplicantsCount = stp_submited_form::where('form_status', 2)
-        ->whereHas('course', function($query) use ($schoolID) {
-            $query->where('school_id', $schoolID);
-        })
-        ->count();
-        $studentList = stp_submited_form::with([
-            'student.detail', // Relationship to student detail
-            'student.higherTranscript', // Relationship to higherTranscript
-            'student.cgpa', // Relationship to cgpa
-            'student.achievement', // Relationship to achievement
-            'student.cocurriculum', // Relationship to cocurriculum
-            'course' // Ensure the course relationship is loaded
-        ])
-          // Apply form_status filter if provided
-          ->when($formStatus, function($query) use ($formStatus) {
-            return $query->whereIn('form_status', $formStatus);
-        })
-        // Apply category_id filter if provided
-        ->when($category, function($query) use ($category) {
-            return $query->whereHas('student.higherTranscript', function($query) use ($category) {
-                return $query->whereIn('category_id', $category);
+        // Fetch basic information
+        $studentInfoQuery = stp_submited_form::with('student', 'course')
+            ->whereHas('course', function ($query) use ($schoolID) {
+                $query->where('school_id', $schoolID);
+            })
+            ->when($request->filled('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->when($request->filled('form_status'), function ($query) use ($request) {
+                $query->where('form_status', $request->form_status);
             });
-        })
-        // Apply courses_id filter if provided
-        ->when($courseApplied, function($query) use ($courseApplied) {
-            return $query->whereIn('courses_id', $courseApplied);
-        })
-        // Apply search filter if provided
-        ->when($request->filled('search'), function($query) use ($searchTerm) {
-            return $query->whereHas('student.detail', function($query) use ($searchTerm) {
-                $query->where(DB::raw("CONCAT(student_detailFirstName, ' ', student_detailLastName)"), 'like', '%' . $searchTerm . '%');
-            });
-        })
-        // Apply school_id filter
-        ->whereHas('course', function($query) use ($schoolID) {
-            $query->where('school_id', $schoolID); // Filter by school_id in the course
-        })
 
-        
-        ->paginate(10)
-        ->through(function ($submittedForm) {
+        // Execute the query for basic info
+        $studentInfo = $studentInfoQuery->get();
+
+        // Fetch media and achievement details
+        $studentIds = $studentInfo->pluck('student_id')->toArray();
+
+        $mediaListQuery = stp_student_media::whereIn('student_id', $studentIds)
+            ->when($request->filled('category'), function ($query) use ($request) {
+                $query->where('studentMedia_type', $request->category);
+            })
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $query->where('studentMedia_name', 'like', '%' . $request->search . '%');
+            });
+
+        $mediaList = $mediaListQuery->get();
+
+        $achievementsQuery = stp_achievement::whereIn('student_id', $studentIds)
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $query->where('achievement_name', 'like', '%' . $request->search . '%');
+            });
+
+        $achievements = $achievementsQuery->get();
+
+        // Format the student info
+        $formattedStudentInfo = $studentInfo->map(function ($submittedForm) {
             $student = $submittedForm->student;
             $course = $submittedForm->course;
-            $categoryName = $student->higherTranscript->pluck('category.core_metaName')->first() ?? 'Unknown';
+
             return [
-                "courses_id" => $submittedForm->courses_id,
-                "course_name" => $course->course_name,
+                "courses_id" => $course->id ?? 'N/A',
+                "course_name" => $course->course_name ?? 'N/A',
                 "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
-                "category" => $categoryName,
-                "highTranscript_name" => $student->higherTranscript->pluck('highTranscript_name')->first() ?? 'N/A',
-                "cgpa" => $student->cgpa->pluck('cgpa')->first() ?? 'N/A',
-                "achievement_total" => $student->achievement->count(), // Count achievements
-                "cocurriculum_total" => $student->cocurriculum->count(), // Count cocurriculums
                 "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
                 "country_code" => $student->student_countryCode ?? 'N/A',
                 "contact_number" => $student->student_contactNo ?? 'N/A',
-                "email" => $student->student_email ?? 'N/A',
-                'school_id' => $course->school_id,
+                'school_id' => $course->school_id ?? 'N/A',
+                'student_id' => $student->id ?? 'N/A', // Add student_id to the result
             ];
         });
 
-        return response()->json([
-            'success' => true,
-            'data' => $studentList,
-            'total_applicants_count' => $totalApplicantsCount, // Return the total count (form_status = Pending only)
-        ]);
-    } catch (\Exception $e) {
-        // Log the error message for debugging
-        \Log::error('Error: ' . $e->getMessage());
+        // Format the media list
+        $formattedMediaList = $mediaList->map(function ($media) {
+            return [
+                'student_id' => $media->student_id ?? 'N/A',
+                'studentMedia_name' => $media->studentMedia_name,
+                'studentMedia_location' => $media->studentMedia_location,
+                'studentMedia_type_id' => $media->studentMedia_type, // Return the ID
+            ];
+        });
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'errors' => $e->getMessage()
-        ], 500);
-    }
-}
-public function applicantDetailStudentInfo(Request $request){
-    try {
-        // Get the authenticated user
-        $authUser = Auth::user();
-        $schoolID = $authUser->id;
-        $studentID = $request->input('student_id');
-        $formStatus = $request->input('form_status');
-        // Ensure formStatus is an array
-        if (!is_array($formStatus) && $formStatus !== null) {
-            $formStatus = [$formStatus];
-        }
-        // Ensure $studentID is an array
-        if ($studentID && !is_array($studentID)) {
-            $studentID = [$studentID];
-        }
+        // Format the achievements
+        $formattedAchievements = $achievements->map(function ($achievement) {
+            return [
+                'student_id' => $achievement->student_id ?? 'N/A',
+                'achievement_name' => $achievement->achievement_name,
+                'achievement_media' => $achievement->achievement_media,
+            ];
+        });
 
-        $applicantDetailStudentInfo = stp_submited_form::with([
-                'student.detail', // Relationship to student detail
-                'student.achievement', // Relationship to achievement
-                'student.cocurriculum', // Relationship to cocurriculum
-                'course' // Ensure the course relationship is loaded
-            ])
-             // Apply form_status filter if provided
-            ->when($formStatus, function($query) use ($formStatus) {
-                return $query->whereIn('form_status', $formStatus);
-            })
-            ->when($studentID, function($query) use ($studentID) {
-                return $query->whereIn('student_id', $studentID);
-            })
-            // Apply school_id filter
-            ->whereHas('course', function($query) use ($schoolID) {
-                $query->where('school_id', $schoolID); // Filter by school_id in the course
-            })
-            ->paginate(10)
-            ->through(function ($submittedForm) {
-                $student = $submittedForm->student;
-                $course = $submittedForm->course;
-
-                 // Handle achievements (multiple achievements)
-                 $achievements = $student->achievement->map(function($achievement) {
-                    return [
-                        'achievement_name' => $achievement->achievement_name,
-                        'awarded_by' => $achievement->awarded_by,
-                        'award_date' => $achievement->date,
-                        'title_obtained' => $achievement->title ? $achievement->title->core_metaName : 'N/A',
-                    ];
-                });
-
-                // Handle cocurriculars (multiple cocurriculums)
-                $cocurriculums = $student->cocurriculum->map(function($cocurriculum) {
-                    return [
-                        'club_name' => $cocurriculum->club_name,
-                        'student_position' => $cocurriculum->student_position,
-                        'join_year' => $cocurriculum->year,
-                        'club_location' => $cocurriculum->location,
-                    ];
-                });
-
-                return [
-                    "course_name" => $course->course_name,
-                    "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
-                    "achievements" => $achievements, // List of achievements
-                    "cocurriculums" => $cocurriculums, // List of cocurriculums
-                    "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
-                    "student_address" => $student->detail->student_detailaddress ?? 'N/A',
-                    "student_country" => $student->detail->country_id->country->country_name ?? 'N/A',
-                    "student_state" => $student->detail->state_id->state->state_name ?? 'N/A',
-                    "student_city" => $student->detail->city_id->city->city_name ?? 'N/A',
-                    "country_code" => $student->student_countryCode ?? 'N/A',
-                    "contact_number" => $student->student_contactNo ?? 'N/A',
-                    "email" => $student->student_email ?? 'N/A',
-                    "student_icNumber" => $student->student_icNumber ?? 'N/A',
-                    'school_id' => $course->school_id,
-                ];
+        // Combine student info and media list
+        $combinedResults = $formattedStudentInfo->map(function ($info) use ($formattedMediaList, $formattedAchievements) {
+            // Filter media and achievements for this student
+            $mediaDetails = $formattedMediaList->filter(function ($media) use ($info) {
+                return $media['student_id'] == $info['student_id'];
             });
 
+            $achievementDetails = $formattedAchievements->filter(function ($achievement) use ($info) {
+                return $achievement['student_id'] == $info['student_id'];
+            });
+
+            // Calculate total count (media + achievements)
+            $totalCount = $mediaDetails->count() + $achievementDetails->count();
+
+            // Format the achievements into strings
+            $achievementName = $achievementDetails->pluck('achievement_name')->implode(', ');
+            $achievementMedia = $achievementDetails->pluck('achievement_media')->implode(', ');
+
+            return array_merge($info, [
+                "media_total" => $totalCount, // Total count of both media and achievements
+                "studentMedia_details" => $mediaDetails->isNotEmpty() ? $mediaDetails : null,
+                "achievement_name" => $achievementName ?: null,
+                "achievement_media" => $achievementMedia ?: null,
+            ]);
+        });
+
+        // Return response
         return response()->json([
             'success' => true,
-            'data' => $applicantDetailStudentInfo
+            'data' => $combinedResults
         ]);
     } catch (\Exception $e) {
         // Log the error message for debugging
@@ -542,6 +478,8 @@ public function applicantDetailStudentInfo(Request $request){
         ], 500);
     }
 }
-
+    
 }
+
+
     
