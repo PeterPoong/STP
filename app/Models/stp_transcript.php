@@ -37,6 +37,6 @@ class stp_transcript extends Model
 
     public function student():BelongsTo
     {
-        return $this->belongsTo(stp_student::class, 'id', 'student_id');
+        return $this->belongsTo(stp_student::class, 'student_id', 'id');
     }
 }

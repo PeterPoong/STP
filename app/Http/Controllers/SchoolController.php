@@ -577,7 +577,89 @@ public function applicantDetailAchievement(Request $request)   //Cocurriculum li
         ]);
     }
 }
-public function applicantDetailAcademic(Request $request)   //Cocurriculum list for the applicant
+public function applicantDetailAcademic(Request $request) //Academic list for the applicant
+{
+    try {
+        // Get the authenticated user
+        $authUser = Auth::user();
+        $schoolID = $authUser->id;
+
+        $request->validate([
+            'student_id' => 'integer|nullable',
+            'category' => 'integer|nullable'
+        ]);
+
+        // Select unique student_ids from stp_submited_form
+        $uniqueStudents = stp_submited_form::with(['student.transcript.subject', 'course'])
+            ->whereHas('course', function ($query) use ($schoolID) {
+                $query->where('school_id', $schoolID);
+            })
+            ->whereHas('student.transcript', function ($query) {
+                $query->where('transcript_status', 1);
+            })
+            ->when($request->filled('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->select('student_id')
+            ->distinct()
+            ->get()
+            ->map(function ($form) use ($request) {
+                $student = $form->student;
+                $course = $form->course;
+
+                // Filter transcripts by category if the category is provided
+                $transcripts = $student->transcript->filter(function ($transcript) use ($request) {
+                    return !$request->filled('category') || $transcript->transcript_category == $request->category;
+                })->map(function ($transcript) {
+                    return [
+                        'subject_name' => $transcript->subject->subject_name,
+                        'grade' => $transcript->grade->core_metaName ?? '',
+                        'category' => $transcript->category->core_metaName ?? '',
+                        'grade_id' => $transcript->transcript_grade, // Store grade id for sorting
+                    ];
+                });
+
+              /// Count the grades and sort them by the grade's stp_core_meta id
+              $gradeCounts = $transcripts->groupBy('grade_id')->map(function ($group, $gradeId) {
+                $gradeName = $group->first()['grade'];
+                return count($group) . $gradeName;
+            });
+
+            // Sort the grade counts by grade_id (which corresponds to stp_core_meta id)
+            $sortedGradeCounts = $gradeCounts->sortKeys()->all();
+
+                return [
+                    'transcripts' => $transcripts,
+                     'count_grade' => $sortedGradeCounts, // Sorted by grade_id (stp_core_meta id)
+                    'school_id' => $course->school_id ?? '',
+                    'student_id' => $student->id ?? '',
+                ];
+            });
+            
+            
+
+        // Paginate the results
+        $paginatedResults = new \Illuminate\Pagination\LengthAwarePaginator(
+            $uniqueStudents->forPage($request->page ?? 1, 10),
+            $uniqueStudents->count(),
+            10,
+            $request->page ?? 1,
+            ['path' => url()->current()]
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $paginatedResults
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+public function applicantResultSlip(Request $request)   //Result slip display for the applicant
 {
     try {
         // Get the authenticated user
@@ -590,15 +672,12 @@ public function applicantDetailAcademic(Request $request)   //Cocurriculum list 
         ]);
 
         // Select unique student_ids from stp_submited_form
-        $uniqueStudents = stp_submited_form::with(['student.transcript','student.transcript.subject','course'])
+        $uniqueStudents = stp_submited_form::with(['student.studentMedia', 'course'])
             ->whereHas('course', function ($query) use ($schoolID) {
                 $query->where('school_id', $schoolID);
             })
-            ->whereHas('student.transcript', function ($query) {
-                $query->where('stp_status', 1);
-            })
-            ->when($request->filled('category'), function ($query) use ($request) {
-                $query->where('transcript_category', $request->category);
+            ->whereHas('student.studentMedia', function ($query) {
+                $query->where('studentMedia_status', 1);
             })
             ->when($request->filled('student_id'), function ($query) use ($request) {
                 $query->where('student_id', $request->student_id);
@@ -606,20 +685,21 @@ public function applicantDetailAcademic(Request $request)   //Cocurriculum list 
             ->select('student_id')
             ->distinct() // Ensure each student_id is unique
             ->get()
-            ->map(function ($form) {
+            ->map(function ($form) use ($request) {
                 $student = $form->student;
                 $course = $form->course;
 
-                $transcripts = $student->transcript->map(function ($transcript) {
+                $studentMedias = $student->studentMedia->filter(function ($studentMedia) use ($request) {
+                    return !$request->filled('category') || $studentMedia->studentMedia_type == $request->category;
+                })->map(function ($studentMedia) {
                     return [
-                        'subject_name' => $transcript->subject->subject_name,
-                        'grade' => $transcript->core_metaName ?? '',
-                        'category' => $transcript->core_metaName ?? '',
+                        'studentMedia_name' => $studentMedia->studentMedia_name ?? '',
+                        'location' => $studentMedia->studentMedia_location ?? '',
                     ];
                 });
 
                 return [
-                    'transcripts' => $transcripts,
+                    'certificates' => $studentMedias,
                     'school_id' => $course->school_id ?? '',
                     'student_id' => $student->id ?? '',
                 ];
@@ -646,6 +726,7 @@ public function applicantDetailAcademic(Request $request)   //Cocurriculum list 
         ]);
     }
 }
+
     public function applicantDetailRelatedDocument(Request $request)
     {
         try {
@@ -783,7 +864,53 @@ public function applicantDetailAcademic(Request $request)   //Cocurriculum list 
         }
     }
     
-  
+    public function editAplicantStatus(Request $request)
+    {
+        try{
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string|max:255',
+                'feedback'=>'string|max:255'
+            ]);
+            $authUser = Auth::user();
+
+            if ($request->type == 'Rejected') {
+                $status = 3;
+                $message = "Successfully Rejected the Applicant";
+            } else {
+                $status = 4;
+                $message = "Successfully Accepted the Applicant";
+            }
+
+            $applicant = stp_submited_form::find($request->id);
+
+            $applicant->update([
+                'form_status' => $status,
+                'feedback' => $request->feedback,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => $message]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+
+        }
+    }
+
     
     
 }

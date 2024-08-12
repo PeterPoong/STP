@@ -18,11 +18,7 @@ class stp_subject extends Model
         'created_by'
     ];
 
-    public function country()
-    {
-        return $this->hasOne(stp_country::class, 'id', 'country_id');
-    }
-
+   
 
     public function category()
     {
