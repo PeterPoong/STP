@@ -577,7 +577,75 @@ public function applicantDetailAchievement(Request $request)   //Cocurriculum li
         ]);
     }
 }
-   
+public function applicantDetailAcademic(Request $request)   //Cocurriculum list for the applicant
+{
+    try {
+        // Get the authenticated user
+        $authUser = Auth::user();
+        $schoolID = $authUser->id;
+        
+        $request->validate([
+            'student_id' => 'integer|nullable',
+            'category' => 'integer|nullable'
+        ]);
+
+        // Select unique student_ids from stp_submited_form
+        $uniqueStudents = stp_submited_form::with(['student.transcript','student.transcript.subject','course'])
+            ->whereHas('course', function ($query) use ($schoolID) {
+                $query->where('school_id', $schoolID);
+            })
+            ->whereHas('student.transcript', function ($query) {
+                $query->where('stp_status', 1);
+            })
+            ->when($request->filled('category'), function ($query) use ($request) {
+                $query->where('transcript_category', $request->category);
+            })
+            ->when($request->filled('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->select('student_id')
+            ->distinct() // Ensure each student_id is unique
+            ->get()
+            ->map(function ($form) {
+                $student = $form->student;
+                $course = $form->course;
+
+                $transcripts = $student->transcript->map(function ($transcript) {
+                    return [
+                        'subject_name' => $transcript->subject->subject_name,
+                        'grade' => $transcript->core_metaName ?? '',
+                        'category' => $transcript->core_metaName ?? '',
+                    ];
+                });
+
+                return [
+                    'transcripts' => $transcripts,
+                    'school_id' => $course->school_id ?? '',
+                    'student_id' => $student->id ?? '',
+                ];
+            });
+
+        // Paginate the results
+        $paginatedResults = new \Illuminate\Pagination\LengthAwarePaginator(
+            $uniqueStudents->forPage($request->page ?? 1, 10),
+            $uniqueStudents->count(),
+            10,
+            $request->page ?? 1,
+            ['path' => url()->current()]
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $paginatedResults
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ]);
+    }
+}
     public function applicantDetailRelatedDocument(Request $request)
     {
         try {

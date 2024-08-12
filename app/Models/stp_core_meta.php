@@ -64,7 +64,12 @@ class stp_core_meta extends Model
 
     public function transcript()
     {
-        return $this->belongsToMany(stp_transcript::class);
+        return $this->belongsToMany(stp_transcript::class, 'transcript_category', 'id');
+    }
+
+    public function subjectCategory(): HasMany
+    {
+        return $this->hasMany(stp_subject::class, 'subject_category', 'id');
     }
 
     public function schoolInstitueCategory(): HasMany
@@ -86,6 +91,12 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_higher_transcript::class, 'higherTranscript_grade', 'id');
     }
+
+    public function transcriptGrade(): HasMany
+    {
+        return $this->hasMany(stp_transcript::class, 'transcript_grade', 'id');
+    }
+
 
     public function cgpa(): HasMany
     {

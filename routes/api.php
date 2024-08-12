@@ -94,6 +94,7 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/applicantDetailInfo', [SchoolController::class, 'applicantDetailInfo']);
     Route::post('/applicantDetailCocurriculum', [SchoolController::class, 'applicantDetailCocurriculum']);
     Route::post('/applicantDetailAchievement', [SchoolController::class, 'applicantDetailAchievement']);
+    Route::post('/applicantDetailAcademic', [SchoolController::class, 'applicantDetailAcademic']);
     Route::post('/applicantDetailRelatedDocument', [SchoolController::class, 'applicantDetailRelatedDocument']);
 
 });

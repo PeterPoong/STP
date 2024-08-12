@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class stp_subject extends Model
 {
@@ -22,8 +23,14 @@ class stp_subject extends Model
         return $this->hasOne(stp_country::class, 'id', 'country_id');
     }
 
-    public function transcript()
+
+    public function category()
     {
-        return $this->belongsToMany(stp_transcript::class);
+        return $this->hasOne(stp_core_meta::class, 'id ', 'subject_category');
+    }
+
+    public function transcripts():HasMany
+    {
+        return $this->hasMany(stp_transcript::class, 'subject_id', 'id');
     }
 }
