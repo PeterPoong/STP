@@ -19,8 +19,9 @@ use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
-use App\Rules\UniqueInArray;
+use Illuminate\Support\Facades\Storage;
 
+use App\Rules\UniqueInArray;
 use Exception;
 
 class studentController extends Controller
@@ -28,7 +29,7 @@ class studentController extends Controller
     public function schoolList(Request $request)
     {
         try {
-            $schoolList = stp_school::where('school_status', 1)
+            $getSchoolList = stp_school::where('school_status', 1)
                 ->when($request->filled('category'), function ($query) use ($request) {
                     $query->orWhere('institue_category', $request->category);
                 })
@@ -41,19 +42,35 @@ class studentController extends Controller
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('school_name', 'like', '%' . $request->search . '%');
                 })
-                ->paginate(10)
-                ->through(function ($school) {
-                    return [
-                        'id' => $school->id,
-                        'name' => $school->school_name,
-                        'category' => $school->institueCategory->core_metaName ?? null,
-                        'logo' => $school->school_logo,
-                        'country' => $school->country->country_name ?? null,
-                        'state' => $school->state->state_name ?? null,
-                        'city' => $school->city->city_name ?? null,
-                        'description' => $school->school_shortDesc
-                    ];
-                });
+                ->paginate(10);
+
+
+            foreach ($getSchoolList as $school) {
+
+                $featured = false;
+                foreach ($school->featured as $s) {
+                    if ($s['featured_type'] == 30 && $s['featured_status'] == 1) {
+                        $featured = true;
+                        break;
+                    }
+                }
+                $schoolList[] = [
+                    'id' => $school->id,
+                    'name' => $school->school_name,
+                    'category' => $school->institueCategory->core_metaName ?? null,
+                    'logo' => $school->school_logo,
+                    'featured' => $featured,
+                    'country' => $school->country->country_name ?? null,
+                    'state' => $school->state->state_name ?? null,
+                    'city' => $school->city->city_name ?? null,
+                    'description' => $school->school_shortDesc
+                ];
+            }
+
+            usort($schoolList, function ($a, $b) {
+                return $b['featured'] <=> $a['featured'];
+            });
+
             return response()->json([
                 'success' => true,
                 'data' => $schoolList
@@ -62,7 +79,7 @@ class studentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Sever Error',
-                'error' => $e
+                'error' => $e->getMessage()
             ]);
         }
     }
@@ -99,7 +116,6 @@ class studentController extends Controller
         }
     }
 
-
     public function hpFeaturedCoursesList(Request $request)
     {
         try {
@@ -107,20 +123,23 @@ class studentController extends Controller
             // return $test->courses->qualification;
             // return stp_featured::whereNotNull('course_id')->get();
 
-            $hpFeaturedCoursesList = stp_featured::whereNotNull('course_id')->get()->map(function ($courses) {
-                if (empty($courses->courses->course_logo)) {
-                    $logo = $courses->courses->school->school_logo;
-                } else {
-                    $logo = $courses->courses->course_logo;
-                }
-                return [
-                    "course_name" => $courses->courses->course_name,
-                    "course_logo" => $logo,
-                    "course_qualification" => $courses->courses->qualification->qualification_name,
-                    'course_school' => $courses->courses->school->school_name,
-                    'location' => $courses->courses->school->city->city_name,
-                ];
-            });
+            $hpFeaturedCoursesList = stp_featured::whereNotNull('course_id')
+                ->where('featured_type', 29)
+                ->where('featured_status', 1)
+                ->get()->map(function ($courses) {
+                    if (empty($courses->courses->course_logo)) {
+                        $logo = $courses->courses->school->school_logo;
+                    } else {
+                        $logo = $courses->courses->course_logo;
+                    }
+                    return [
+                        "course_name" => $courses->courses->course_name,
+                        "course_logo" => $logo,
+                        "course_qualification" => $courses->courses->qualification->qualification_name,
+                        'course_school' => $courses->courses->school->school_name,
+                        'location' => $courses->courses->school->city->city_name,
+                    ];
+                });
 
             return response()->json([
                 'success' => true,
@@ -154,8 +173,6 @@ class studentController extends Controller
 
     public function courseList(Request $request)
     {
-        // $test = stp_course::find(1);
-        // return $test->school;
         try {
             $request->validate([
                 'search' => 'string',
@@ -183,7 +200,7 @@ class studentController extends Controller
                 })
                 ->paginate(10);
 
-            $cousesList = [];
+
 
             foreach ($getCourses as $course) {
                 if (empty($course->course_logo)) {
@@ -191,6 +208,16 @@ class studentController extends Controller
                 } else {
                     $logo = $course->course_logo;
                 }
+
+                $featured = false;
+                foreach ($course->featured as $c) {
+
+                    if ($c['featured_type'] == 30 && $c['featured_status'] == 1) {
+                        $featured = true;
+                        break;
+                    }
+                }
+                // $coursesList = [];
                 $coursesList[] = [
                     'id' => $course->id,
                     'school_id' => $course->school->school_name,
@@ -198,6 +225,7 @@ class studentController extends Controller
                     'description' => $course->course_description,
                     'requirement' => $course->course_requirement,
                     'cost' => $course->course_cost,
+                    'featured' => $featured,
                     'period' => $course->course_period,
                     'intake' => $course->course_intake,
                     'category' => $course->category->category_name,
@@ -206,6 +234,10 @@ class studentController extends Controller
                     'logo' => $logo,
                 ];
             }
+
+            usort($coursesList, function ($a, $b) {
+                return $b['featured'] <=> $a['featured'];
+            });
 
             return response()->json([
                 'success' => true,
@@ -228,6 +260,7 @@ class studentController extends Controller
             ]);
             $student = stp_student::find($request->id);
             // return $student->detail;
+
             $stduentDetail = [
                 'id' => $student->id,
                 'username' => $student->student_userName,
@@ -237,6 +270,7 @@ class studentController extends Controller
                 'email' => $student->student_email,
                 'contact' => $student->student_countryCode . $student->student_contactNo,
                 'profilePic' => $student->student_proilePic,
+                'gender' => $student->detail->studentGender->core_metaName,
                 'address' => $student->detail->student_detailAddress,
                 'country' => $student->detail->country->country_name,
                 'state' => $student->detail->state->state_name,
@@ -773,6 +807,156 @@ class studentController extends Controller
                 'message' => 'Internal Server Error',
                 'errors' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function editStudent(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string|max:255',
+                'firt_name' => 'string|max:255',
+                'last_name' => 'string|max:255',
+                'address' => 'string|max:255',
+                'country' => 'integer',
+                'city' => 'integer',
+                'state' => 'integer',
+                'gender' => 'integer',
+                'postcode' => 'string',
+                'ic' => 'integer|min:6|',
+                'password' => 'required|string|min:8',
+                'confirm_password' => 'required|string|min:8|same:password',
+                'country_code' => 'required',
+                'contact_number' => 'required|numeric|digits_between:1,15',
+                'email' => 'required|string|email|max:255',
+            ]);
+            $authUser = Auth::user();
+
+            //check ic
+            $checkingIc = stp_student::where('student_icNumber', $request->ic)
+                ->where('id', '!=', $request->id)
+                ->exists();
+
+            if ($checkingIc) {
+                throw ValidationException::withMessages([
+                    'ic' => ['ic has been used'],
+                ]);
+            }
+
+            //checking contact number
+            $checkingUserContact = stp_student::where('student_countryCode', $request->country_code)
+                ->where('student_contactNo', $request->contact_number)
+                ->where('id', '!=', $request->id)
+                ->exists();
+
+            if ($checkingUserContact) {
+                throw ValidationException::withMessages([
+                    'contact_no' => ['Contact has been used'],
+                ]);
+            }
+
+
+            $student = stp_student::find(1);
+            $studentDetail = $student->detail;
+
+            $checkingEmail = stp_student::where('student_email', $request->email)
+                ->where('id', '!=', $request->id)
+                ->exists();
+
+
+            if ($checkingEmail) {
+                throw ValidationException::withMessages([
+                    'email' => ['Contact has been taken'],
+                ]);
+            }
+
+            $updateingStudent = $student->update([
+                "student_userName" => $request->name,
+                "student_password" => Hash::make($request->password),
+                'student_icNumber' => $request->ic,
+                'student_email' => $request->email,
+                'student_countryCode' => $request->country_code,
+                'student_contactNo' => $request->contact_number,
+                'updated_by' => $authUser->id
+            ]);
+
+            $updatingDetail = $studentDetail->update([
+                "student_detailFirstName" => $request->first_name ?? "",
+                "student_detailLastName" => $request->last_name ?? "",
+                "student_detailAddress" => $request->address ?? "",
+                "country_id" => $request->country ?? null,
+                'gender' => $request->gender ?? null,
+                "city_id" => $request->city ?? null,
+                "state_id" => $request->state ?? null,
+                "student_detailPostcode" => $request->postcode ?? "",
+                'updated_by' => $authUser->id
+            ]);
+
+            if ($updateingStudent) {
+                return response()->json([
+                    'success' => true,
+                    "data" => ["message" => "update successful"]
+                ]);
+            }
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Sever Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateProfilePic(Request $request)
+    {
+        try {
+            $request->validate([
+                'porfilePic' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+            ]);
+            $authUser = Auth::user();
+
+
+            if (!empty($authUser->student_proilePic)) {
+                Storage::delete('public/' . $authUser->student_proilePic);
+            }
+
+
+
+            $image = $request->file('porfilePic');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+
+            $imagePath = $image->storeAs('studentProfilePic', $imageName, 'public'); // Store in 'storage/app/public/images'
+            $authUser->update([
+                'student_proilePic' => $imagePath,
+                'updated_by' => $authUser->id
+            ]);
+            // $authUser->student_proilePic = $imagePath; // Save the path to the database
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Update profile successfully']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => "Internal Server Error",
+                    'error' => $e->getMessage()
+                ]
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
         }
     }
 }

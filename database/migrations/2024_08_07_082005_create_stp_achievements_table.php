@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('title_obtained')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->string('achivement_media')->nullable();
             $table->integer('date')->nullable();
+            $table->integer('achievements_status')->default(1);
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();
             $table->timestamps();

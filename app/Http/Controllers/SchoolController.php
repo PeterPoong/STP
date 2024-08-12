@@ -28,7 +28,7 @@ class SchoolController extends Controller
     {
         try {
             $courseList = stp_course::query()
-                ->where('course_status',1)
+                ->where('course_status', 1)
                 ->when($request->filled('category'), function ($query) use ($request) {
                     $query->where('category_id', $request->category);
                 })
@@ -205,7 +205,7 @@ class SchoolController extends Controller
 
     public function editCourseStatus(Request $request)
     {
-        try{
+        try {
             $request->validate([
                 'id' => 'required|integer',
                 'type' => 'required|string|max:255'
@@ -244,51 +244,51 @@ class SchoolController extends Controller
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ], 500);
-
         }
     }
 
-    public function editSchoolDetail(Request $request){
-        try{ 
+    public function editSchoolDetail(Request $request)
+    {
+        try {
             $request->validate([
-            'id' => 'required|integer',
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|max:255',
-            'countryCode' => 'required|string|max:255',
-            'contact' => 'required|string|max:255',
-            'password' => 'required|string|min:8',
-            'confirm_password' => 'required|string|min:8|same:password',
-            'country' => 'required|integer',
-            'state' => 'required|integer',
-            'city' => 'required|integer',
-            'category' => 'required|integer',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
-        ]);
-        $authUser = Auth::user();
-        
-        $checkingEmail = stp_school::where('id', '!=', $request->id)
-        ->where('school_email', $request->email)
-        ->exists();
+                'id' => 'required|integer',
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|max:255',
+                'countryCode' => 'required|string|max:255',
+                'contact' => 'required|string|max:255',
+                'password' => 'required|string|min:8',
+                'confirm_password' => 'required|string|min:8|same:password',
+                'country' => 'required|integer',
+                'state' => 'required|integer',
+                'city' => 'required|integer',
+                'category' => 'required|integer',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+            ]);
+            $authUser = Auth::user();
+
+            $checkingEmail = stp_school::where('id', '!=', $request->id)
+                ->where('school_email', $request->email)
+                ->exists();
 
             if ($checkingEmail) {
                 throw ValidationException::withMessages([
                     'email' => ['email had been used']
                 ]);
             }
-        
-        $checkingUserContact = stp_school::where('school_countryCode', $request->country_code)
-        ->where('school_contactNo', $request->contact_number)
-        ->where('id', '!=', $request->id)
-        ->exists();
+
+            $checkingUserContact = stp_school::where('school_countryCode', $request->country_code)
+                ->where('school_contactNo', $request->contact_number)
+                ->where('id', '!=', $request->id)
+                ->exists();
 
             if ($checkingUserContact) {
                 throw ValidationException::withMessages([
                     'contact_no' => ['Contact has been used'],
                 ]);
             }
-           
-        $school = stp_school::find($request->id);
-        
+
+            $school = stp_school::find($request->id);
+
             if ($request->hasFile('logo')) {
                 if (!empty($school->school_logo)) {
                     Storage::delete('public/' . $school->school_logo);
@@ -297,26 +297,26 @@ class SchoolController extends Controller
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('schoolLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
-        
+
             $updateSchool = $school->update([
-                'school_name'=>$request->name,
-                'school_email'=>$request->email,
-                'school_countryCode'=>$request->countryCode,
+                'school_name' => $request->name,
+                'school_email' => $request->email,
+                'school_countryCode' => $request->countryCode,
                 'school_password' => Hash::make($request->password),
                 'school_fullDesc' => $request->fullDesc,
                 'school_shortDesc' => $request->shortDesc,
-                'school_address'=>$request->address,
+                'school_address' => $request->address,
                 'country_id' => $request->country,
                 'state_id' => $request->state,
                 'city_id' => $request->city,
                 'institue_category' => $request->category,
-                'school_lg'=>$request->lg,
-                'school_lat'=>$request->lat,
-                'person_inChargeName'=>$request->PICName,
-                'person_inChargeNumber'=>$request->PICNo,
-                'person_inChargeEmail'=>$request->PICEmail,
-                'account_type'=>$request->account,
-                'school_officialWebsite'=>$request->website,
+                'school_lg' => $request->lg,
+                'school_lat' => $request->lat,
+                'person_inChargeName' => $request->PICName,
+                'person_inChargeNumber' => $request->PICNo,
+                'person_inChargeEmail' => $request->PICEmail,
+                'account_type' => $request->account,
+                'school_officialWebsite' => $request->website,
                 'school_logo' => $imagePath ?? null,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
@@ -326,20 +326,55 @@ class SchoolController extends Controller
                 "success" => true,
                 "data" => ['message' => 'Update Successfully']
             ]);
-
-        }catch (ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 "success" => false,
                 "message" => "Validation Error",
                 "errors" => $e->errors()
             ], 422);
-    }catch (\Exception $e) {
-        return response()->json([
-            "success" => false,
-            "message" => "Internal Server Error",
-            "error" => $e->getMessage()
-        ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Internal Server Error",
+                "error" => $e->getMessage()
+            ]);
+        }
+    }
 
+    public function resetSchoolPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'currentPassword' => 'required|string|min:8',
+                'newPassword' => 'required|string|min:8',
+                'confirmPassword' => 'required|string|min:8|same:newPassword'
+            ]);
+            $authUser = Auth::user();
+            if (!Hash::check($request->currentPassword, $authUser->school_password)) {
+                throw ValidationException::withMessages(["password does not match"]);
+            }
+
+            $authUser->update([
+                'school_password' => Hash::make($request->newPassword),
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['messenger' => "Successfully reset password"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

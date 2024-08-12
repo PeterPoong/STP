@@ -56,6 +56,7 @@ class AdminController extends Controller
                 'country' => 'integer',
                 'city' => 'integer',
                 'state' => 'integer',
+                'gender' => 'integer',
                 'postcode' => 'string',
                 'ic' => 'integer|min:6|',
                 'password' => 'required|string|min:8',
@@ -91,7 +92,7 @@ class AdminController extends Controller
             }
 
 
-            $student = stp_student::find(1);
+            $student = stp_student::find($request->id);
             $studentDetail = $student->detail;
 
 
@@ -134,6 +135,7 @@ class AdminController extends Controller
                 "student_detailLastName" => $request->last_name ?? "",
                 "student_detailAddress" => $request->address ?? "",
                 "country_id" => $request->country ?? null,
+                'gender' => $request->gender ?? null,
                 "city_id" => $request->city ?? null,
                 "state_id" => $request->state ?? null,
                 "student_detailPostcode" => $request->postcode ?? "",
@@ -156,7 +158,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Sever Error',
-                'error' => $e
+                'error' => $e->getMessage()
             ], 500);
         }
     }
@@ -246,13 +248,17 @@ class AdminController extends Controller
                         'name' => $school->school_name,
                         'category' => $school->institueCategory->core_metaName ?? null,
                         'country' => $school->country->country_name ?? null,
+                        'email' => $school->school_email,
+                        'contact' => $school->school_countryCode . $school->school_contactNo,
                         'state' => $school->state->state_name ?? null,
                         'city' => $school->city->city_name ?? null,
                         'status' => $status ?? null
                     ];
                 });
 
-            return response()->json($schoolList);
+            return response()->json([
+                $schoolList
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -692,8 +698,6 @@ class AdminController extends Controller
     public function coursesList(Request $request)
     {
         try {
-            // $test = stp_course::find(1);
-            // return $test->category;
             $courseList = stp_course::when($request->filled('category'), function ($query) use ($request) {
                 $query->where('category_id', $request->category);
             })
@@ -1060,7 +1064,6 @@ class AdminController extends Controller
 
             $category = stp_courses_category::find($request->id);
 
-
             if ($request->hasFile('icon')) {
                 if (!empty($category->category_icon)) {
                     Storage::delete('public/' . $category->category_icon);
@@ -1408,11 +1411,19 @@ class AdminController extends Controller
     {
         try {
             $subjectList = stp_subject::where('subject_status', 1)->get();
+
+            $list = [];
             foreach ($subjectList as $subject) {
+                if ($subject->subject_status == 1) {
+                    $status = "Active";
+                } else {
+                    $status = "Disable";
+                }
                 $list[] = [
                     'id' => $subject->id,
                     'name' => $subject->subject_name,
-                    'category' => $subject->category,
+                    'category' => $subject->category->core_metaName,
+                    'status' => $status
                 ];
             }
             return response()->json([
@@ -1425,6 +1436,61 @@ class AdminController extends Controller
                 'success' => false,
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function categoryList(Request $request)
+    {
+        try {
+            $request->validate([
+                'search' => 'string',
+                'hotpick' => 'integer',
+                'status' => 'integer'
+            ]);
+
+            $categoryList = stp_courses_category::when($request->filled('search'), function ($query) use ($request) {
+                $query->orWhere('category_name', 'like', '%' . $request->search . '%');
+            })
+                ->when($request->filled('hotpick'), function ($query) use ($request) {
+                    $query->orWhere('course_hotPick', $request->hotpick);
+                })
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->orWhere('category_status', $request->status);
+                })
+                ->paginate(10)
+                ->through(function ($category) {
+                    switch ($category->category_status) {
+                        case 0:
+                            $satus = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                    }
+                    return [
+                        "id" => $category->id,
+                        "category_name" => $category->category_name,
+                        "course_hotPick" => $category->course_hotPick ?? 0,
+                        "category_status" => $status
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $categoryList
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' > $e->getMessage()
             ]);
         }
     }

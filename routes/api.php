@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\countryController;
+use App\Http\Controllers\serviceFunctionController;
 use App\Http\Controllers\studentController;
 
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
@@ -19,8 +20,6 @@ Route::post('/school/register', [AuthController::class, 'schoolRegister']);
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('/countryCode', [countryController::class, 'countryCode']);
-
-
 
 Route::prefix('student')->group(function () {
     Route::post('/hpFeaturedSchoolList', [studentController::class, 'hpFeaturedSchoolList']);
@@ -40,17 +39,18 @@ Route::prefix('student')->group(function () {
 
 
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
-    Route::middleware('auth:sanctum')->post('/editDetail', [AdminController::class, 'editStudent']);
+    Route::middleware('auth:sanctum')->post('/editDetail', [studentController::class, 'editStudent']);
+    Route::middleware('auth:sanctum')->post('/updateProfilePic', [studentController::class, 'updateProfilePic']);
     Route::middleware('auth:sanctum')->post('/subjectList', [studentController::class, 'subjectList']);
     Route::middleware('auth:sanctum')->post('/addEditTranscript', [studentController::class, 'addEditTranscript']);
     Route::middleware('auth:sanctum')->post('/addEditHigherTranscript', [studentController::class, 'addEditHigherTranscript']);
-    // Route::middleware('auth:sanctum')->post('/addTranscript', [studentController::class, 'addTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
     Route::middleware('auth:sanctum')->get('/pendingAppList', [studentController::class, 'pendingAppList']);
     Route::middleware('auth:sanctum')->get('/historyAppList', [studentController::class, 'historyAppList']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
+    Route::post('/adminList', [AdminController::class, 'adminList']);
     Route::post('/studentList', [AdminController::class, 'studentList']);
     Route::post('/editStudent', [AdminController::class, 'editStudent']);
     Route::post('/editStatus', [AdminController::class, 'editStudentStatus']);
@@ -73,6 +73,8 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/addTag', [AdminController::class, 'addTag']);
     Route::post('/searchTag', [AdminController::class, 'searchTag']);
 
+    Route::post('/categoryList', [AdminController::class, 'categoryList']);
+    Route::post('/addCategory', [AdminController::class, 'addCategory']);
     Route::post('/addCategory', [AdminController::class, 'addCategory']);
     Route::post('/editCategory', [AdminController::class, 'editCategory']);
     Route::post('/editHotPick', [AdminController::class, 'editHotPick']);
@@ -90,7 +92,11 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCourses', [SchoolController::class, 'editCourse']);
     Route::post('/editCourseStatus', [SchoolController::class, 'editCourseStatus']);
     Route::post('/editSchool', [SchoolController::class, 'editSchoolDetail']);
+    Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
 });
+
+Route::post('/sendOtp', [serviceFunctionController::class, 'sendingOtp']);
+Route::post('/validateOtp', [serviceFunctionController::class, 'validateOtp']);
 
 Route::middleware('auth:sanctum')->get('/test', [AuthController::class, 'test']);
 Route::middleware('auth:sanctum')->get('/test5', [AuthController::class, 'test']);

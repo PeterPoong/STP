@@ -47,7 +47,7 @@ class stp_student_detail extends Model
         return $this->belongsTo(stp_state::class, 'state_id', 'id');
     }
 
-    public function gender(): BelongsTo
+    public function studentGender(): BelongsTo
     {
         return $this->belongsTo(stp_core_meta::class, 'gender', 'id');
     }

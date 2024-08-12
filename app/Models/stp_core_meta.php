@@ -36,12 +36,6 @@ class stp_core_meta extends Model
         return $this->belongsToMany(stp_school_social_media::class);
     }
 
-
-    // public function courses(): HasMany
-    // {
-    //     return $this->hasMany(stp_course::class, 'category_id', 'id');
-    // }
-
     public function schoolMedia()
     {
         return $this->belongsToMany(stp_school_media::class);
@@ -100,5 +94,10 @@ class stp_core_meta extends Model
     public function studentGender(): HasMany
     {
         return $this->hasMany(stp_student_detail::class, 'gender', 'id');
+    }
+
+    public function subjectCategory(): HasMany
+    {
+        return $this->hasMany(stp_subject::class, 'subject_category', 'id');
     }
 }

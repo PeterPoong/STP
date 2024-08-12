@@ -64,4 +64,8 @@ class stp_student extends Model
         return $this->hasMany(stp_core_meta::class, 'student_id', 'id');
     }
 
+    public function otp(): HasMany
+    {
+        return $this->hasMany(stp_student_otp::class, 'student_id', 'id');
+    }
 }

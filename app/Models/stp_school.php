@@ -75,4 +75,9 @@ class stp_school extends Model
     {
         return $this->belongsTo(stp_core_meta::class, 'institue_category', 'id');
     }
+
+    public function otp(): HasMany
+    {
+        return $this->hasMany(stp_school_otp::class, 'school_id', 'id');
+    }
 }

@@ -20,6 +20,7 @@ return new class extends Migration
             $table->foreignId('country_id')->nullable()->constrained('stp_countries')->onDelete('set null');
             $table->foreignId('state_id')->nullable()->constrained('stp_states')->onDelete('set null');
             $table->foreignId('city_id')->nullable()->constrained('stp_cities')->onDelete('set null');
+            $table->foreignId('gender')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->string('student_detailPostcode')->nullable();
             $table->string('student_detailStatus')->default(1);
             $table->string('updated_by')->nullable();
