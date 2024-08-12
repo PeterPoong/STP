@@ -12,7 +12,7 @@ class stp_transcript extends Model
     protected $fillable = [
         'subject_id',
         'transcript_grade',
-        'user_id',
+        'student_id',
         'transcript_category',
         'transcript_status',
         'updated_by',
@@ -29,8 +29,8 @@ class stp_transcript extends Model
         return $this->hasOne(stp_core_meta::class, 'id', 'transcript_grade');
     }
 
-    public function user()
+    public function student()
     {
-        return $this->hasOne(User::class, 'id', 'user_id');
+        return $this->hasOne(User::class, 'id', 'student_id');
     }
 }

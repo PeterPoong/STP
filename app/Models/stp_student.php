@@ -48,7 +48,10 @@ class stp_student extends Model
     {
         return $this->hasMany(stp_higher_transcript::class, 'student_id', 'id');
     }
-
+    public function transcript(): HasMany
+    {
+        return $this->hasMany(stp_transcript::class, 'student_id', 'id');
+    }
     public function cgpa(): HasMany
     {
         return $this->hasMany(stp_cgpa::class, 'student_id', 'id');

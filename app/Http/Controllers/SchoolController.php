@@ -348,6 +348,236 @@ class SchoolController extends Controller
 
         }
     }
+    public function applicantDetailHeader(Request $request)
+{
+    try{
+        // Get the authenticated user
+        $authUser = Auth::user();
+        $schoolID = $authUser->id;
+        $request->validate([
+            'form_status' => 'integer|nullable',
+                'student_id' => 'integer|nullable'
+        ]);
+
+        $studentInfo = stp_submited_form::with('student', 'course')
+        ->whereHas('course', function ($query) use ($schoolID) {
+            $query->where('school_id', $schoolID);
+        })
+        ->when($request->filled('student_id'), function ($query) use ($request) {
+            $query->where('student_id', $request->student_id);
+        })
+        ->when($request->filled('form_status'), function ($query) use ($request) {
+            $query->where('form_status', $request->form_status);
+        })
+        ->paginate(10);
+        $formattedStudentInfo = $studentInfo->map(function ($submittedForm) {
+            $student = $submittedForm->student;
+            $course = $submittedForm->course;
+            return [
+                "courses_id" => $course->id ?? 'N/A',
+                "course_name" => $course->course_name ?? 'N/A',
+                "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
+                "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
+                "country_code" => $student->student_countryCode ?? 'N/A',
+                "contact_number" => $student->student_contactNo ?? 'N/A',
+                'school_id' => $course->school_id ?? 'N/A',
+                'student_id' => $student->id ?? 'N/A', // Add student_id to the result
+            ];
+        });
+        return response()->json([
+            'success' => true,
+            'data' => $studentInfo
+        ]);
+    }catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Sever Error',
+            'error' => $e
+        ]);
+    }
+}
+
+public function applicantDetailInfo(Request $request)   //Header and basic information for the applicant
+{
+    try{
+        // Get the authenticated user
+        $authUser = Auth::user();
+        $schoolID = $authUser->id;
+        $request->validate([
+            'form_status' => 'integer|nullable',
+                'student_id' => 'integer|nullable'
+        ]);
+
+        $studentInfo = stp_submited_form::with('student', 'course')
+        ->whereHas('course', function ($query) use ($schoolID) {
+            $query->where('school_id', $schoolID);
+        })
+        ->when($request->filled('student_id'), function ($query) use ($request) {
+            $query->where('student_id', $request->student_id);
+        })
+        ->when($request->filled('form_status'), function ($query) use ($request) {
+            $query->where('form_status', $request->form_status);
+        })
+        ->paginate(10);
+        $formattedStudentInfo = $studentInfo->map(function ($submittedForm) {
+            $student = $submittedForm->student;
+            $course = $submittedForm->course;
+            return [
+                "courses_id" => $course->id ?? 'N/A',
+                "course_name" => $course->course_name ?? 'N/A',
+                "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
+                "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
+                "country_code" => $student->student_countryCode ?? 'N/A',
+                "contact_number" => $student->student_contactNo ?? 'N/A',
+                'school_id' => $course->school_id ?? 'N/A',
+                'student_id' => $student->id ?? 'N/A', // Add student_id to the result
+            ];
+        });
+        return response()->json([
+            'success' => true,
+            'data' => $studentInfo
+        ]);
+    }catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Sever Error',
+            'error' => $e
+        ]);
+    }
+}
+public function applicantDetailCocurriculum(Request $request)   //Cocurriculum list for the applicant
+{
+    try {
+        // Get the authenticated user
+        $authUser = Auth::user();
+        $schoolID = $authUser->id;
+        
+        $request->validate([
+            'student_id' => 'integer|nullable'
+        ]);
+
+        // Select unique student_ids from stp_submited_form
+        $uniqueStudents = stp_submited_form::with(['student.cocurriculum', 'course'])
+            ->whereHas('course', function ($query) use ($schoolID) {
+                $query->where('school_id', $schoolID);
+            })
+            ->whereHas('student.cocurriculum', function ($query) {
+                $query->where('cocurriculums_status', 1);
+            })
+            ->when($request->filled('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->select('student_id')
+            ->distinct() // Ensure each student_id is unique
+            ->get()
+            ->map(function ($form) {
+                $student = $form->student;
+                $course = $form->course;
+
+                $cocurriculums = $student->cocurriculum->map(function ($cocurriculum) {
+                    return [
+                        'club_name' => $cocurriculum->club_name,
+                        'location' => $cocurriculum->location,
+                        'position' => $cocurriculum->student_position,
+                        'year' => $cocurriculum->year,
+                    ];
+                });
+
+                return [
+                    'cocurriculums' => $cocurriculums,
+                    'school_id' => $course->school_id ?? '',
+                    'student_id' => $student->id ?? '',
+                ];
+            });
+
+        // Paginate the results
+        $paginatedResults = new \Illuminate\Pagination\LengthAwarePaginator(
+            $uniqueStudents->forPage($request->page ?? 1, 10),
+            $uniqueStudents->count(),
+            10,
+            $request->page ?? 1,
+            ['path' => url()->current()]
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $paginatedResults
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+public function applicantDetailAchievement(Request $request)   //Cocurriculum list for the applicant
+{
+    try {
+        // Get the authenticated user
+        $authUser = Auth::user();
+        $schoolID = $authUser->id;
+        
+        $request->validate([
+            'student_id' => 'integer|nullable'
+        ]);
+
+        // Select unique student_ids from stp_submited_form
+        $uniqueStudents = stp_submited_form::with(['student.achievement', 'course'])
+            ->whereHas('course', function ($query) use ($schoolID) {
+                $query->where('school_id', $schoolID);
+            })
+            ->whereHas('student.achievement', function ($query) {
+                $query->where('achievements_status', 1);
+            })
+            ->when($request->filled('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->select('student_id')
+            ->distinct() // Ensure each student_id is unique
+            ->get()
+            ->map(function ($form) {
+                $student = $form->student;
+                $course = $form->course;
+
+                $achievements = $student->achievement->map(function ($achievement) {
+                    return [
+                        'achievement_name' => $achievement->achivement_name,
+                        'location' =>$achievement->awarded_by,
+                        'position' => $achievement->title->core_metaName ?? '',
+                        'date' => $achievement->date,
+                    ];
+                });
+
+                return [
+                    'cocurriculums' => $achievements,
+                    'school_id' => $course->school_id ?? '',
+                    'student_id' => $student->id ?? '',
+                ];
+            });
+
+        // Paginate the results
+        $paginatedResults = new \Illuminate\Pagination\LengthAwarePaginator(
+            $uniqueStudents->forPage($request->page ?? 1, 10),
+            $uniqueStudents->count(),
+            10,
+            $request->page ?? 1,
+            ['path' => url()->current()]
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $paginatedResults
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+   
     public function applicantDetailRelatedDocument(Request $request)
     {
         try {
@@ -485,6 +715,7 @@ class SchoolController extends Controller
         }
     }
     
+  
     
     
 }
