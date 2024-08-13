@@ -47,6 +47,10 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
     Route::middleware('auth:sanctum')->get('/pendingAppList', [studentController::class, 'pendingAppList']);
     Route::middleware('auth:sanctum')->get('/historyAppList', [studentController::class, 'historyAppList']);
+    Route::middleware('auth:sanctum')->post('/resetStudentPassword', [studentController::class, 'resetStudentPassword']);
+
+
+    Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -84,6 +88,8 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editSubject', [AdminController::class, 'editSubject']);
     Route::post('/editSubjectStatus', [AdminController::class, 'editSubjectStatus']);
     Route::post('/subjectList', [AdminController::class, 'subjectList']);
+
+    Route::post('/resetAdminPassword', [AdminController::class, 'resetAdminPassword']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {
@@ -97,6 +103,9 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 
 Route::post('/sendOtp', [serviceFunctionController::class, 'sendingOtp']);
 Route::post('/validateOtp', [serviceFunctionController::class, 'validateOtp']);
+Route::post('/resetPassword', [serviceFunctionController::class, 'resetPassword']);
+
+
 
 Route::middleware('auth:sanctum')->get('/test', [AuthController::class, 'test']);
 Route::middleware('auth:sanctum')->get('/test5', [AuthController::class, 'test']);

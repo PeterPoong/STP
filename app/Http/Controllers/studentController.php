@@ -17,6 +17,9 @@ use App\Models\stp_tag;
 use App\Models\stp_transcript;
 use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\serviceFunctionController;
+
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
@@ -26,6 +29,13 @@ use Exception;
 
 class studentController extends Controller
 {
+    protected $serviceFunctionController;
+
+    public function __construct(serviceFunctionController $serviceFunctionController)
+    {
+        $this->serviceFunctionController = $serviceFunctionController;
+    }
+
     public function schoolList(Request $request)
     {
         try {
@@ -341,7 +351,7 @@ class studentController extends Controller
 
             $authUser = Auth::user();
             $existingSubject = stp_transcript::where('transcript_category', $request->category)
-                ->where('user_id', $authUser->id)
+                ->where('student_id', $authUser->id)
                 ->where('transcript_status', 1)
                 ->pluck('subject_id')
                 ->toArray();
@@ -354,7 +364,7 @@ class studentController extends Controller
                 foreach (array_values($removeArray) as $new) {
                     $data = stp_transcript::where('subject_id', $new)
                         ->where('transcript_category', $request->category)
-                        ->where('user_id', $authUser->id)
+                        ->where('student_id', $authUser->id)
                         ->update(['transcript_status' => 0]);
                 }
             }
@@ -362,7 +372,7 @@ class studentController extends Controller
             foreach ($request->data as $requestData) {
                 $findExist = stp_transcript::where('subject_id', $requestData['subjectID'])
                     ->where('transcript_category', $request->category)
-                    ->where('user_id', $authUser->id)
+                    ->where('student_id', $authUser->id)
                     ->exists();
                 if ($findExist) {
                     $updateData = [
@@ -372,7 +382,7 @@ class studentController extends Controller
                     ];
                     $findExist = stp_transcript::where('subject_id', $requestData['subjectID'])
                         ->where('transcript_category', $request->category)
-                        ->where('user_id', $authUser->id)
+                        ->where('student_id', $authUser->id)
                         ->update($updateData);
                 } else {
                     // return $requestData;
@@ -380,7 +390,7 @@ class studentController extends Controller
                         'subject_id' => $requestData['subjectID'],
                         'transcript_grade' => $requestData['grade'],
                         'transcript_category' => $request->category,
-                        'user_id' => $authUser->id
+                        'student_id' => $authUser->id
                     ]);
                 }
             }
@@ -645,8 +655,11 @@ class studentController extends Controller
             $request->validate([
                 'courseID' => 'required|integer',
             ]);
+
             $authUser = Auth::user();
             $studentID = $authUser->id;
+
+
 
             $checkingCourse = stp_submited_form::where('courses_id', $request->courseID)
                 ->where('student_id', $studentID)
@@ -654,7 +667,7 @@ class studentController extends Controller
                 ->exists();
             if ($checkingCourse) {
                 throw ValidationException::withMessages([
-                    "courses" => ['This Student applied for this course']
+                    "courses" => ['You had already Applied this course']
                 ]);
             }
             stp_submited_form::create([
@@ -664,6 +677,9 @@ class studentController extends Controller
                 'created_by' => $authUser->id,
                 'created_at' => now(),
             ]);
+
+            $this->serviceFunctionController->sendSchoolEmail($request->courseID, $authUser);
+
             return response()->json([
                 'success' => true,
                 'data' => ['message' => 'Successfully Applied for the Course']
@@ -956,6 +972,43 @@ class studentController extends Controller
                 'success' => false,
                 'message' => 'Validation Error',
                 'error' => $e->errors()
+            ]);
+        }
+    }
+
+    public function resetStudentPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'currentPassword' => 'required|string|min:8',
+                'newPassword' => 'required|string|min:8',
+                'confirmPassword' => 'required|string|min:8|same:newPassword'
+            ]);
+            $authUser = Auth::user();
+            if (!Hash::check($request->currentPassword, $authUser->student_password)) {
+                throw ValidationException::withMessages(["password does not match"]);
+            }
+
+            $authUser->update([
+                'student_password' => Hash::make($request->newPassword),
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['messenger' => "Successfully reset password"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
             ]);
         }
     }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class stp_transcript extends Model
 {
@@ -12,7 +13,7 @@ class stp_transcript extends Model
     protected $fillable = [
         'subject_id',
         'transcript_grade',
-        'user_id',
+        'student_id',
         'transcript_category',
         'transcript_status',
         'updated_by',
@@ -29,8 +30,12 @@ class stp_transcript extends Model
         return $this->hasOne(stp_core_meta::class, 'id', 'transcript_grade');
     }
 
-    public function user()
+    // public function user()
+    // {
+    //     return $this->hasOne(User::class, 'id', 'user_id');
+    // }
+    public function student(): BelongsTo
     {
-        return $this->hasOne(User::class, 'id', 'user_id');
+        return $this->belongsTo(stp_student::class, 'student_id', 'id');
     }
 }

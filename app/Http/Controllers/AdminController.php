@@ -26,13 +26,9 @@ use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 
 class AdminController extends Controller
 {
-    public function addStudent()
-    {
-    }
+    public function addStudent() {}
 
-    public function updateStudent()
-    {
-    }
+    public function updateStudent() {}
 
     public function studentList(Request $request)
     {
@@ -1491,6 +1487,43 @@ class AdminController extends Controller
                 'success' => false,
                 'message' => "Internal Server Error",
                 'error' > $e->getMessage()
+            ]);
+        }
+    }
+
+    public function resetAdminPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'currentPassword' => 'required|string|min:8',
+                'newPassword' => 'required|string|min:8',
+                'confirmPassword' => 'required|string|min:8|same:newPassword'
+            ]);
+            $authUser = Auth::user();
+            if (!Hash::check($request->currentPassword, $authUser->password)) {
+                throw ValidationException::withMessages(["password does not match"]);
+            }
+
+            $authUser->update([
+                'password' => Hash::make($request->newPassword),
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['messenger' => "Successfully reset password"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
             ]);
         }
     }

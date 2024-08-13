@@ -100,4 +100,9 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_subject::class, 'subject_category', 'id');
     }
+
+    public function packageType(): HasMany
+    {
+        return $this->hasMany(stp_package::class, 'package_type', 'id');
+    }
 }

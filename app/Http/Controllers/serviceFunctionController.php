@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\stp_course;
 use App\Models\stp_school;
 use App\Models\stp_school_otp;
 use App\Models\stp_student;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Facades\Hash;
 
 class serviceFunctionController extends Controller
 {
@@ -176,5 +178,77 @@ class serviceFunctionController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function resetPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'newPassword' => 'required|min:8',
+                'confirmPassword' => 'required|same:newPassword',
+                'type' => 'required|string'
+            ]);
+
+            if ($request->type != 'admin' && $request->type != 'student' && $request->type != 'school') {
+                throw ValidationException::withMessages([
+                    'type' => 'Wrong Type'
+                ]);
+            }
+
+            switch ($request->type) {
+                case 'student':
+                    $user = stp_student::where('student_email', $request->email)->first();
+                    $password = $user->student_password;
+                    $passwordType = "student_password";
+                    break;
+                case 'school':
+                    $user = stp_school::where('school_email', $request->email)->first();
+                    $password = $user->school_password;
+                    $passwordType = "school_password";
+
+                    break;
+                case 'admin':
+                    $user = User::where('email', $request->email)->first();
+                    $password = $user->password;
+                    $passwordType = "password";
+
+                    break;
+            }
+
+            $user->update([
+                $passwordType => Hash::make($request->newPassword),
+                'updated_by' => $user->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => "Successfully Reset the password"
+                ]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function sendSchoolEmail($courseID, $student)
+    {
+        $course = stp_course::find($courseID);
+        $school = $course->school;
+
+
+        $sendEmailToSchool = $this->serviceFunction->sendAppliedCourseEmail($school, $course, $student);
+        return $sendEmailToSchool;
     }
 }

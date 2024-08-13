@@ -7,6 +7,7 @@ use App\Models\stp_student_otp;
 use App\Models\stp_user_otp;
 use Illuminate\Support\Str;
 use App\Mail\OtpMail;
+use App\Mail\SendSchoolEmail;
 use Illuminate\Support\Facades\Mail;
 
 class ServiceFunction
@@ -40,5 +41,29 @@ class ServiceFunction
                 break;
         }
         Mail::to($email)->send(new OtpMail($otp));
+    }
+
+    public function sendAppliedCourseEmail($school, $course, $student)
+    {
+        try {
+            $institute_email = $school->school_email;
+            $data = [
+                'institute_name' => $school->school_name,
+                'course_name' => $course->course_name,
+                'student_name' => $student->student_userName,
+                'student_email' => $student->student_email,
+                'student_phone' =>  $student->student_countryCode . " " . $student->student_contactNo,
+                'application_date' => now()->format('Y-m-d H:i:s'),
+                'actionUrl' => "https://www.youtube.com/?feature=youtu.be"
+            ];
+
+            Mail::to($institute_email)->send(new SendSchoolEmail($data));
+        } catch (\Exception $e) {
+            return response()->json([
+                'sucess' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

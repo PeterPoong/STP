@@ -72,11 +72,6 @@ class User extends Authenticatable
         return $this->belongsToMany(stp_user_media::class);
     }
 
-    public function transcript()
-    {
-        return $this->belongsToMany(stp_transcript::class);
-    }
-
     public function detail(): HasOne
     {
         return $this->hasOne(stp_user_detail::class, 'user_id', 'id');

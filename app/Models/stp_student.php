@@ -68,4 +68,9 @@ class stp_student extends Model
     {
         return $this->hasMany(stp_student_otp::class, 'student_id', 'id');
     }
+
+    public function transcript(): HasMany
+    {
+        return $this->hasMany(stp_transcript::class, 'student_id', 'id');
+    }
 }
