@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stp_advertisment_benners', function (Blueprint $table) {
+        Schema::create('stp_advertisement_banners', function (Blueprint $table) {
             $table->id();
             $table->string('banner_name');
             $table->string('banner_file');
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('stp_advertisment_benners');
+        Schema::dropIfExists('stp_advertisement_banners');
     }
 };
