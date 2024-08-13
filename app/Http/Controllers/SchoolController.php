@@ -346,7 +346,8 @@ class SchoolController extends Controller
             ]);
         }
     }
-    public function applicantDetailHeader(Request $request)
+
+    public function applicantDetailInfo(Request $request)   //Header and basic information for the applicant
     {
         try {
             // Get the authenticated user
@@ -394,52 +395,39 @@ class SchoolController extends Controller
             ]);
         }
     }
-
-    public function applicantDetailInfo(Request $request)   //Header and basic information for the applicant
+    public function resetSchoolPassword(Request $request)
     {
         try {
-            // Get the authenticated user
-            $authUser = Auth::user();
-            $schoolID = $authUser->id;
             $request->validate([
-                'form_status' => 'integer|nullable',
-                'student_id' => 'integer|nullable'
+                'currentPassword' => 'required|string|min:8',
+                'newPassword' => 'required|string|min:8',
+                'confirmPassword' => 'required|string|min:8|same:newPassword'
+            ]);
+            $authUser = Auth::user();
+            if (!Hash::check($request->currentPassword, $authUser->school_password)) {
+                throw ValidationException::withMessages(["password does not match"]);
+            }
+
+            $authUser->update([
+                'school_password' => Hash::make($request->newPassword),
+                'updated_by' => $authUser->id
             ]);
 
-            $studentInfo = stp_submited_form::with('student', 'course')
-                ->whereHas('course', function ($query) use ($schoolID) {
-                    $query->where('school_id', $schoolID);
-                })
-                ->when($request->filled('student_id'), function ($query) use ($request) {
-                    $query->where('student_id', $request->student_id);
-                })
-                ->when($request->filled('form_status'), function ($query) use ($request) {
-                    $query->where('form_status', $request->form_status);
-                })
-                ->paginate(10);
-            $formattedStudentInfo = $studentInfo->map(function ($submittedForm) {
-                $student = $submittedForm->student;
-                $course = $submittedForm->course;
-                return [
-                    "courses_id" => $course->id ?? 'N/A',
-                    "course_name" => $course->course_name ?? 'N/A',
-                    "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
-                    "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
-                    "country_code" => $student->student_countryCode ?? 'N/A',
-                    "contact_number" => $student->student_contactNo ?? 'N/A',
-                    'school_id' => $course->school_id ?? 'N/A',
-                    'student_id' => $student->id ?? 'N/A', // Add student_id to the result
-                ];
-            });
             return response()->json([
                 'success' => true,
-                'data' => $studentInfo
+                'data' => ['messenger' => "Successfully reset password"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Internal Sever Error',
-                'error' => $e
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
             ]);
         }
     }
@@ -851,9 +839,6 @@ class SchoolController extends Controller
                 'data' => $combinedResults
             ]);
         } catch (\Exception $e) {
-            // Log the error message for debugging
-            \Log::error('Error: ' . $e->getMessage());
-
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
@@ -862,7 +847,7 @@ class SchoolController extends Controller
         }
     }
 
-    public function editAplicantStatus(Request $request)
+    public function editApplicantStatus(Request $request)
     {
         try {
             $request->validate([
