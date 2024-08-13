@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\stp_achievement;
 use App\Models\stp_core_meta;
 use App\Models\stp_country;
 use App\Models\stp_course;
@@ -17,6 +18,7 @@ use App\Models\stp_tag;
 use App\Models\stp_transcript;
 use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 use App\Rules\UniqueInArray;
@@ -211,7 +213,7 @@ class studentController extends Controller
                 'success' => true,
                 'data' => $coursesList
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => "Internal Server Error",
@@ -307,7 +309,7 @@ class studentController extends Controller
 
             $authUser = Auth::user();
             $existingSubject = stp_transcript::where('transcript_category', $request->category)
-                ->where('user_id', $authUser->id)
+                ->where('student_id', $authUser->id)
                 ->where('transcript_status', 1)
                 ->pluck('subject_id')
                 ->toArray();
@@ -320,7 +322,7 @@ class studentController extends Controller
                 foreach (array_values($removeArray) as $new) {
                     $data = stp_transcript::where('subject_id', $new)
                         ->where('transcript_category', $request->category)
-                        ->where('user_id', $authUser->id)
+                        ->where('student_id', $authUser->id)
                         ->update(['transcript_status' => 0]);
                 }
             }
@@ -328,7 +330,7 @@ class studentController extends Controller
             foreach ($request->data as $requestData) {
                 $findExist = stp_transcript::where('subject_id', $requestData['subjectID'])
                     ->where('transcript_category', $request->category)
-                    ->where('user_id', $authUser->id)
+                    ->where('student_id', $authUser->id)
                     ->exists();
                 if ($findExist) {
                     $updateData = [
@@ -338,7 +340,7 @@ class studentController extends Controller
                     ];
                     $findExist = stp_transcript::where('subject_id', $requestData['subjectID'])
                         ->where('transcript_category', $request->category)
-                        ->where('user_id', $authUser->id)
+                        ->where('student_id', $authUser->id)
                         ->update($updateData);
                 } else {
                     // return $requestData;
@@ -346,7 +348,7 @@ class studentController extends Controller
                         'subject_id' => $requestData['subjectID'],
                         'transcript_grade' => $requestData['grade'],
                         'transcript_category' => $request->category,
-                        'user_id' => $authUser->id
+                        'student_id' => $authUser->id
                     ]);
                 }
             }
@@ -775,4 +777,198 @@ class studentController extends Controller
             ], 500);
         }
     }
+
+    public function addAchievement(Request $request){
+        try{
+            $request->validate([
+                'achievement_name'=>'required|string|max:255',
+                'date' => 'required|string|max:255',
+                'title' => 'required|integer',
+                'awarded_by'=>'required|string|max:255',
+                'achievement_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048'
+            ]);
+
+            $authUser = Auth::user();
+            $checkingAchievement = stp_achievement::where('student_id', $authUser->id)
+                ->where('achievement_name', $request->achievement_name)
+                ->exists();
+
+                if ($checkingAchievement) {
+                    throw ValidationException::withMessages([
+                        "courses" => ['Achievement with this name already uploaded']
+                    ]);
+                }
+
+            if ($request->hasFile('achievement_media')) {
+                $image = $request->file('achievement_media');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('achievementCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+           stp_achievement::create([
+                'achievement_name'=>$request->achievement_name,
+                'date'=>$request->date,
+                'title_obtained'=>$request->title,
+                'awarded_by'=>$request->awarded_by,
+                'achievement_media'=>$imagePath ?? '',
+                'achievements_status'=>1,
+                'student_id'=>$authUser->id,
+                'created_by'=>$authUser->id,
+                'created_at'=>now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Added the Achievement']
+            ]);
+
+        }catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+    }catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ]);
+    }
 }
+
+public function editAchievement(Request $request){
+    try{
+        $authUser = Auth::user();
+        $request->validate([
+                'id'=>'required|integer',
+                'achievement_name'=>'required|string|max:255',
+                'date' => 'required|string|max:255',
+                'title' => 'required|integer',
+                'awarded_by'=>'required|string|max:255',
+                'achievement_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048' // Image validation
+        ]);
+        $checkingAchievement = stp_achievement::where('student_id',  $authUser->id)
+        ->where('achievement_name', $request->achievement_name)
+        ->where('id', '!=', $request->id)
+        ->exists();
+
+        if ($checkingAchievement) {
+            throw ValidationException::withMessages([
+                "Achievement" => ['Achievement with this name already uploaded']
+            ]);
+        }
+        $achievement= stp_achievement::find($request->id);
+
+        if ($request->hasFile('achievement_media')) {
+            if (!empty($achievement->achievement_media)) {
+                Storage::delete('public/' . $achievement->achievement_media);
+            }
+            $image = $request->file('achievement_media');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('achievementCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
+        }
+
+        $achievement->update([
+            'student_id' => $authUser->id,
+            'achievement_name' => $request->achievement_name,
+            'date' => $request->date,
+            'title_obtained' => $request->title,
+            'awarded_by' => $request->awarded_by,
+            'achievement_media' => $imagePath ?? null,
+            'updated_by' => $authUser->id,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['message' => "Update Successfully"]
+        ]);
+            }catch (ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Validation Error",
+                    'errors' => $e->errors()
+                ]);
+        }catch (Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Internal Server Error",
+                "errors" => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function deleteAchievement(Request $request){
+        try{
+            $request->validate([
+               'id' => 'required|integer',
+               'type' => 'required|string|max:255'
+            ]);
+
+            $authUser = Auth::user();
+
+            if ($request->type == 'delete') {
+                $status = 0;
+                $message = "Successfully Deleted the Achievement";
+            }
+
+            $achievement= stp_achievement::find($request->id);
+    
+            $achievement->update([
+                'student_id' => $authUser->id,
+                'achievements_status'=>$status,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => $message]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+
+        }
+    }
+    public function achievementsList(Request $request){
+        try{
+
+            $authUser = Auth::user();
+            $studentlID = $authUser->id;
+
+            $achievementList = stp_achievement::query()
+            ->where('achievements_status',1)
+            ->where('student_id',$studentlID)
+
+            ->paginate(10)
+            ->through(function ($achievementList) {
+                $status = ($achievementList->achievements_status == 1) ? "Active" : "Inactive";
+                return [
+                    "achievement_name" => $achievementList->achievement_name,
+                    "awarded_by" => $achievementList->awarded_by,
+                    "title_obtained" => $achievementList->title->core_metaName ?? '',
+                    "date" => $achievementList->date,
+                    "achievement_media" => $achievementList->achievement_media,
+                    "status" => "Active"
+                ];
+            });
+            return $achievementList;
+        }catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+}
+    
