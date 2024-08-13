@@ -109,7 +109,7 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/applicantDetailAchievement', [SchoolController::class, 'applicantDetailAchievement']);
     Route::post('/applicantDetailAcademic', [SchoolController::class, 'applicantDetailAcademic']);
     Route::post('/applicantResultSlip', [SchoolController::class, 'applicantResultSlip']);
-    Route::post('/editAplicantStatus', [SchoolController::class, 'editAplicantStatus']);
+    Route::post('/editApplicantStatus', [SchoolController::class, 'editApplicantStatus']);
     Route::post('/applicantDetailRelatedDocument', [SchoolController::class, 'applicantDetailRelatedDocument']);
 
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
