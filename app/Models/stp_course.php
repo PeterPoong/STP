@@ -61,4 +61,10 @@ class stp_course extends Model
     {
         return $this->belongsTo(stp_core_meta::class, 'study_mode', 'id');
     }
+
+    public function submitedForm(): HasMany
+    {
+        return $this->hasMany(stp_submited_form::class, 'course_id', 'id');
+    }
+    
 }

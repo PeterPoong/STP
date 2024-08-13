@@ -14,6 +14,8 @@ class stp_cocurriculum extends Model
         'club_name',
         'student_position',
         'year',
+        'cocurriculums_status',
+        'location',
         'updated_by',
         'created_by',
     ];
@@ -21,7 +23,7 @@ class stp_cocurriculum extends Model
 
     public function student():BelongsTo
     {
-        return $this->belongTo(stp_student::class, 'student_id', 'id');
+        return $this->belongsTo(stp_student::class, 'student_id', 'id');
 
     }
 }

@@ -14,15 +14,17 @@ class stp_achievement extends Model
         'student_id',
         'achievement_name',
         'title_obtained',
+        'awarded_by',
         'achievement_media',
         'date',
+        'achievements_status',
         'updated_by',
         'created_by'
     ];
 
     public function student():BelongsTo
     {
-        return $this->belongTo(stp_student::class, 'student_id', 'id');
+        return $this->belongsTo(stp_student::class, 'student_id', 'id');
 
     }
 

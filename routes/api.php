@@ -47,6 +47,11 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
     Route::middleware('auth:sanctum')->get('/pendingAppList', [studentController::class, 'pendingAppList']);
     Route::middleware('auth:sanctum')->get('/historyAppList', [studentController::class, 'historyAppList']);
+    Route::middleware('auth:sanctum')->post('/addAchievement', [studentController::class, 'addAchievement']);
+    Route::middleware('auth:sanctum')->post('/editAchievement', [studentController::class, 'editAchievement']);
+    Route::middleware('auth:sanctum')->post('/deleteAchievement', [studentController::class, 'deleteAchievement']);
+    Route::middleware('auth:sanctum')->post('/achievementsList', [studentController::class, 'achievementsList']);
+
     Route::middleware('auth:sanctum')->post('/resetStudentPassword', [studentController::class, 'resetStudentPassword']);
 
 
@@ -98,6 +103,15 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCourses', [SchoolController::class, 'editCourse']);
     Route::post('/editCourseStatus', [SchoolController::class, 'editCourseStatus']);
     Route::post('/editSchool', [SchoolController::class, 'editSchoolDetail']);
+    Route::post('/applicantDetailList', [SchoolController::class, 'applicantDetailList']);
+    Route::post('/applicantDetailInfo', [SchoolController::class, 'applicantDetailInfo']);
+    Route::post('/applicantDetailCocurriculum', [SchoolController::class, 'applicantDetailCocurriculum']);
+    Route::post('/applicantDetailAchievement', [SchoolController::class, 'applicantDetailAchievement']);
+    Route::post('/applicantDetailAcademic', [SchoolController::class, 'applicantDetailAcademic']);
+    Route::post('/applicantResultSlip', [SchoolController::class, 'applicantResultSlip']);
+    Route::post('/editAplicantStatus', [SchoolController::class, 'editAplicantStatus']);
+    Route::post('/applicantDetailRelatedDocument', [SchoolController::class, 'applicantDetailRelatedDocument']);
+
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
 });
 
@@ -110,6 +124,7 @@ Route::post('/resetPassword', [serviceFunctionController::class, 'resetPassword'
 Route::middleware('auth:sanctum')->get('/test', [AuthController::class, 'test']);
 Route::middleware('auth:sanctum')->get('/test5', [AuthController::class, 'test']);
 Route::middleware('auth:sanctum')->get('/test6', [AdminController::class, 'studentList']);
+
 
 
 

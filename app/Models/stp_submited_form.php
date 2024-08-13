@@ -14,6 +14,7 @@ class stp_submited_form extends Model
         'student_id',
         'courses_id',
         'form_status',
+        'feedback',
         'updated_by',
         'created_by'
     ];

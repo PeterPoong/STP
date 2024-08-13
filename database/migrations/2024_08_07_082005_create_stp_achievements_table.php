@@ -16,9 +16,10 @@ return new class extends Migration
             $table->foreignId('student_id')->nullable()->constrained('stp_students')->onDelete('set null');
             $table->string('achievement_name')->nullable();
             $table->foreignId('title_obtained')->nullable()->constrained('stp_core_metas')->onDelete('set null');
-            $table->string('achivement_media')->nullable();
-            $table->integer('date')->nullable();
-            $table->integer('achievements_status')->default(1);
+            $table->string('achievement_media')->nullable();
+            $table->string('awarded_by')->nullable();
+            $table->string('date')->nullable();
+            $table->integer('achievements_status')->default('1');
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();
             $table->timestamps();

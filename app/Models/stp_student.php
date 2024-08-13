@@ -48,7 +48,10 @@ class stp_student extends Model
     {
         return $this->hasMany(stp_higher_transcript::class, 'student_id', 'id');
     }
-
+    public function transcript(): HasMany
+    {
+        return $this->hasMany(stp_transcript::class, 'student_id', 'id');
+    }
     public function cgpa(): HasMany
     {
         return $this->hasMany(stp_cgpa::class, 'student_id', 'id');
@@ -64,13 +67,12 @@ class stp_student extends Model
         return $this->hasMany(stp_core_meta::class, 'student_id', 'id');
     }
 
+    public function studentMedia(): HasMany
+    {
+        return $this->hasMany(stp_student_media::class, 'student_id', 'id');
+    }
     public function otp(): HasMany
     {
         return $this->hasMany(stp_student_otp::class, 'student_id', 'id');
-    }
-
-    public function transcript(): HasMany
-    {
-        return $this->hasMany(stp_transcript::class, 'student_id', 'id');
     }
 }

@@ -12,9 +12,9 @@ class stp_core_meta extends Model
 {
     use HasFactory;
 
-    public function studentRole()
+    public function studentRole(): BelongsToMany
     {
-        return $this->belongsToMany(stp_student::class);
+        return $this->belongsToMany(stp_student::class, 'student_role_pivot_table', 'core_meta_id', 'student_id');
     }
 
     public function users(): HasMany
@@ -58,7 +58,12 @@ class stp_core_meta extends Model
 
     public function transcript()
     {
-        return $this->belongsToMany(stp_transcript::class);
+        return $this->belongsToMany(stp_transcript::class, 'transcript_category', 'id');
+    }
+
+    public function subjectCategory(): HasMany
+    {
+        return $this->hasMany(stp_subject::class, 'subject_category', 'id');
     }
 
     public function schoolInstitueCategory(): HasMany
@@ -80,6 +85,12 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_higher_transcript::class, 'higherTranscript_grade', 'id');
     }
+
+    public function transcriptGrade(): HasMany
+    {
+        return $this->hasMany(stp_transcript::class, 'transcript_grade', 'id');
+    }
+
 
     public function cgpa(): HasMany
     {

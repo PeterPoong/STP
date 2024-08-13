@@ -3,12 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\stp_city;
+use App\Models\stp_transcript;
 use Illuminate\Http\Request;
 use App\Models\stp_student;
 use App\Models\stp_country;
 use App\Models\stp_course;
 use App\Models\stp_course_tag;
 use App\Models\stp_courses_category;
+use App\Models\stp_submited_form;
+use App\Models\stp_achievement;
+use App\Models\stp_student_media;
+use Illuminate\Support\Facades\DB;
 use App\Models\stp_featured;
 use App\Models\stp_school;
 use App\Models\stp_state;
@@ -20,6 +25,7 @@ use Intervention\Image\Facades\Image as Image;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Validator;
 
 class SchoolController extends Controller
@@ -276,8 +282,8 @@ class SchoolController extends Controller
                 ]);
             }
 
-            $checkingUserContact = stp_school::where('school_countryCode', $request->country_code)
-                ->where('school_contactNo', $request->contact_number)
+            $checkingUserContact = stp_school::where('school_countryCode', $request->countryCode)
+                ->where('school_contactNo', $request->contact)
                 ->where('id', '!=', $request->id)
                 ->exists();
 

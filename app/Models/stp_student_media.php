@@ -4,19 +4,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class stp_student_media extends Model
 {
     use HasFactory;
 
-    public function student()
+    public function student() :BelongsTo
     {
-        return $this->hasOne(stp_student::class, 'id', 'student_id');
+        return $this->belongsTo(stp_student::class, 'student_id', 'id');
     }
 
-    public function type()
+    public function type() :BelongsTo
     {
-        return $this->hasOne(stp_core_meta::class, 'id', 'studentMedia_type');
+        return $this->belongsTo(stp_core_meta::class, 'studentMedia_type', 'id');
     }
 }
