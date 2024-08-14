@@ -16,7 +16,8 @@ class stp_submited_form extends Model
         'form_status',
         'form_feedback',
         'updated_by',
-        'created_by'
+        'created_by',
+        'created_at'
     ];
 
     public function student(): BelongsTo

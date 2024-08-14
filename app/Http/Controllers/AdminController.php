@@ -1637,27 +1637,53 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'id' => 'required|integer',
-                'name' => 'required|string',
-                'category' => 'required|integer'
+                'courses_id' => 'required|integer',
+                'school_id' => 'required|integer',
+                'feedback' => 'string|max:255',
+                'created_at' => 'required|date_format:Y-m-d'
             ]);
-            $authUser = Auth::user();
-            $findSubject = stp_subject::find($request->id);
-            $findSubject->update([
-                'subject_name' => $request->name,
-                'subject_category' => $request->category,
-                'updated_by' => $authUser->id
+    
+            // Retrieve the course based on the provided courses_id
+            $course = stp_course::find($request->courses_id);
+    
+            // Check if the course exists and belongs to the specified school_id
+            if (!$course || $course->school_id != $request->school_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The course does not exist in this institute'
+                ], 400);
+            }
+    
+            // Retrieve the applicant form by ID
+            $editApplication = stp_submited_form::find($request->id);
+    
+            // Temporarily disable automatic timestamps
+            $editApplication->timestamps = false;
+    
+            // Update the applicant form
+            $editApplication->update([
+                'courses_id' => $request->courses_id,
+                'school_id' => $course->school_id, // Use the school_id from the course
+                'created_at' => $request->created_at,
+                'form_feedback' => $request->feedback,
+                'updated_by' => Auth::id(),
+                'updated_at' => now()
             ]);
-
+    
+            // Re-enable automatic timestamps
+            $editApplication->timestamps = true;
+    
             return response()->json([
                 'success' => true,
-                'data' => ['message' => "Update Successfully"]
+                'data' => ['message' => "Update Applicant Successfully"]
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'success' => true,
+                'success' => false,
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ], 500);
         }
-    } 
+    }
+    
 }

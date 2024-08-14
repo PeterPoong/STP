@@ -109,6 +109,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
     Route::post('/applicantDetailInfo', [AdminController::class, 'applicantDetailInfo']);
     Route::post('/editApplicantStatus', [AdminController::class, 'editApplicantStatus']);
+    Route::post('/editApplicantForm', [AdminController::class, 'editApplicantForm']);
 
 
 
