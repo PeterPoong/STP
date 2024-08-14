@@ -47,16 +47,19 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
     Route::middleware('auth:sanctum')->get('/pendingAppList', [studentController::class, 'pendingAppList']);
     Route::middleware('auth:sanctum')->get('/historyAppList', [studentController::class, 'historyAppList']);
+
     Route::middleware('auth:sanctum')->post('/addAchievement', [studentController::class, 'addAchievement']);
     Route::middleware('auth:sanctum')->post('/editAchievement', [studentController::class, 'editAchievement']);
     Route::middleware('auth:sanctum')->post('/deleteAchievement', [studentController::class, 'deleteAchievement']);
     Route::middleware('auth:sanctum')->post('/achievementsList', [studentController::class, 'achievementsList']);
+
     Route::middleware('auth:sanctum')->post('/transcriptCategoryList', [studentController::class, 'transcriptCategoryList']);
     Route::middleware('auth:sanctum')->post('/subjectListByCategory', [studentController::class, 'subjectListByCategory']);
     Route::middleware('auth:sanctum')->post('/mediaListByCategory', [studentController::class, 'mediaListByCategory']);
     Route::middleware('auth:sanctum')->post('/addTranscriptFile', [studentController::class, 'addTranscriptFile']);
     Route::middleware('auth:sanctum')->post('/editTranscriptFile', [studentController::class, 'editTranscriptFile']);
     Route::middleware('auth:sanctum')->post('/deleteTranscriptFile', [studentController::class, 'deleteTranscriptFile']);
+
     Route::middleware('auth:sanctum')->post('/addOtherCertFile', [studentController::class, 'addOtherCertFile']);
     Route::middleware('auth:sanctum')->post('/editOtherCertFile', [studentController::class, 'editOtherCertFile']);
     Route::middleware('auth:sanctum')->post('/deleteOtherCertFile', [studentController::class, 'deleteOtherCertFile']);
@@ -103,6 +106,11 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editSubject', [AdminController::class, 'editSubject']);
     Route::post('/editSubjectStatus', [AdminController::class, 'editSubjectStatus']);
     Route::post('/subjectList', [AdminController::class, 'subjectList']);
+
+    Route::post('/applicantDetailInfo', [AdminController::class, 'applicantDetailInfo']);
+    Route::post('/editApplicantStatus', [AdminController::class, 'editApplicantStatus']);
+
+
 
     Route::post('/resetAdminPassword', [AdminController::class, 'resetAdminPassword']);
 });

@@ -12,6 +12,7 @@ use App\Models\stp_course_tag;
 use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use App\Models\stp_school;
+use App\Models\stp_submited_form;
 use App\Models\stp_state;
 use App\Models\stp_subject;
 use App\Models\stp_tag;
@@ -1527,4 +1528,136 @@ class AdminController extends Controller
             ]);
         }
     }
+
+    public function applicantDetailInfo(Request $request)   //Header and basic information for the applicant
+    {
+        try {
+            // Get the authenticated user
+            $authUser = Auth::user();
+
+            $request->validate([
+                'form_status' => 'integer|nullable',
+                'student_id' => 'integer|nullable',
+                'courses_id'=>'integer|nullable'
+            ]);
+
+            $applicantInfo = stp_submited_form::query()
+
+                ->when($request->filled('student_id'), function ($query) use ($request) {
+                    $query->where('student_id', $request->student_id);
+                })
+                ->when($request->filled('courses_id'), function ($query) use ($request) {
+                    $query->where('courses_id', $request->courses_id);
+                })
+                ->when($request->filled('form_status'), function ($query) use ($request) {
+                    $query->where('form_status', $request->form_status);
+                })
+                ->paginate(10)
+                ->through(function ($applicant) {
+                return [
+                    "courses_id" => $applicant->id ?? 'N/A',
+                    "course_name" => $applicant->course->course_name ?? 'N/A',
+                    "form_status" => $applicant->form_status == 2 ? "Pending" : ($applicant->form_status == 3 ? "Rejected" : "Accepted"),
+                    "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
+                    "country_code" => $applicant->student->student_countryCode ?? 'N/A',
+                    "contact_number" =>$applicant->student->student_contactNo ?? 'N/A',
+                    'student_id' => $applicant->id, // Add student_id to the result
+                ];
+            });
+            return response()->json([
+                'success' => true,
+                'data' => $applicantInfo
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Sever Error',
+                'error' => $e
+            ]);
+        }
+    }
+    public function editApplicantStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string|max:255',
+                'feedback' => 'string|max:255'
+            ]);
+            $authUser = Auth::user();
+
+            if ($request->type == 'Active') {
+                $status = 1;
+                $message = "Successfully Set the Application Status to Active";
+            } elseif ($request->type == 'Pending'){
+                $status = 2;
+                $message = "Successfully Set the Applicantion status to Pending";
+            } elseif ($request->type == 'Rejected'){
+                $status = 3;
+                $message = "Successfully Rejected the Applicant";
+            } elseif ($request->type == 'Accepted'){
+                $status = 4;
+                $message = "Successfully Accepted the Applicant";
+            }elseif($request->type == 'Disable'){
+            $status = 0;
+            $message = "Successfully Set the Applicantion Status to Disable";
+            }
+        
+
+            $applicant = stp_submited_form::find($request->id);
+
+            $applicant->update([
+                'form_status' => $status,
+                'form_feedback' => $request->feedback,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => $message]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editApplicantForm(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string',
+                'category' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            $findSubject = stp_subject::find($request->id);
+            $findSubject->update([
+                'subject_name' => $request->name,
+                'subject_category' => $request->category,
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Successfully"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    } 
 }
