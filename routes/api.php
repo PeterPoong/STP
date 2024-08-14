@@ -51,6 +51,9 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/editAchievement', [studentController::class, 'editAchievement']);
     Route::middleware('auth:sanctum')->post('/deleteAchievement', [studentController::class, 'deleteAchievement']);
     Route::middleware('auth:sanctum')->post('/achievementsList', [studentController::class, 'achievementsList']);
+    Route::middleware('auth:sanctum')->post('/transcriptCategoryList', [studentController::class, 'transcriptCategoryList']);
+    Route::middleware('auth:sanctum')->post('/subjectListByCategory', [studentController::class, 'subjectListByCategory']);
+    Route::middleware('auth:sanctum')->post('/mediaListByCategory', [studentController::class, 'mediaListByCategory']);
 
     Route::middleware('auth:sanctum')->post('/resetStudentPassword', [studentController::class, 'resetStudentPassword']);
 

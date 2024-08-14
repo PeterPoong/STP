@@ -10,6 +10,7 @@ use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use App\Models\stp_higher_transcript;
 use App\Models\stp_qualification;
+use App\Models\stp_student_media;
 use Illuminate\Http\Request;
 use App\Models\stp_school;
 use App\Models\stp_student;
@@ -1208,4 +1209,123 @@ class studentController extends Controller
             ], 500);
         }
     }
+
+    public function transcriptCategoryList(Request $request)
+    {
+        try {
+            // Validate the request
+            $request->validate([
+                'category_id' => 'integer|nullable'
+            ]);
+    
+            // Query to list all transcript categories with optional filtering
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1) // Only active categories
+                ->where('core_metaType', 'transcript_category') // Only transcript categories
+                ->when($request->filled('category_id'), function ($query) use ($request) {
+                    $query->where('id', $request->category_id);
+                })
+                ->paginate(10)
+                ->through(function ($categoryList) {
+                    return [
+                        "id"=> $categoryList->id,
+                        "transcript_category" => $categoryList->core_metaName,
+                        "status" => $categoryList->core_metaStatus == 1 ? "Active" : "Inactive"
+                    ];
+                });
+    
+            // Return the result
+            return response()->json([
+                'success' => true,
+                'data' => $categoryList
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+public function subjectListByCategory(Request $request)
+{
+    try {
+        // Validate that 'category_id' is an integer and nullable (optional)
+        $request->validate([
+            'category_id' => 'integer|nullable'
+        ]);
+
+        // Query the stp_subject table to get subjects with the matching category
+        $subjectList = stp_subject::query()
+            ->where('subject_status', 1) // Assuming 1 means 'Active'
+            ->when($request->filled('category_id'), function ($query) use ($request) {
+                // Filtering the subjects by the selected category
+                $query->where('subject_category', $request->category_id);
+            })
+            ->paginate(10) // Paginating the result
+            ->through(function ($subject) {
+                return [
+                    "id"=>$subject->id,
+                    "subject_name" => $subject->subject_name,
+                    "category_id" => $subject->subject_category,
+                    "status" => $subject->subject_status ? "Active" : "Inactive"
+                ];
+            });
+
+        // Return the filtered subject list in JSON format
+        return response()->json([
+            "success" => true,
+            "data" => $subjectList
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            "success" => false,
+            "message" => $e->getMessage()
+        ], 500);
+    }
+}
+public function mediaListByCategory(Request $request){
+    try{
+        // Validate that 'category_id' is an integer and nullable (optional)
+        $request->validate([
+            'category_id' => 'integer|nullable'
+        ]);
+
+        $mediaList = stp_student_media::query()
+        ->where('studentMedia_status', 1)
+        ->when($request->filled('category_id'), function ($query) use ($request) {
+            // Filtering the subjects by the selected category
+            $query->where('studentMedia_type', $request->category_id);
+        })
+        ->paginate(10) // Paginating the result
+        ->through(function ($StudentMedia) {
+            return [
+                "id"=>$StudentMedia->id,
+                "studentMedia_name" => $StudentMedia->studentMedia_name,
+                "studentMedia_location" => $StudentMedia->studentMedia_location,
+                "category_id" => $StudentMedia->studentMedia_type,
+                "status" => $StudentMedia->studentMedia_status ? "Active" : "Inactive"
+            ];
+        });
+
+         // Return the filtered subject list in JSON format
+         return response()->json([
+            "success" => true,
+            "data" => $mediaList
+        ]);
+    }catch (Exception $e) {
+        return response()->json([
+            "success" => false,
+            "message" => $e->getMessage()
+        ], 500);
+}
+
+}
 }
