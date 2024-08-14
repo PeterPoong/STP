@@ -12,6 +12,7 @@ class stp_other_certificate extends Model
 
         'student_id',
         'certificate_name',
+        'certificate_media',
         'certificate_status',
         'updated_by',
         'created_by',

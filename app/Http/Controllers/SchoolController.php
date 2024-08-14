@@ -869,7 +869,7 @@ class SchoolController extends Controller
 
             $applicant->update([
                 'form_status' => $status,
-                'feedback' => $request->feedback,
+                'form_feedback' => $request->feedback,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
 

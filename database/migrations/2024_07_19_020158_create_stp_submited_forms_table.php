@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('student_id')->nullable()->constrained('stp_students')->onDelete('set null');
             $table->foreignId('courses_id')->nullable()->constrained('stp_courses')->onDelete('set null');
             $table->integer('form_status')->default(1);
-            $table->string('feedback')->nullable();
+            $table->string('form_feedback')->nullable();
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();
             $table->timestamps();

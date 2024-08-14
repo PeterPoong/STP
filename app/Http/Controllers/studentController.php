@@ -9,6 +9,7 @@ use App\Models\stp_course;
 use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use App\Models\stp_higher_transcript;
+use App\Models\stp_other_certificate;
 use App\Models\stp_qualification;
 use App\Models\stp_student_media;
 use Illuminate\Http\Request;
@@ -1257,6 +1258,7 @@ class studentController extends Controller
 public function subjectListByCategory(Request $request)
 {
     try {
+
         // Validate that 'category_id' is an integer and nullable (optional)
         $request->validate([
             'category_id' => 'integer|nullable'
@@ -1294,12 +1296,16 @@ public function subjectListByCategory(Request $request)
 public function mediaListByCategory(Request $request){
     try{
         // Validate that 'category_id' is an integer and nullable (optional)
+        $authUser = Auth::user();
+        $studentID = $authUser->id;
+
         $request->validate([
             'category_id' => 'integer|nullable'
         ]);
 
         $mediaList = stp_student_media::query()
         ->where('studentMedia_status', 1)
+        ->where('student_id', $studentID)
         ->when($request->filled('category_id'), function ($query) use ($request) {
             // Filtering the subjects by the selected category
             $query->where('studentMedia_type', $request->category_id);
@@ -1329,4 +1335,345 @@ public function mediaListByCategory(Request $request){
 
 }
 
+public function addTranscriptFile(Request $request){
+    try{
+        $authUser = Auth::user();
+
+        $request->validate([
+            'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048', // File validation
+            'studentMedia_name'=>'required|string|max:255',
+            'studentMedia_type'=>'required|integer',
+            'studentMedia_format'=>'nullable|string|max:255'
+            
+        ]);
+        
+            
+        $checkingTranscriptFile = stp_student_media::where('student_id', $authUser->id)
+                ->where('studentMedia_name', $request->studentMedia_name)
+                ->exists();
+
+            if ($checkingTranscriptFile) {
+                throw ValidationException::withMessages([
+                    "transcripts" => ['Transcript with this name already uploaded']
+                ]);
+            }
+
+            if ($request->hasFile('studentMedia_location')) {
+                $image = $request->file('studentMedia_location');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('transcriptCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+            stp_student_media::create([
+                'studentMedia_name' => $request->studentMedia_name,
+                'studentMedia_type' => $request->studentMedia_type,
+                'studentMedia_format' => $request->studentMedia_format,
+                'studentMedia_location' => $imagePath ?? '',
+                'studentMedia_status' => 1,
+                'student_id' => $authUser->id,
+                'created_by' => $authUser->id,
+                'created_at' => now()
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Added the Transcript']
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    public function editTranscriptFile(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                'id' => 'required|integer',
+                'studentMedia_type' => 'required|integer',
+                'studentMedia_name' => 'required|string|max:255',
+                'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048' // Image validation
+            ]);
+            $checkingstudentMedia = stp_student_media::where('student_id',  $authUser->id)
+                ->where('studentMedia_name', $request->studentMedia_name)
+                ->where('id', '!=', $request->id)
+                ->exists();
+
+            if ($checkingstudentMedia) {
+                throw ValidationException::withMessages([
+                    "studentMedia" => ['Transcript with this name already uploaded']
+                ]);
+            }
+            $studentMedia = stp_student_media::find($request->id);
+
+            if ($request->hasFile('studentMedia_location')) {
+                if (!empty($studentMedia->studentMedia_location)) {
+                    Storage::delete('public/' . $studentMedia->studentMedia_location);
+                }
+                $image = $request->file('studentMedia_location');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('transcriptCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+
+            $studentMedia->update([
+                'student_id' => $authUser->id,
+                'studentMedia_name' => $request->studentMedia_name,
+                'studentMedia_type' => $request->studentMedia_type,
+                'studentMedia_location' => $imagePath ?? null,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'errors' => $e->errors()
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Internal Server Error",
+                "errors" => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function deleteTranscriptFile(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string|max:255'
+            ]);
+
+            $authUser = Auth::user();
+
+            if ($request->type == 'delete') {
+                $status = 0;
+                $message = "Successfully Deleted the Transcript File";
+            }
+
+            $transcriptFile = stp_student_media::find($request->id);
+
+            $transcriptFile->update([
+                'student_id' => $authUser->id,
+                'studentMedia_status' => $status,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => $message]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addOtherCertFile(Request $request){
+        try{
+            $authUser = Auth::user();
+    
+            $request->validate([
+                'certificate_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048', // File validation
+                'certificate_name'=>'required|string|max:255'   
+            ]);
+            
+                
+            $checkingCertificateFile = stp_other_certificate::where('student_id', $authUser->id)
+                    ->where('certificate_name', $request->certificate_name)
+                    ->exists();
+    
+                if ($checkingCertificateFile) {
+                    throw ValidationException::withMessages([
+                        "transcripts" => ['Certificate with this name already uploaded']
+                    ]);
+                }
+    
+                if ($request->hasFile('certificate_media')) {
+                    $image = $request->file('certificate_media');
+                    $imageName = time() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('otherCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
+                }
+                stp_other_certificate::create([
+                    'certificate_name' => $request->certificate_name,
+                    'certificate_media' => $imagePath ?? '',
+                    'certificate_status' => 1,
+                    'student_id' => $authUser->id,
+                    'created_by' => $authUser->id,
+                    'created_at' => now()
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'data' => ['message' => 'Successfully Added the Certificate']
+                ]);
+            } catch (ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation Error',
+                    'error' => $e->errors()
+                ]);
+            } catch (Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Internal Server Error',
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        public function editOtherCertFile(Request $request)
+        {
+            try {
+                $authUser = Auth::user();
+                $request->validate([
+                    'id' => 'required|integer',
+                    'certificate_name' => 'required|string|max:255',
+                    'certificate_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048' // Image validation
+                ]);
+                $checkingCertificateMedia = stp_other_certificate::where('student_id',  $authUser->id)
+                    ->where('certificate_name', $request->certificate_name)
+                    ->where('id', '!=', $request->id)
+                    ->exists();
+    
+                if ($checkingCertificateMedia) {
+                    throw ValidationException::withMessages([
+                        "certificate" => ['Certificate with this name already uploaded']
+                    ]);
+                }
+                $certificate = stp_other_certificate::find($request->id);
+    
+                if ($request->hasFile('certificate_media')) {
+                    if (!empty($certificate->certificate_media)) {
+                        Storage::delete('public/' . $certificate->certificate_media);
+                    }
+                    $image = $request->file('certificate_media');
+                    $imageName = time() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('otherCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
+                }
+    
+                $certificate->update([
+                    'student_id' => $authUser->id,
+                    'certificate_name' => $request->certificate_name,
+                    'certificate_media' => $imagePath ?? null,
+                    'updated_by' => $authUser->id,
+                    'updated_at' => now(),
+                ]);
+    
+                return response()->json([
+                    'success' => true,
+                    'data' => ['message' => "Update Successfully"]
+                ]);
+            } catch (ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Validation Error",
+                    'errors' => $e->errors()
+                ]);
+            } catch (Exception $e) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "Internal Server Error",
+                    "errors" => $e->getMessage()
+                ]);
+            }
+        }
+        public function deleteOtherCertFile(Request $request)
+        {
+            try {
+                $request->validate([
+                    'id' => 'required|integer',
+                    'type' => 'required|string|max:255'
+                ]);
+    
+                $authUser = Auth::user();
+    
+                if ($request->type == 'delete') {
+                    $status = 0;
+                    $message = "Successfully Deleted the Certificate File";
+                }
+    
+                $certificateFile = stp_other_certificate::find($request->id);
+    
+                $certificateFile->update([
+                    'student_id' => $authUser->id,
+                    'certificate_status' => $status,
+                    'updated_by' => $authUser->id,
+                    'updated_at' => now(),
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'data' => ['message' => $message]
+                ]);
+            } catch (ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation Error',
+                    'Errors' => $e->errors()
+                ], 422);
+            } catch (Exception $e) {
+                return response()->json([
+                    'succcess' => false,
+                    'message' => 'Internal Server Error',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+        }
+
+        public function otherFileCertList(Request $request){
+            try{
+                $authUser = Auth::user();
+                $studentID = $authUser->id;
+
+                $otherCertList= stp_other_certificate::query()
+                ->where('certificate_status', 1)
+                ->where('student_id', $studentID)
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('certificate_name', 'like', '%' . $request->search . '%');
+                })
+                ->paginate(10) // Paginating the result
+                ->through(function ($cert) {
+                    $status = ($cert->certificate_status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $cert->certificate_name,
+                        "media" => $cert->certificate_media,
+                        "status" => "Active"
+                    ];
+                });
+        
+                 // Return the filtered subject list in JSON format
+                 return response()->json([
+                    "success" => true,
+                    "data" => $otherCertList
+                ]);
+            }catch (Exception $e) {
+                return response()->json([
+                    "success" => false,
+                    "message" => $e->getMessage()
+                ], 500);
+        }
+        
+        }
 }

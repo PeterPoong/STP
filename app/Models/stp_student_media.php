@@ -11,6 +11,17 @@ class stp_student_media extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'student_id',
+        'studentMedia_name',
+        'studentMedia_location',
+        'studentMedia_type',
+        'studentMedia_format',
+        'studentMedia_status',
+        'updated_by',
+        'created_by'
+    ];
+
     public function student() :BelongsTo
     {
         return $this->belongsTo(stp_student::class, 'student_id', 'id');
