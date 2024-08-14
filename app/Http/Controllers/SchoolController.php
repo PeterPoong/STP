@@ -27,9 +27,19 @@ use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Validator;
+use App\Http\Controllers\serviceFunctionController;
+
+
 
 class SchoolController extends Controller
 {
+    protected $serviceFunctionController;
+
+    public function __construct(serviceFunctionController $serviceFunctionController)
+    {
+        $this->serviceFunctionController = $serviceFunctionController;
+    }
+
     public function coursesList(Request $request)
     {
         try {
@@ -857,6 +867,7 @@ class SchoolController extends Controller
             ]);
             $authUser = Auth::user();
 
+
             if ($request->type == 'Rejected') {
                 $status = 3;
                 $message = "Successfully Rejected the Applicant";
@@ -865,15 +876,18 @@ class SchoolController extends Controller
                 $message = "Successfully Accepted the Applicant";
             }
 
+
             $applicant = stp_submited_form::find($request->id);
 
             $applicant->update([
                 'form_status' => $status,
-                'feedback' => $request->feedback,
+                'form_feedback' => $request->feedback,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
-
             ]);
+
+            $this->serviceFunctionController->sendStudentApplicantStatusEmail($applicant, $status, $request->feedback ?? "no comment");
+
             return response()->json([
                 'success' => true,
                 'data' => ['message' => $message]

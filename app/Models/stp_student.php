@@ -75,4 +75,9 @@ class stp_student extends Model
     {
         return $this->hasMany(stp_student_otp::class, 'student_id', 'id');
     }
+
+    public function otherCertificate(): HasMany
+    {
+        return $this->hasMany(stp_other_certificate::class, 'student_id', 'id');
+    }
 }

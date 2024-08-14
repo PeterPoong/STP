@@ -11,13 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stp_submited_forms', function (Blueprint $table) {
+        Schema::create('stp_other_certificates', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->nullable()->constrained('stp_students')->onDelete('set null');
-            $table->foreignId('courses_id')->nullable()->constrained('stp_courses')->onDelete('set null');
-            $table->string('form_feedback')->nullable();
-            $table->integer('form_status')->default(1);
-            $table->string('feedback')->nullable();
+            $table->string('certificate_name')->nullable();
+            $table->string('certificate_media')->nullable();
+            $table->integer('certificate_status')->default('1');
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();
             $table->timestamps();
@@ -29,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('stp_submited_forms');
+        Schema::dropIfExists('stp_other_certificates');
     }
 };

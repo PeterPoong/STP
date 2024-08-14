@@ -251,4 +251,44 @@ class serviceFunctionController extends Controller
         $sendEmailToSchool = $this->serviceFunction->sendAppliedCourseEmail($school, $course, $student);
         return $sendEmailToSchool;
     }
+
+    public function sendStudentApplicantStatusEmail($form, $status, $feedback)
+    {
+        try {
+            $studentName = $form->student->student_userName;
+            $courseName = $form->course->course_name;
+            $schoolName = $form->course->school->school_name;
+            $studentEmail = $form->student->student_email;
+            $sendAcceptanceEmail = $this->serviceFunction->sendStudentEmail($studentName, $courseName, $schoolName, $studentEmail, $status, $feedback);
+            return $sendAcceptanceEmail;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function sendReminder($form, $authUser)
+    {
+        try {
+            $schoolEmail = $form->course->school->school_email;
+            $studentName = $authUser->student_userName;
+            $courseName = $form->course->course_name;
+            $schoolName = $form->course->school->school_name;
+            $sendReminder = $this->serviceFunction->sendReminder(
+                $schoolEmail,
+                $studentName,
+                $courseName,
+                $schoolName
+            );
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

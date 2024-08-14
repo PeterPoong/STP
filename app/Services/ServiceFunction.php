@@ -8,6 +8,9 @@ use App\Models\stp_user_otp;
 use Illuminate\Support\Str;
 use App\Mail\OtpMail;
 use App\Mail\SendSchoolEmail;
+use App\Mail\SendAcceptanceEmail;
+use App\Mail\SendRejectEmail;
+use App\Mail\SendReminder;
 use Illuminate\Support\Facades\Mail;
 
 class ServiceFunction
@@ -60,8 +63,51 @@ class ServiceFunction
             Mail::to($institute_email)->send(new SendSchoolEmail($data));
         } catch (\Exception $e) {
             return response()->json([
-                'sucess' => false,
+                'success' => false,
                 'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function sendStudentEmail($studentName, $courseName, $schoolName, $studentEmail, $status, $feedback)
+    {
+        try {
+            $data = [
+                'studentName' => $studentName,
+                'courseName' => $courseName,
+                'schoolName' => $schoolName,
+                'feedback' => $feedback
+            ];
+            if ($status == 4) {
+                Mail::to($studentEmail)->send(new SendAcceptanceEmail($data));
+            } else {
+                Mail::to($studentEmail)->send(new SendRejectEmail($data));
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
+    public function sendReminder($schoolEmail, $studentName, $courseName, $schoolName)
+    {
+        try {
+            $data = [
+                'courseName' => $courseName,
+                'studentName' => $studentName,
+                'schoolName' => $schoolName,
+                'reviewLink' => "https://www.youtube.com/"
+            ];
+            Mail::to($schoolEmail)->send(new SendReminder($data));
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ]);
         }

@@ -659,9 +659,6 @@ class studentController extends Controller
 
             $authUser = Auth::user();
             $studentID = $authUser->id;
-
-
-
             $checkingCourse = stp_submited_form::where('courses_id', $request->courseID)
                 ->where('student_id', $studentID)
                 ->where('form_status', '!=', 3)
@@ -1206,6 +1203,35 @@ class studentController extends Controller
                 'message' => 'Internal Server Error',
                 'errors' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function sendReminder(Request $request)
+    {
+        try {
+            $request->validate([
+                "formID" => 'required|integer'
+            ]);
+            $form = stp_submited_form::find($request->formID);
+
+            $authUser = Auth::user();
+            $this->serviceFunctionController->sendReminder($form, $authUser);
+            return response()->json([
+                'success' => true,
+                'data' => 'Send Reminder successfully'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }
