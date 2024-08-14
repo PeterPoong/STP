@@ -61,11 +61,6 @@ class stp_core_meta extends Model
         return $this->belongsToMany(stp_transcript::class, 'transcript_category', 'id');
     }
 
-    public function subjectCategory(): HasMany
-    {
-        return $this->hasMany(stp_subject::class, 'subject_category', 'id');
-    }
-
     public function schoolInstitueCategory(): HasMany
     {
         return $this->hasMany(stp_school::class, 'institue_category', 'id');
