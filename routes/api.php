@@ -111,6 +111,11 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editApplicantStatus', [AdminController::class, 'editApplicantStatus']);
     Route::post('/editApplicantForm', [AdminController::class, 'editApplicantForm']);
 
+    Route::post('/addPackage', [AdminController::class, 'addPackage']);
+    Route::post('/editPackage', [AdminController::class, 'editPackage']);
+    Route::post('/deletePackage', [AdminController::class, 'deletePackage']);
+    Route::post('/packageList', [AdminController::class, 'packageList']);
+
 
 
     Route::post('/resetAdminPassword', [AdminController::class, 'resetAdminPassword']);
