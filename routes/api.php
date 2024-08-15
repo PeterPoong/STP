@@ -64,7 +64,10 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/editOtherCertFile', [studentController::class, 'editOtherCertFile']);
     Route::middleware('auth:sanctum')->post('/deleteOtherCertFile', [studentController::class, 'deleteOtherCertFile']);
     Route::middleware('auth:sanctum')->post('/otherFileCertList', [studentController::class, 'otherFileCertList']);
+
     Route::middleware('auth:sanctum')->post('/resetStudentPassword', [studentController::class, 'resetStudentPassword']);
+
+
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
 });
 
@@ -133,14 +136,6 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 Route::post('/sendOtp', [serviceFunctionController::class, 'sendingOtp']);
 Route::post('/validateOtp', [serviceFunctionController::class, 'validateOtp']);
 Route::post('/resetPassword', [serviceFunctionController::class, 'resetPassword']);
-
-Route::middleware('auth:sanctum')->get('validateToken', function () {
-    return response()->json([
-        'success' => true,
-        'message' => 'Token is valid'
-    ]);
-});
-
 
 
 

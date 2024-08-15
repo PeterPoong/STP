@@ -191,79 +191,30 @@ class studentController extends Controller
                 'search' => 'string',
                 'country' => 'integer',
                 'qualification' => 'integer',
-                'location' => 'array',
-                'category' => 'array',
-                'institute' => 'integer',
-                'studyMode' => 'array',
-                'tuitionFee' => 'numeric'
+                'state' => 'integer',
+                'category' => 'integer',
             ]);
 
             // $test = stp_course::find(1);
             // return $test->studyMode->core_metaName;
             $getCourses = stp_course::when($request->filled('qualification'), function ($query) use ($request) {
-                $query->where('qualification_id', $request->qualification);
+                $query->orWhere('qualification_id', $request->qualification);
             })
                 ->when($request->filled('category'), function ($query) use ($request) {
-                    $query->whereIn('category_id', $request->category);
+                    $query->orWhere('category_id', $request->category);
                 })
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('course_name', 'like', '%' . $request->search . '%');
                 })
                 ->when($request->filled('country'), function ($query) use ($request) {
                     $query->whereHas('school', function ($query) use ($request) {
-                        $query->where('country_id', $request->country);
+                        $query->where('country_id', 1);
                     });
                 })
-                ->when($request->filled('institute'), function ($query) use ($request) {
-                    $query->whereHas('school', function ($query) use ($request) {
-                        $query->where('institue_category', $request->institute);
-                    });
-                })
-                ->when($request->filled('studyMode'), function ($query) use ($request) {
-                    $query->whereIn('study_mode', $request->studyMode);
-                })
-                ->when($request->filled('location'), function ($query) use ($request) {
-                    $query->whereHas('school', function ($query) use ($request) {
-                        $query->whereIn('state_id', $request->location);
-                    });
-                })
-                ->when($request->filled('tuitionFee'), function ($query) use ($request) {
-                    $query->where('course_cost', '<=', $request->tuitionFee);
-                })
-                ->paginate(10)
-                ->through(function ($course) {
-                    $featured = false;
-                    foreach ($course->featured as $c) {
-
-                        if ($c['featured_type'] == 30 && $c['featured_status'] == 1) {
-                            $featured = true;
-                            break;
-                        }
-                    }
-
-                    return [
-                        'id' => $course->id,
-                        'school_id' => $course->school->school_name,
-                        'name' => $course->course_name,
-                        'description' => $course->course_description,
-                        'requirement' => $course->course_requirement,
-                        'cost' => $course->course_cost,
-                        'featured' => $featured,
-                        'period' => $course->course_period,
-                        'intake' => $course->course_intake,
-                        'category' => $course->category->category_name,
-                        'qualification' => $course->qualification->qualification_name,
-                        'mode' => $course->studyMode->core_metaName ?? null,
-                        'logo' => $course->course_logo ?? $course->school->school_logo,
-                        'location' => $course->school->state->state_name
-                    ];
-                });
-
-            return $getCourses;
+                ->paginate(10);
 
 
 
-            $coursesList = [];
             foreach ($getCourses as $course) {
                 if (empty($course->course_logo)) {
                     $logo = $course->school->school_logo;
@@ -272,7 +223,6 @@ class studentController extends Controller
                 }
 
                 $featured = false;
-
                 foreach ($course->featured as $c) {
 
                     if ($c['featured_type'] == 30 && $c['featured_status'] == 1) {
@@ -280,7 +230,7 @@ class studentController extends Controller
                         break;
                     }
                 }
-
+                // $coursesList = [];
                 $coursesList[] = [
                     'id' => $course->id,
                     'school_id' => $course->school->school_name,
@@ -295,16 +245,12 @@ class studentController extends Controller
                     'qualification' => $course->qualification->qualification_name,
                     'mode' => $course->studyMode->core_metaName ?? null,
                     'logo' => $logo,
-                    'location' => $course->school->state->state_name
                 ];
             }
 
-            if (count($coursesList) > 0) {
-                usort($coursesList, function ($a, $b) {
-                    return $b['featured'] <=> $a['featured'];
-                });
-            }
-
+            usort($coursesList, function ($a, $b) {
+                return $b['featured'] <=> $a['featured'];
+            });
 
             return response()->json([
                 'success' => true,
