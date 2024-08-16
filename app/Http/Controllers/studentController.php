@@ -198,8 +198,6 @@ class studentController extends Controller
                 'tuitionFee' => 'numeric'
             ]);
 
-            // $test = stp_course::find(1);
-            // return $test->studyMode->core_metaName;
             $getCourses = stp_course::when($request->filled('qualification'), function ($query) use ($request) {
                 $query->where('qualification_id', $request->qualification);
             })
@@ -259,7 +257,19 @@ class studentController extends Controller
                     ];
                 });
 
-            return $getCourses;
+            $sortedCourses = $getCourses->sortByDesc('featured')->values();
+
+            $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
+                $sortedCourses->forPage($getCourses->currentPage(), $getCourses->perPage()), // Slice the collection for the current page
+                $sortedCourses->count(),
+                $getCourses->perPage(),
+                $getCourses->currentPage(),
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+            return response()->json([
+                'success' => true,
+                'data' => $paginatedCourses
+            ]);
 
 
 
@@ -1756,6 +1766,46 @@ class studentController extends Controller
                 "success" => false,
                 "message" => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function resetDummyAccountPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'newPassword' => 'required|string|min:8',
+                'confirmPassword' => 'required|string|min:8|same:newPassword'
+            ]);
+
+            $findStudent = stp_student::find(1);
+            if ($findStudent->student_status != 3) {
+                throw ValidationException::withMessages(['account' => 'Account is not dummy anymore']);
+            }
+
+            $findStudent->update([
+                'student_password' => Hash::make($request->newPassword),
+                'student_status' => 1
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => "Successfully Reset Password"
+                ]
+            ]);
+        } catch (validationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

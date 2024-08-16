@@ -1538,7 +1538,7 @@ class AdminController extends Controller
             $request->validate([
                 'form_status' => 'integer|nullable',
                 'student_id' => 'integer|nullable',
-                'courses_id'=>'integer|nullable'
+                'courses_id' => 'integer|nullable'
             ]);
 
             $applicantInfo = stp_submited_form::query()
@@ -1554,16 +1554,16 @@ class AdminController extends Controller
                 })
                 ->paginate(10)
                 ->through(function ($applicant) {
-                return [
-                    "courses_id" => $applicant->id ?? 'N/A',
-                    "course_name" => $applicant->course->course_name ?? 'N/A',
-                    "form_status" => $applicant->form_status == 2 ? "Pending" : ($applicant->form_status == 3 ? "Rejected" : "Accepted"),
-                    "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
-                    "country_code" => $applicant->student->student_countryCode ?? 'N/A',
-                    "contact_number" =>$applicant->student->student_contactNo ?? 'N/A',
-                    'student_id' => $applicant->id, // Add student_id to the result
-                ];
-            });
+                    return [
+                        "courses_id" => $applicant->id ?? 'N/A',
+                        "course_name" => $applicant->course->course_name ?? 'N/A',
+                        "form_status" => $applicant->form_status == 2 ? "Pending" : ($applicant->form_status == 3 ? "Rejected" : "Accepted"),
+                        "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
+                        "country_code" => $applicant->student->student_countryCode ?? 'N/A',
+                        "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
+                        'student_id' => $applicant->id, // Add student_id to the result
+                    ];
+                });
             return response()->json([
                 'success' => true,
                 'data' => $applicantInfo
@@ -1576,6 +1576,7 @@ class AdminController extends Controller
             ]);
         }
     }
+
     public function editApplicantStatus(Request $request)
     {
         try {
@@ -1589,20 +1590,20 @@ class AdminController extends Controller
             if ($request->type == 'Active') {
                 $status = 1;
                 $message = "Successfully Set the Application Status to Active";
-            } elseif ($request->type == 'Pending'){
+            } elseif ($request->type == 'Pending') {
                 $status = 2;
                 $message = "Successfully Set the Applicantion status to Pending";
-            } elseif ($request->type == 'Rejected'){
+            } elseif ($request->type == 'Rejected') {
                 $status = 3;
                 $message = "Successfully Rejected the Applicant";
-            } elseif ($request->type == 'Accepted'){
+            } elseif ($request->type == 'Accepted') {
                 $status = 4;
                 $message = "Successfully Accepted the Applicant";
-            }elseif($request->type == 'Disable'){
-            $status = 0;
-            $message = "Successfully Set the Applicantion Status to Disable";
+            } elseif ($request->type == 'Disable') {
+                $status = 0;
+                $message = "Successfully Set the Applicantion Status to Disable";
             }
-        
+
 
             $applicant = stp_submited_form::find($request->id);
 
@@ -1659,5 +1660,5 @@ class AdminController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
-    } 
+    }
 }

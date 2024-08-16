@@ -65,6 +65,7 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/deleteOtherCertFile', [studentController::class, 'deleteOtherCertFile']);
     Route::middleware('auth:sanctum')->post('/otherFileCertList', [studentController::class, 'otherFileCertList']);
     Route::middleware('auth:sanctum')->post('/resetStudentPassword', [studentController::class, 'resetStudentPassword']);
+    Route::middleware('auth:sanctum',)->post('/resetDummyAccountPassword', [studentController::class, 'resetDummyAccountPassword']);
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
 });
 
@@ -73,6 +74,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/studentList', [AdminController::class, 'studentList']);
     Route::post('/editStudent', [AdminController::class, 'editStudent']);
     Route::post('/editStatus', [AdminController::class, 'editStudentStatus']);
+
 
     Route::post('/schoolList', [AdminController::class, 'schoolList']);
     Route::post('/addSchool', [AdminController::class, 'addSchool']);
@@ -106,9 +108,6 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
     Route::post('/applicantDetailInfo', [AdminController::class, 'applicantDetailInfo']);
     Route::post('/editApplicantStatus', [AdminController::class, 'editApplicantStatus']);
-
-
-
     Route::post('/resetAdminPassword', [AdminController::class, 'resetAdminPassword']);
 });
 
@@ -128,6 +127,7 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/applicantDetailRelatedDocument', [SchoolController::class, 'applicantDetailRelatedDocument']);
 
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
+    Route::post('/resetDummySchoolPassword', [SchoolController::class, 'resetDummySchoolPassword']);
 });
 
 Route::post('/sendOtp', [serviceFunctionController::class, 'sendingOtp']);

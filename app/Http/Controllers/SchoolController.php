@@ -28,8 +28,7 @@ use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Validator;
 use App\Http\Controllers\serviceFunctionController;
-
-
+use PHPUnit\TextUI\Help;
 
 class SchoolController extends Controller
 {
@@ -904,6 +903,46 @@ class SchoolController extends Controller
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function resetDummySchoolPassword(Request $request)
+    {
+
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'newPassword' => 'required|string|min:8',
+                'confirmPassword' => 'required|string|min:8'
+            ]);
+
+            $findSchool = stp_school::find($request->id);
+            if ($findSchool->school_status != 3) {
+                throw ValidationException::withMessages([
+                    'account' => "Account is active already"
+                ]);
+            };
+
+            $findSchool->update([
+                'school_password' => Hash::make($request->newPassword),
+                'school_status' => 1
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "successfully activate your account"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error"
+            ]);
         }
     }
 }
