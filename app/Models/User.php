@@ -26,6 +26,7 @@ class User extends Authenticatable
         'country_code',
         'contact_no',
         'user_role',
+        'status',
         'profile_pic',
         'created_by',
         'updated_by'

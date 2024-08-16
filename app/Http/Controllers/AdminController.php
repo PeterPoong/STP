@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\stp_city;
+use App\Models\stp_package;
 use Illuminate\Http\Request;
 use App\Models\stp_student;
 
@@ -1593,15 +1594,15 @@ class AdminController extends Controller
             } elseif ($request->type == 'Pending') {
                 $status = 2;
                 $message = "Successfully Set the Applicantion status to Pending";
-            } elseif ($request->type == 'Rejected') {
+            } elseif ($request->type == 'Reject') {
                 $status = 3;
                 $message = "Successfully Rejected the Applicant";
-            } elseif ($request->type == 'Accepted') {
+            } elseif ($request->type == 'Accept') {
                 $status = 4;
                 $message = "Successfully Accepted the Applicant";
-            } elseif ($request->type == 'Disable') {
+            } elseif ($request->type == 'Delete') {
                 $status = 0;
-                $message = "Successfully Set the Applicantion Status to Disable";
+                $message = "Successfully Deleted the Applicant";
             }
 
 
@@ -1638,20 +1639,103 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'id' => 'required|integer',
-                'name' => 'required|string',
-                'category' => 'required|integer'
+                'courses_id' => 'required|integer',
+                'school_id' => 'required|integer',
+                'feedback' => 'string|max:255',
+                'created_at' => 'required|date_format:Y-m-d'
             ]);
+
+            // Retrieve the course based on the provided courses_id
+            $course = stp_course::find($request->courses_id);
+
+            // Check if the course exists and belongs to the specified school_id
+            if (!$course || $course->school_id != $request->school_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The course does not exist in this institute'
+                ], 400);
+            }
+
+            // Retrieve the applicant form by ID
+            $editApplication = stp_submited_form::find($request->id);
+
+            // Temporarily disable automatic timestamps
+            $editApplication->timestamps = false;
+
+            // Update the applicant form
+            $editApplication->update([
+                'courses_id' => $request->courses_id,
+                'school_id' => $course->school_id, // Use the school_id from the course
+                'created_at' => $request->created_at,
+                'form_feedback' => $request->feedback,
+                'updated_by' => Auth::id(),
+                'updated_at' => now()
+            ]);
+
+            // Re-enable automatic timestamps
+            $editApplication->timestamps = true;
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Applicant Successfully"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function addPackage(Request $request)
+    {
+        try {
+            $request->validate([
+                'package_name' => 'required|string|max:255',
+                'package_detail' => 'required|string|max:255',
+                'package_type' => 'required|integer',
+                'package_price' => 'required|numeric|regex:/^\d+(\.\d{1,2})?$/'
+            ]);
+
+            // Convert the package_detail input into an HTML list
+            $packageDetail = $request->package_detail;
+
+            // Split the input by line breaks
+            $lines = preg_split("/\r\n|\n|\r/", $packageDetail);
+
+            // Initialize the HTML structure
+            $htmlOutput = "<ul>";
+
+            // Loop through each line, clean it, and wrap it in <li> tags
+            foreach ($lines as $line) {
+                $cleanedLine = preg_replace("/^\d+\)\s*/", '', $line);
+                $htmlOutput .= "<li>" . htmlentities($cleanedLine) . "</li>";
+            }
+
+            // Close the <ul> tag
+            $htmlOutput .= "</ul>";
+
+
             $authUser = Auth::user();
-            $findSubject = stp_subject::find($request->id);
-            $findSubject->update([
-                'subject_name' => $request->name,
-                'subject_category' => $request->category,
-                'updated_by' => $authUser->id
+
+            stp_package::create([
+                'package_name' => $request->package_name,
+                'package_detail' => $htmlOutput, // Save the HTML list
+                'package_type' => $request->package_type,
+                'package_price' => $request->package_price,
+                'created_by' => $authUser->id,
+                'created_at' => now()
             ]);
 
             return response()->json([
                 'success' => true,
-                'data' => ['message' => "Update Successfully"]
+                'data' => ["message" => "Succesfully Created a Package"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1659,6 +1743,181 @@ class AdminController extends Controller
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+    public function editPackage(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'package_name' => 'required|string|max:255',
+                'package_detail' => 'required|string|max:255',
+                'package_type' => 'required|integer',
+                'package_price' => 'required|numeric|regex:/^\d+(\.\d{1,2})?$/'
+            ]);
+
+            // Convert the package_detail input into an HTML list
+            $packageDetail = $request->package_detail;
+
+            // Split the input by line breaks
+            $lines = preg_split("/\r\n|\n|\r/", $packageDetail);
+
+            // Initialize the HTML structure
+            $htmlOutput = "<ul>";
+
+            // Loop through each line, clean it, and wrap it in <li> tags
+            foreach ($lines as $line) {
+                $cleanedLine = preg_replace("/^\d+\)\s*/", '', $line);
+                $htmlOutput .= "<li>" . htmlentities($cleanedLine) . "</li>";
+            }
+
+            // Close the <ul> tag
+            $htmlOutput .= "</ul>";
+
+            $authUser = Auth::user();
+
+            $findPackage = stp_package::find($request->id);
+            $findPackage->update([
+                'package_name' => $request->package_name,
+                'package_detail' => $htmlOutput, // Save the HTML list
+                'package_type' => $request->package_type,
+                'package_price' => $request->package_price,
+                'updated_by' => $authUser->id,
+                'updated_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Package Successfully"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deletePackage(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string|max:255',
+            ]);
+            $authUser = Auth::user();
+
+            if ($request->type == 'Delete') {
+                $status = 0;
+                $message = "Successfully Deleted the Package";
+            }
+
+
+            $applicant = stp_package::find($request->id);
+
+            $applicant->update([
+                'package_status' => $status,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => $message]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function packageList(Request $request)
+    {
+        try {
+            $packageList = stp_package::query()
+                ->when($request->filled('package_type'), function ($query) use ($request) {
+                    $query->where('package_type', $request->package_type);
+                })
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('package_name', 'like', '%' . $request->search . '%');
+                })
+                ->paginate(10)
+                ->through(function ($package) {
+                    $status = ($package->package_status == 1) ? "Active" : "Inactive";
+                    return [
+                        "package_name" => $package->package_name,
+                        "package_detail" => $package->package_detail,
+                        "package_type" => $package->package_type,
+                        "package_price" => $package->package_price,
+                        "package_status" => $status
+                    ];
+                });
+            return $packageList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function resetAdminDummyPassword(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+
+            // Check if the user's status is 3
+            if ($authUser->status == 3) {
+                // Force user to reset password
+                $request->validate([
+                    'currentPassword' => 'required|string|min:8',
+                    'newPassword' => 'required|string|min:8',
+                    'confirmPassword' => 'required|string|min:8|same:newPassword'
+                ]);
+
+                if (!Hash::check($request->currentPassword, $authUser->password)) {
+                    throw ValidationException::withMessages(["password does not match"]);
+                }
+
+                $authUser->update([
+                    'password' => Hash::make($request->newPassword),
+                    'status' => 1,  // Change status to 1 after resetting password
+                    'updated_by' => $authUser->id
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'data' => ['message' => "Successfully reset password"]
+                ]);
+            }
+
+            // If the status is not 3, ignore the password reset
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "No need to reset password"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }
