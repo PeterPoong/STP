@@ -1869,4 +1869,56 @@ class AdminController extends Controller
     }
 
 }
+
+public function resetAdminDummyPassword(Request $request)
+{
+    try {
+        $authUser = Auth::user();
+
+        // Check if the user's status is 3
+        if ($authUser->status == 3) {
+            // Force user to reset password
+            $request->validate([
+                'currentPassword' => 'required|string|min:8',
+                'newPassword' => 'required|string|min:8',
+                'confirmPassword' => 'required|string|min:8|same:newPassword'
+            ]);
+
+            if (!Hash::check($request->currentPassword, $authUser->password)) {
+                throw ValidationException::withMessages(["password does not match"]);
+            }
+
+            $authUser->update([
+                'password' => Hash::make($request->newPassword),
+                'status' => 1,  // Change status to 1 after resetting password
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Successfully reset password"]
+            ]);
+        }
+
+        // If the status is not 3, ignore the password reset
+        return response()->json([
+            'success' => true,
+            'data' => ['message' => "No need to reset password"]
+        ]);
+
+    } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => "Validation Error",
+            'error' => $e->errors()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
 }

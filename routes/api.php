@@ -117,7 +117,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/packageList', [AdminController::class, 'packageList']);
 
 
-
+    Route::post('/resetAdminDummyPassword', [AdminController::class, 'resetAdminDummyPassword']);
     Route::post('/resetAdminPassword', [AdminController::class, 'resetAdminPassword']);
 });
 
