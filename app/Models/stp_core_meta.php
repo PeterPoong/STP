@@ -106,4 +106,10 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_package::class, 'package_type', 'id');
     }
+
+    public function intake(): HasMany
+    {
+        return $this->hasMany(stp_intake::class, 'intake_month','id');
+    }
+
 }

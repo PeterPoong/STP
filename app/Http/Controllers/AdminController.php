@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\stp_city;
 use App\Models\stp_package;
+use App\Models\stp_user_detail;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\stp_student;
 
@@ -1918,6 +1920,86 @@ class AdminController extends Controller
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    public function addAdmin(Request $request) {
+        try{
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'string|max:255',
+                'ic_number' => 'nullable|integer',
+                'country_code' => 'required|string|max:255',
+                'contact_no' => 'required|string|max:255',
+                'password' => 'required|string|max:255',
+                'user_detailPostcode' => 'required|string|max:255',
+                'user_detailCountry' => 'required|string|max:255',
+                'user_detailCity' => 'required|string|max:255',
+                'user_detailState' => 'required|string|max:255',
+                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
+            ]);
+
+            $authUser = Auth::user();
+            $checkingName = User::where('id',  $authUser->id)
+            ->where('name', $request->name)
+            ->exists();
+
+            if ($checkingName) {
+                throw ValidationException::withMessages([
+                    "names" => ['This Name Already Exist.']
+                ]);
+            }
+
+            if ($request->hasFile('profile_pic')) {
+                $image = $request->file('profile_pic');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('profilePic', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'ic_number' => $request->ic_number,
+                'country_code' => $request->country_code,
+                'contact_no' => $request->contact_no,
+                'password' => $request->password,
+                'profile_pic' =>$imagePath ?? '', // Image validation
+                'user_role'=>1,
+                'status'=>3,
+                'created_by'=> $authUser->id,
+                'created_at'=>now()
+            ]);
+
+            
+
+            stp_user_detail::create([
+                'user_detailPostcode' => $request->user_detailPostcode,
+                'user_detailCountry' => $request->user_detailCountry,
+                'user_detailCity' => $request->user_detailCity,
+                'user_detailState' =>$request->user_detailState,
+                'user_detailStatus'=>1,
+                'user_id'=>$user->id,
+                'created_by'=> $authUser->id,
+                'created_at'=>now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Added the New Admin']
+            ]);
+        }catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+        }catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+
         }
     }
 }
