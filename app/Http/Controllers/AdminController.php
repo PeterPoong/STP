@@ -2002,4 +2002,163 @@ class AdminController extends Controller
 
         }
     }
+    public function disableAdmin(Request $request)
+    {
+        try{
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string|max:255'
+            ]);
+
+            $authUser = Auth::user();
+
+            if ($request->type == 'disable') {
+                $status = 0;
+                $message = "Successfully Disable the Admin";
+        }
+        $adminStatus = User::find($request->id);
+        
+        $adminStatus->update([
+            'status' => $status,
+            'updated_by' => $authUser->id,
+            'updated_at' => now(),
+
+        ]);
+        return response()->json([
+            'success' => true,
+            'data' => ['message' => $message]
+        ]);
+        }catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+
+        }catch (\Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function adminList(Request $request){
+        try{
+            $adminList = User::query()
+            ->where('status', 1)
+            ->where('user_role', 1)
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            })
+            ->paginate(10)
+            ->through(function ($admin) {
+                $status = ($admin->status == 1) ? "Active" : "Inactive";
+                return [
+                    "name" => $admin-> name,
+                    "email" => $admin->email,
+                    "ic_number" => $admin->ic_number,
+                    "contact_no" => $admin->contact_no,
+                    "status" => "Active"
+                ];
+            });
+
+            return $adminList;
+            }catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Internal Server Error',
+                    'errors' => $e->getMessage()
+                ], 500);
+        }
+
+    }
+
+    public function editAdmin(Request $request) {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string|max:255',
+                'email' => 'string|max:255',
+                'ic_number' => 'nullable|integer',
+                'country_code' => 'required|string|max:255',
+                'contact_no' => 'required|string|max:255',
+                'password' => 'nullable|string|max:255', // Make password nullable for edits
+                'user_detailPostcode' => 'required|string|max:255',
+                'user_detailCountry' => 'required|string|max:255',
+                'user_detailCity' => 'required|string|max:255',
+                'user_detailState' => 'required|string|max:255',
+                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
+            ]);
+    
+            // Check if the name already exists for another user
+            $checkingName = User::where('id', '!=', $request->id)
+                ->where('name', $request->name)
+                ->exists();
+    
+            if ($checkingName) {
+                throw ValidationException::withMessages([
+                    "names" => ['This Name Already Exists.']
+                ]);
+            }
+    
+            $admin = User::findOrFail($request->id); // Find the user or throw a 404 error
+    
+            // Handle profile picture upload
+            $imagePath = $admin->profile_pic; // Default to current profile picture
+            if ($request->hasFile('profile_pic')) {
+                if (!empty($admin->profile_pic)) {
+                    Storage::delete('public/' . $admin->profile_pic);
+                }
+                $image = $request->file('profile_pic');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('profilePic', $imageName, 'public');
+            }
+    
+            // Update the admin user
+            $admin->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'ic_number' => $request->ic_number,
+                'country_code' => $request->country_code,
+                'contact_no' => $request->contact_no,
+                'password' => $request->password ? bcrypt($request->password) : $admin->password, // Only update password if provided
+                'profile_pic' => $imagePath,
+                'status' => 1,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+            ]);
+    
+            // Update the admin user's details
+            $admin->detail->update([
+                'user_detailPostcode' => $request->user_detailPostcode,
+                'user_detailCountry' => $request->user_detailCountry,
+                'user_detailCity' => $request->user_detailCity,
+                'user_detailState' => $request->user_detailState,
+                'user_detailStatus' => 1,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'errors' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Internal Server Error",
+                "errors" => $e->getMessage()
+            ]);
+        }
+    }
+    
 }
