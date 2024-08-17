@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\stp_city;
+use App\Models\stp_intake;
 use App\Models\stp_package;
 use App\Models\stp_user_detail;
 use App\Models\User;
@@ -646,12 +647,16 @@ class AdminController extends Controller
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'string|max:255',
+                'requirement' => 'string|max:255',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
-                'intake' => 'required|string|max:255',
+                'intake' => 'required|array',
+                'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
                 'category' => 'required|integer',
-                'qualification' => 'required|integer'
+                'qualification' => 'required|integer',
+                'course_logo'=>'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
+
             $authUser = Auth::user();
             $checkingCourse = stp_course::where('school_id', $request->schoolID)
                 ->where('course_name', $request->name)
@@ -661,21 +666,36 @@ class AdminController extends Controller
                     "courses" => ['Courses already exist in the school']
                 ]);
             }
-
-            stp_course::create([
+            if ($request->hasFile('course_logo')) {
+                $image = $request->file('course_logo');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('courseLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+            $course = stp_course::create([
                 'school_id' => $request->schoolID,
                 'course_name' => $request->name,
                 'course_description' => $request->description ?? null,
-                'course_requirement' => $request->requiremnt ?? null,
+                'course_requirement' => $request->requirement ?? null,
                 'course_cost' => $request->cost,
                 'course_period' => $request->period,
                 'course_intake' => $request->intake,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
-                'course_requirement' => $request->requirement,
-                'created_by' => $authUser->id
+                'course_logo' =>$imagePath ?? '',
+                'created_by' => $authUser->id,
+                'course_status'=>1,
+                'created_at'=>now()
             ]);
 
+            foreach ($request->intake as $intakeMonth) {
+                stp_intake::create([
+                    'course_id' => $course->id,
+                    'intake_month' => $intakeMonth,
+                    'created_by' => $authUser->id,
+                    'intake_status' => 1,
+                    'created_at' => now()
+                ]);
+            }
             return response()->json([
                 'success' => true,
                 'data' => ['message' => 'Successfully Added the Courses']
@@ -755,7 +775,11 @@ class AdminController extends Controller
                     "tagName" => $tag->tag['tag_name']
                 ];
             }
-
+            // Fetch all intakes associated with the course
+            $intakeList = [];
+            foreach ($courseList->intake as $intake) {
+                $intakeList[] = $intake->month->core_metaName;
+            }
             $courseListDetail = [
                 'id' => $courseList->id,
                 'course' => $courseList->course_name,
@@ -763,7 +787,7 @@ class AdminController extends Controller
                 'requirement' => $courseList->course_requirement,
                 'cost' => $courseList->course_cost,
                 'period' => $courseList->course_period,
-                'intake' => $courseList->course_intake,
+                'intake' => $intakeList, // Updated to include all intakes
                 'category' => $courseList->category->category_name,
                 'school' => $courseList->school->school_name,
                 'qualification' => $courseList->qualification->qualifiation_name,
@@ -771,11 +795,13 @@ class AdminController extends Controller
                 'logo' => $logo,
                 'tag' => $tagList
             ];
+        
             return response()->json([
                 'success' => true,
                 'data' => $courseListDetail
             ]);
             return $courseListDetail;
+        
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -792,13 +818,16 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
+                'requirement' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'string|max:255',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
-                'intake' => 'required|string|max:255',
+                'intake' => 'required|array',
+                'intake.*' => 'integer|between:41,52',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
+                'course_logo'=>'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
             $checkingCourse = stp_course::where('school_id', $request->schoolID)
@@ -814,19 +843,40 @@ class AdminController extends Controller
 
             $courses = stp_course::find($request->id);
 
+            $imagePath = $courses->course_logo; // Default to current profile picture
+            if ($request->hasFile('course_logo')) {
+                if (!empty($courses->course_logo)) {
+                    Storage::delete('public/' . $courses->course_logo);
+                }
+                $image = $request->file('course_logo');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('courseLogo', $imageName, 'public');
+            }
+
             $courses->update([
                 'school_id' => $request->schoolID,
                 'course_name' => $request->name,
                 'course_description' => $request->description ?? null,
-                'course_requirement' => $request->requiremnt ?? null,
+                'course_requirement' => $request->requirement,
                 'course_cost' => $request->cost,
                 'course_period' => $request->period,
                 'course_intake' => $request->intake,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
-                'course_requirement' => $request->requirement,
-                'updated_by' => $authUser->id
+                'course-logo' => $imagePath ?? '',
+                'updated_by' => $authUser->id,
+                'updated_at'=>now()
             ]);
+
+            foreach ($request->intake as $intakeMonth) {
+                stp_intake::create([
+                'course_id' => $courses->id,
+                    'intake_month' => $intakeMonth,
+                    'updated_by' => $authUser->id,
+                    'intake_status' => 1,
+                    'updated_at' => now()
+            ]);
+        }
             return response()->json([
                 'success' => true,
                 'data' => ['message' => "Update Successfully"]

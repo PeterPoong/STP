@@ -10,6 +10,14 @@ class stp_intake extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'course_id',
+        'intake_month',
+        'intake_status',
+        'updated_by',
+        'created_by'
+    ];
+
     public function course(): BelongsTo
     {
         return $this->belongsTo(stp_course::class, 'course_id', 'id');
