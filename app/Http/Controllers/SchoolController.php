@@ -28,6 +28,7 @@ use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Validator;
 use App\Http\Controllers\serviceFunctionController;
+use App\Models\stp_intake;
 use PHPUnit\TextUI\Help;
 
 class SchoolController extends Controller
@@ -85,7 +86,7 @@ class SchoolController extends Controller
                 'requirement' => 'string|max:255',
                 'cost' => 'required|regex:/^\d+(\.\d{1,2})?$/',
                 'period' => 'required|string|max:255',
-                'intake' => 'required|string|max:255',
+                'intake' => 'required|array',
                 'category' => 'required|integer',
                 'mode' => 'required|integer',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
@@ -108,14 +109,13 @@ class SchoolController extends Controller
                 $imagePath = $image->storeAs('courseLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
 
-            stp_course::create([
+            $createCourse = stp_course::create([
                 'school_id' => $request->schoolID,
                 'course_name' => $request->name,
                 'course_description' => $request->description ?? null,
                 'course_requirement' => $request->requirement ?? null,
                 'course_cost' => $request->cost,
                 'course_period' => $request->period,
-                'course_intake' => $request->intake,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
                 'study_mode' => $request->mode,
@@ -124,6 +124,17 @@ class SchoolController extends Controller
                 'created_by' => $authUser->id,
                 'created_at' => now(),
             ]);
+
+            $newIntakeData = [];
+            foreach ($request->intake as $intakeMonth) {
+                $newIntakeData[] = [
+                    'course_id' => $createCourse->id,
+                    'intake_month' => $intakeMonth,
+                    'created_by' => $authUser->id
+                ];
+            };
+
+            stp_intake::insert($newIntakeData);
 
             return response()->json([
                 'success' => true,
@@ -156,7 +167,7 @@ class SchoolController extends Controller
                 'requirement' => 'string|max:255',
                 'cost' => 'required|regex:/^\d+(\.\d{1,2})?$/',
                 'period' => 'required|string|max:255',
-                'intake' => 'required|string|max:255',
+                'intake' => 'required|array',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
             ]);
 
@@ -167,7 +178,7 @@ class SchoolController extends Controller
 
             if ($checkingCourse) {
                 throw ValidationException::withMessages([
-                    "courses" => ['Courses already exist in the school']
+                    "courses" => ['Courses name already exist in the school']
                 ]);
             }
 
@@ -189,7 +200,6 @@ class SchoolController extends Controller
                 'course_requirement' => $request->requirement ?? null,
                 'course_cost' => $request->cost,
                 'course_period' => $request->period,
-                'course_intake' => $request->intake,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
                 'study_mode' => $request->mode,
@@ -197,6 +207,43 @@ class SchoolController extends Controller
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
             ]);
+
+            $getIntake = stp_intake::where("course_id", $request->id)->where('intake_status', 1)->get();
+            $existingMonth = $getIntake->pluck('intake_month')->toArray();
+
+
+
+            $new = array_diff($request->intake, $existingMonth);
+            $remove = array_diff($existingMonth, $request->intake);
+
+            $checkExistingNewIntake = stp_intake::where('course_id', $request->id)->whereIn('intake_month', $new)->get();
+            if (count($checkExistingNewIntake) > 0) {
+                foreach ($checkExistingNewIntake as $exist) {
+                    $new = array_diff($new, [$exist['intake_month']]);
+                    $exist->update([
+                        'intake_status' => 1,
+                        'updated_by' => $authUser->id
+                    ]);
+                }
+            }
+
+            $newIntakeData = [];
+            foreach ($new as $newIntake) {
+                $newIntakeData[] = [
+                    'course_id' => $request->id,
+                    'intake_month' => $newIntake,
+                    'created_by' => $authUser->id
+                ];
+            }
+
+            stp_intake::insert($newIntakeData);
+
+            stp_intake::where('course_id', $request->id)
+                ->whereIn('intake_month', $remove)
+                ->update([
+                    'intake_status' => 0,
+                    'updated_by' => $authUser->id
+                ]);
 
             return response()->json([
                 'success' => true,

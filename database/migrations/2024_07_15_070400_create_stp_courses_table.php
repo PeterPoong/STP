@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('course_requirement');
             $table->decimal('course_cost');
             $table->string('course_period');
-            $table->string('course_intake');
+            $table->string('course_intake')->nullable();
             $table->foreignId('category_id')->nullable()->constrained('stp_courses_categories')->onDelete('set null');
             $table->foreignId('qualification_id')->nullable()->constrained('stp_qualifications')->onDelete('set null');
             $table->foreignId('study_mode')->nullable()->constrained('stp_core_metas')->onDelete('set null');

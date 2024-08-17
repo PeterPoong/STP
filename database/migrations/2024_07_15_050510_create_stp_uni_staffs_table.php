@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('uniStaff_countryCode');
             $table->string('uniStaff_contactNo');
             $table->foreignId('user_role')->nullable()->constrained('stp_core_metas')->onDelete('set null');
-            $table->string('uniStaff_proilePic');
+            $table->string('uniStaff_profilePic');
             $table->integer('uniStaff_status')->default(1);
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();

@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('contact_no');
             // $table->unsignedBigInteger('user_role')->nullable();
             $table->foreignId('user_role')->nullable()->constrained('stp_core_metas')->onDelete('set null');
-            $table->string('proile_pic')->nullable();
+            $table->string('profile_pic')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

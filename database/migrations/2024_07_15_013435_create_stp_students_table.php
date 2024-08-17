@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('student_countryCode');
             $table->string('student_contactNo');
             $table->foreignId('user_role')->nullable()->constrained('stp_core_metas')->onDelete('set null');
-            $table->string('student_proilePic')->nullable();
+            $table->string('student_profilePic')->nullable();
             $table->integer('student_status')->default(1);
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();

@@ -66,4 +66,9 @@ class stp_course extends Model
     {
         return $this->hasMany(stp_submited_form::class, 'course_id', 'id');
     }
+
+    public function intake(): HasMany
+    {
+        return $this->hasMany(stp_intake::class, 'course_id', 'id');
+    }
 }

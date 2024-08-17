@@ -23,7 +23,7 @@ class stp_student extends Model
         'student_countryCode',
         'student_contactNo',
         'user_role',
-        'student_proilePic',
+        'student_profilePic',
         'student_status',
         'created_by',
         'updated_by'

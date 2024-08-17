@@ -186,6 +186,8 @@ class studentController extends Controller
 
     public function courseList(Request $request)
     {
+        // $test = stp_course::find(1)->intake;
+        // return $test[0]->month;
         try {
             $request->validate([
                 'search' => 'string',
@@ -195,7 +197,8 @@ class studentController extends Controller
                 'category' => 'array',
                 'institute' => 'integer',
                 'studyMode' => 'array',
-                'tuitionFee' => 'numeric'
+                'tuitionFee' => 'numeric',
+                'intake' => 'array'
             ]);
 
             $getCourses = stp_course::when($request->filled('qualification'), function ($query) use ($request) {
@@ -228,6 +231,11 @@ class studentController extends Controller
                 ->when($request->filled('tuitionFee'), function ($query) use ($request) {
                     $query->where('course_cost', '<=', $request->tuitionFee);
                 })
+                ->when($request->filled('intake'), function ($query) use ($request) {
+                    $query->whereHas('intake', function ($query) use ($request) {
+                        $query->whereIn('intake_month', $request->intake);
+                    });
+                })
                 ->paginate(10)
                 ->through(function ($course) {
                     $featured = false;
@@ -237,8 +245,8 @@ class studentController extends Controller
                             $featured = true;
                             break;
                         }
-                    }
-
+                    };
+                    $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
                     return [
                         'id' => $course->id,
                         'school_id' => $course->school->school_name,
@@ -248,7 +256,7 @@ class studentController extends Controller
                         'cost' => $course->course_cost,
                         'featured' => $featured,
                         'period' => $course->course_period,
-                        'intake' => $course->course_intake,
+                        'intake' => $intakeMonths,
                         'category' => $course->category->category_name,
                         'qualification' => $course->qualification->qualification_name,
                         'mode' => $course->studyMode->core_metaName ?? null,
@@ -257,8 +265,8 @@ class studentController extends Controller
                     ];
                 });
 
-            $sortedCourses = $getCourses->sortByDesc('featured')->values();
 
+            $sortedCourses = $getCourses->sortByDesc('featured')->values();
             $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
                 $sortedCourses->forPage($getCourses->currentPage(), $getCourses->perPage()), // Slice the collection for the current page
                 $sortedCourses->count(),
@@ -266,55 +274,11 @@ class studentController extends Controller
                 $getCourses->currentPage(),
                 ['path' => $request->url(), 'query' => $request->query()]
             );
+
             return response()->json([
                 'success' => true,
                 'data' => $paginatedCourses
             ]);
-
-
-
-            $coursesList = [];
-            foreach ($getCourses as $course) {
-                if (empty($course->course_logo)) {
-                    $logo = $course->school->school_logo;
-                } else {
-                    $logo = $course->course_logo;
-                }
-
-                $featured = false;
-
-                foreach ($course->featured as $c) {
-
-                    if ($c['featured_type'] == 30 && $c['featured_status'] == 1) {
-                        $featured = true;
-                        break;
-                    }
-                }
-
-                $coursesList[] = [
-                    'id' => $course->id,
-                    'school_id' => $course->school->school_name,
-                    'name' => $course->course_name,
-                    'description' => $course->course_description,
-                    'requirement' => $course->course_requirement,
-                    'cost' => $course->course_cost,
-                    'featured' => $featured,
-                    'period' => $course->course_period,
-                    'intake' => $course->course_intake,
-                    'category' => $course->category->category_name,
-                    'qualification' => $course->qualification->qualification_name,
-                    'mode' => $course->studyMode->core_metaName ?? null,
-                    'logo' => $logo,
-                    'location' => $course->school->state->state_name
-                ];
-            }
-
-            if (count($coursesList) > 0) {
-                usort($coursesList, function ($a, $b) {
-                    return $b['featured'] <=> $a['featured'];
-                });
-            }
-
 
             return response()->json([
                 'success' => true,
@@ -346,7 +310,7 @@ class studentController extends Controller
                 'ic' => $student->student_icNumber,
                 'email' => $student->student_email,
                 'contact' => $student->student_countryCode . $student->student_contactNo,
-                'profilePic' => $student->student_proilePic,
+                'profilePic' => $student->student_profilePic,
                 'gender' => $student->detail->studentGender->core_metaName,
                 'address' => $student->detail->student_detailAddress,
                 'country' => $student->detail->country->country_name,
@@ -1003,8 +967,8 @@ class studentController extends Controller
             $authUser = Auth::user();
 
 
-            if (!empty($authUser->student_proilePic)) {
-                Storage::delete('public/' . $authUser->student_proilePic);
+            if (!empty($authUser->student_profilePic)) {
+                Storage::delete('public/' . $authUser->student_profilePic);
             }
 
 
@@ -1014,10 +978,10 @@ class studentController extends Controller
 
             $imagePath = $image->storeAs('studentProfilePic', $imageName, 'public'); // Store in 'storage/app/public/images'
             $authUser->update([
-                'student_proilePic' => $imagePath,
+                'student_profilePic' => $imagePath,
                 'updated_by' => $authUser->id
             ]);
-            // $authUser->student_proilePic = $imagePath; // Save the path to the database
+            // $authUser->student_profilePic = $imagePath; // Save the path to the database
 
             return response()->json([
                 'success' => true,

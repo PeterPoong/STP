@@ -95,8 +95,8 @@ class AdminController extends Controller
 
 
             if ($request->hasFile('image')) {
-                if (!empty($student->student_proilePic)) {
-                    Storage::delete('public/' . $student->student_proilePic);
+                if (!empty($student->student_profilePic)) {
+                    Storage::delete('public/' . $student->student_profilePic);
                 }
 
                 $image = $request->file('image');
@@ -104,7 +104,7 @@ class AdminController extends Controller
                 // $resizedImage = Image::make($image)->fit(300, 300);
 
                 $imagePath = $image->storeAs('studentProfilePic', $imageName, 'public'); // Store in 'storage/app/public/images'
-                $student->student_proilePic = $imagePath; // Save the path to the database
+                $student->student_profilePic = $imagePath; // Save the path to the database
             }
 
             $checkingEmail = stp_student::where('student_email', $request->email)

@@ -16,7 +16,7 @@ class stp_uni_staff extends Model
         'uniStaff_countryCode',
         'uniStaff_contactNo',
         'user_role',
-        'uniStaff_proilePic',
+        'uniStaff_profilePic',
         'uniStaff_status',
         'created_by',
         'updated_by'
