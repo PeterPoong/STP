@@ -118,7 +118,11 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/resetAdminDummyPassword', [AdminController::class, 'resetAdminDummyPassword']);
     Route::post('/resetAdminPassword', [AdminController::class, 'resetAdminPassword']);
 
-    Route::post('/addData', [AdminController::class, 'addData']);
+    Route::post('/dataList', [AdminController::class, 'dataList']);
+    Route::get("/dataFilterList", [AdminController::class, 'dataFilterList']);
+    Route::post("/addDataList", [AdminController::class, 'addDataList']);
+    Route::post("/editData", [AdminController::class, 'editData']);
+    Route::post("/editDataStatus", [AdminController::class, 'editDataStatus']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {

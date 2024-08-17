@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\stp_city;
+use App\Models\stp_core_meta;
 use App\Models\stp_package;
 use Illuminate\Http\Request;
 use App\Models\stp_student;
@@ -25,6 +26,8 @@ use Illuminate\Support\Facades\Storage;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+
+use function PHPSTORM_META\type;
 
 class AdminController extends Controller
 {
@@ -1916,6 +1919,171 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function dataList(Request $request)
+    {
+        try {
+            $request->validate([
+                'core_meta_type' => 'required|string'
+            ]);
+            $dataList = stp_core_meta::where('core_metaType', $request->core_meta_type)->where('core_metaStatus', 1)->get()
+                ->map(function ($list) {
+                    return [
+                        'core_metaType' => $list->core_metaType,
+                        'core_metaName' => $list->core_metaName,
+                        'status' => $list->core_metaStatus
+                    ];
+                });
+            return response()->json([
+                'success' => true,
+                'data' => $dataList
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function dataFilterList(Request $request)
+    {
+        try {
+            $getList = stp_core_meta::pluck('core_metaType')->unique()->values();
+            return response()->json([
+                'success' => true,
+                'data' => $getList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function addDataList(Request $request)
+    {
+        try {
+            $request->validate([
+                'metaType' => 'required|string',
+                'metaName' => 'required|string'
+            ]);
+
+            $authUser = Auth::user();
+            $newData = stp_core_meta::create([
+                'core_metaType' => $request->metaType,
+                'core_metaName' => $request->metaName,
+                'created_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully added new meta'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function editData(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'metaName' => 'required|string'
+            ]);
+
+            $getData = stp_core_meta::find($request->id);
+            $type = $getData->core_metaType;
+            $validateNewData = stp_core_meta::where('core_metaType', $type)->where('core_metaName', $request->metaName)->exists();
+            if ($validateNewData) {
+                throw ValidationException::withMessages([
+                    'data' => 'data with the meta name already exist'
+                ]);
+            }
+
+            $updateData = $getData->update([
+                'core_metaName' => $request->metaName
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "successfully update the data"
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function editDataStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'action' => 'required|string',
+                'id' => 'required|integer'
+            ]);
+
+            $findData = stp_core_meta::find($request->id);
+            $authUser = Auth::user();
+
+            if ($request->action == 'disable') {
+                $status = 0;
+            } else {
+                $status = 1;
+            }
+
+            $findData->update([
+                'core_metaStatus' => $status,
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully ' . $request->action
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ]);
         }

@@ -264,7 +264,6 @@ class SchoolController extends Controller
         }
     }
 
-
     public function editCourseStatus(Request $request)
     {
         try {
