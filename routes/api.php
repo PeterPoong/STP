@@ -28,6 +28,7 @@ Route::prefix('student')->group(function () {
     Route::post('/categoryList', [studentController::class, 'categoryList']);
     Route::post('/courseList', [studentController::class, 'courseList']);
     Route::post('/courseDetail', [AdminController::class, 'courseDetail']);
+
     Route::post('/schoolDetail', [AdminController::class, 'schoolDetail']);
     Route::get('/countryList', [studentController::class, 'countryList']);
     Route::get('/instituteType', [studentController::class, 'instituteType']);
@@ -36,6 +37,7 @@ Route::prefix('student')->group(function () {
     Route::post('/locationFilterList', [studentController::class, 'locationFilterList']);
     Route::get('/categoryFilterList', [studentController::class, 'categoryFilterList']);
     Route::get('/tuitionFeeFilterRange', [studentController::class, 'tuitionFeeFilterRange']);
+    Route::get('/intakeFilterList', [studentController::class, 'intakeFilterList']);
 
 
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
@@ -66,7 +68,6 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/otherFileCertList', [studentController::class, 'otherFileCertList']);
     Route::middleware('auth:sanctum')->post('/resetStudentPassword', [studentController::class, 'resetStudentPassword']);
     Route::middleware('auth:sanctum',)->post('/resetDummyAccountPassword', [studentController::class, 'resetDummyAccountPassword']);
-    Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {

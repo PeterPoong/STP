@@ -22,7 +22,7 @@ use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\serviceFunctionController;
-
+use App\Models\stp_intake;
 use Illuminate\Support\Facades\Storage;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
@@ -609,7 +609,7 @@ class studentController extends Controller
                 'countryID' => 'required|integer'
             ]);
 
-            $country = stp_country::find(1);
+            $country = stp_country::find($request->countryID);
             $states = $country->state;
             $stateList = [];
             foreach ($states as $state) {
@@ -1768,6 +1768,28 @@ class studentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function intakeFilterList()
+    {
+        try {
+            $intakeList = stp_intake::get()
+                ->map(function ($intake) {
+                    return ['month' => $intake->month->core_metaName];
+                })
+                ->unique('month')
+                ->values(); // Reindex the array
+            return response()->json([
+                'success' => true,
+                'data' => $intakeList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ]);
         }
