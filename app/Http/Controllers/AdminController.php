@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\stp_advertisement_banner;
 use App\Models\stp_city;
 use App\Models\stp_intake;
 use App\Models\stp_package;
@@ -829,21 +830,21 @@ class AdminController extends Controller
                 'qualification' => 'required|integer',
                 'course_logo'=>'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
-
+    
             $checkingCourse = stp_course::where('school_id', $request->schoolID)
                 ->where('course_name', $request->name)
                 ->where('id', '!=', $request->id)
                 ->exists();
-
+    
             if ($checkingCourse) {
                 throw ValidationException::withMessages([
-                    "courses" => ['Courses already exist in the school']
+                    "courses" => ['Course already exists in the school']
                 ]);
             }
-
+    
             $courses = stp_course::find($request->id);
-
-            $imagePath = $courses->course_logo; // Default to current profile picture
+    
+            $imagePath = $courses->course_logo; // Default to current course logo
             if ($request->hasFile('course_logo')) {
                 if (!empty($courses->course_logo)) {
                     Storage::delete('public/' . $courses->course_logo);
@@ -852,7 +853,7 @@ class AdminController extends Controller
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('courseLogo', $imageName, 'public');
             }
-
+    
             $courses->update([
                 'school_id' => $request->schoolID,
                 'course_name' => $request->name,
@@ -860,42 +861,79 @@ class AdminController extends Controller
                 'course_requirement' => $request->requirement,
                 'course_cost' => $request->cost,
                 'course_period' => $request->period,
-                'course_intake' => $request->intake,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
-                'course-logo' => $imagePath ?? '',
+                'course_logo' => $imagePath ?? '',
                 'updated_by' => $authUser->id,
-                'updated_at'=>now()
+                'updated_at' => now()
+            ]);
+    
+            $getIntake = stp_intake::where('course_id', $request->id)
+            ->where('intake_status', 1)
+            ->get();
+
+            $existingMonth = $getIntake->pluck('intake_month')->toArray();
+
+            // Identify new intakes and intakes to remove
+         $new = array_diff($request->intake, $existingMonth);
+         $remove = array_diff($existingMonth, $request->intake);
+
+            // Handle existing new intakes (reactivate if necessary)
+            $checkExistingNewIntake = stp_intake::where('course_id', $request->id)
+            ->whereIn('intake_month', $new)
+            ->get();
+
+            if (count($checkExistingNewIntake) > 0) {
+            foreach ($checkExistingNewIntake as $exist) {
+                $new = array_diff($new, [$exist['intake_month']]);
+                $exist->update([
+                    'intake_status' => 1,
+                    'updated_by' => $authUser->id
+                ]);
+            }
+            }
+
+            // Insert new intakes
+         $newIntakeData = [];
+            foreach ($new as $newIntake) {
+            $newIntakeData[] = [
+                'course_id' => $request->id,
+                'intake_month' => $newIntake,
+                'created_by' => $authUser->id,
+                'updated_at' => now()
+            ];
+            }
+
+            stp_intake::insert($newIntakeData);
+
+            // Deactivate intakes that are no longer associated with the course
+            stp_intake::where('course_id', $request->id)
+            ->whereIn('intake_month', $remove)
+            ->update([
+                'intake_status' => 0,
+                'updated_by' => $authUser->id,
+                'updated_at' => now()
             ]);
 
-            foreach ($request->intake as $intakeMonth) {
-                stp_intake::create([
-                'course_id' => $courses->id,
-                    'intake_month' => $intakeMonth,
-                    'updated_by' => $authUser->id,
-                    'intake_status' => 1,
-                    'updated_at' => now()
-            ]);
-        }
-            return response()->json([
-                'success' => true,
-                'data' => ['message' => "Update Successfully"]
+         return response()->json([
+            'success' => true,
+            'data' => ['message' => "Update Successfully"]
             ]);
         } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => "Validaion Error",
-                'errors' => $e->errors()
-            ]);
+        return response()->json([
+            'success' => false,
+            'message' => "Validation Error",
+            'errors' => $e->errors()
+        ]);
         } catch (\Exception $e) {
-            return response()->json([
-                "success" => true,
-                "message" => "Internal Server Error",
-                "errors" => $e->getMessage()
-            ]);
-        }
+        return response()->json([
+            "success" => false,
+            "message" => "Internal Server Error",
+            "errors" => $e->getMessage()
+        ]);
     }
-
+}
+    
     public function editCourseStatus(Request $request)
     {
         try {
@@ -2210,5 +2248,168 @@ class AdminController extends Controller
             ]);
         }
     }
+
+
+
+    public function addBanner(Request $request) {
+        try{
+            $request->validate([
+                'banner_name' => 'required|string|max:255',
+                'banner_file'=> 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'banner_url'=> 'required|string|max:255',
+                'featured_id'=> 'required|integer',
+                'banner_start' => 'required|date_format:Y-m-d H:i:s',
+                'banner_end' => 'required|date_format:Y-m-d H:i:s'
+            ]);
+
+            $authUser = Auth::user();
+            if ($request->hasFile('banner_file')) {
+                $image = $request->file('banner_file');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('bannerFile', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+
+            stp_advertisement_banner::create([
+                'banner_name'=> $request->banner_name,
+                'banner_file'=> $imagePath,
+                'banner_url'=> $request->banner_url,
+                'featured_id'=> $request->featured_id,
+                'banner_start'=> $request->banner_start,
+                'banner_end'=> $request->banner_end,
+                'created_by'=>$authUser->id,
+                'banner_status'=>1,
+                'created_at'=>now()
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Added the Banner']
+            ]);
+            }catch (ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation Error',
+                    'error' => $e->errors()
+                ]);
+        }catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function editBanner(Request $request) {
+        try {
+            $authUser = Auth::user();
     
+            // Adjust validation rules
+            $request->validate([
+                'id' => 'required|integer',
+                'banner_name' => 'required|string|max:255',
+                'banner_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Make banner_file nullable
+                'banner_url' => 'required|string|max:255',
+                'featured_id' => 'required|integer',
+                'banner_start' => 'required|date_format:Y-m-d H:i:s',
+                'banner_end' => 'required|date_format:Y-m-d H:i:s'
+            ]);
+    
+            // Find the existing banner by id
+            $adBanner = stp_advertisement_banner::find($request->id);
+    
+            if (!$adBanner) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Banner not found'
+                ]);
+            }
+    
+            // Handle file upload if a new file is provided
+            if ($request->hasFile('banner_file')) {
+                // Delete the old file if it exists
+                if (!empty($adBanner->banner_file)) {
+                    Storage::delete('public/' . $adBanner->banner_file);
+                }
+    
+                // Upload the new file
+                $image = $request->file('banner_file');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('bannerFile', $imageName, 'public'); // Store in 'storage/app/public/bannerFile'
+            } else {
+                // Use the existing banner file if no new file is uploaded
+                $imagePath = $adBanner->banner_file;
+            }
+    
+            // Update the banner with the new or existing file path and other details
+            $adBanner->update([
+                'banner_name' => $request->banner_name,
+                'banner_file' => $imagePath, // Use the existing or new file path
+                'banner_url' => $request->banner_url,
+                'featured_id' => $request->featured_id,
+                'banner_start' => $request->banner_start,
+                'banner_end' => $request->banner_end,
+                'updated_by' => $authUser->id,
+                'updated_at' => now()
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Banner Successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'errors' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Internal Server Error",
+                "errors" => $e->getMessage()
+            ]);
+        }
+    }
+    public function disableBanner(Request $request){
+        try{
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string|max:255'
+            ]);
+
+            $authUser = Auth::user();
+            if ($request->type == 'disable') {
+                $status = 0;
+                $message = "Successfully Disable the Banner";
+        }
+
+        $banner = stp_advertisement_banner::find($request->id);
+        $banner->update([
+            'banner_status' => $status,
+            'updated_by' => $authUser->id,
+            'updated_at' => now(),
+
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['message' => $message]
+        ]);
+        }catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+    
+        }catch (\Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+
+        }
+    
+    }
 }
