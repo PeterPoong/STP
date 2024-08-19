@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\stp_advertisement_banner;
 use App\Models\stp_city;
 use App\Models\stp_core_meta;
+use App\Models\stp_intake;
 use App\Models\stp_package;
+use App\Models\stp_user_detail;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\stp_student;
 
@@ -647,12 +651,16 @@ class AdminController extends Controller
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'string|max:255',
+                'requirement' => 'string|max:255',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
-                'intake' => 'required|string|max:255',
+                'intake' => 'required|array',
+                'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
                 'category' => 'required|integer',
-                'qualification' => 'required|integer'
+                'qualification' => 'required|integer',
+                'course_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
+
             $authUser = Auth::user();
             $checkingCourse = stp_course::where('school_id', $request->schoolID)
                 ->where('course_name', $request->name)
@@ -662,21 +670,36 @@ class AdminController extends Controller
                     "courses" => ['Courses already exist in the school']
                 ]);
             }
-
-            stp_course::create([
+            if ($request->hasFile('course_logo')) {
+                $image = $request->file('course_logo');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('courseLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+            $course = stp_course::create([
                 'school_id' => $request->schoolID,
                 'course_name' => $request->name,
                 'course_description' => $request->description ?? null,
-                'course_requirement' => $request->requiremnt ?? null,
+                'course_requirement' => $request->requirement ?? null,
                 'course_cost' => $request->cost,
                 'course_period' => $request->period,
                 'course_intake' => $request->intake,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
-                'course_requirement' => $request->requirement,
-                'created_by' => $authUser->id
+                'course_logo' => $imagePath ?? '',
+                'created_by' => $authUser->id,
+                'course_status' => 1,
+                'created_at' => now()
             ]);
 
+            foreach ($request->intake as $intakeMonth) {
+                stp_intake::create([
+                    'course_id' => $course->id,
+                    'intake_month' => $intakeMonth,
+                    'created_by' => $authUser->id,
+                    'intake_status' => 1,
+                    'created_at' => now()
+                ]);
+            }
             return response()->json([
                 'success' => true,
                 'data' => ['message' => 'Successfully Added the Courses']
@@ -756,7 +779,11 @@ class AdminController extends Controller
                     "tagName" => $tag->tag['tag_name']
                 ];
             }
-
+            // Fetch all intakes associated with the course
+            $intakeList = [];
+            foreach ($courseList->intake as $intake) {
+                $intakeList[] = $intake->month->core_metaName;
+            }
             $courseListDetail = [
                 'id' => $courseList->id,
                 'course' => $courseList->course_name,
@@ -764,7 +791,7 @@ class AdminController extends Controller
                 'requirement' => $courseList->course_requirement,
                 'cost' => $courseList->course_cost,
                 'period' => $courseList->course_period,
-                'intake' => $courseList->course_intake,
+                'intake' => $intakeList, // Updated to include all intakes
                 'category' => $courseList->category->category_name,
                 'school' => $courseList->school->school_name,
                 'qualification' => $courseList->qualification->qualifiation_name,
@@ -772,6 +799,7 @@ class AdminController extends Controller
                 'logo' => $logo,
                 'tag' => $tagList
             ];
+
             return response()->json([
                 'success' => true,
                 'data' => $courseListDetail
@@ -793,13 +821,16 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
+                'requirement' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'string|max:255',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
-                'intake' => 'required|string|max:255',
+                'intake' => 'required|array',
+                'intake.*' => 'integer|between:41,52',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
+                'course_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
             $checkingCourse = stp_course::where('school_id', $request->schoolID)
@@ -809,25 +840,83 @@ class AdminController extends Controller
 
             if ($checkingCourse) {
                 throw ValidationException::withMessages([
-                    "courses" => ['Courses already exist in the school']
+                    "courses" => ['Course already exists in the school']
                 ]);
             }
 
             $courses = stp_course::find($request->id);
 
+            $imagePath = $courses->course_logo; // Default to current course logo
+            if ($request->hasFile('course_logo')) {
+                if (!empty($courses->course_logo)) {
+                    Storage::delete('public/' . $courses->course_logo);
+                }
+                $image = $request->file('course_logo');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('courseLogo', $imageName, 'public');
+            }
+
             $courses->update([
                 'school_id' => $request->schoolID,
                 'course_name' => $request->name,
                 'course_description' => $request->description ?? null,
-                'course_requirement' => $request->requiremnt ?? null,
+                'course_requirement' => $request->requirement,
                 'course_cost' => $request->cost,
                 'course_period' => $request->period,
-                'course_intake' => $request->intake,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
-                'course_requirement' => $request->requirement,
-                'updated_by' => $authUser->id
+                'course_logo' => $imagePath ?? '',
+                'updated_by' => $authUser->id,
+                'updated_at' => now()
             ]);
+
+            $getIntake = stp_intake::where('course_id', $request->id)
+                ->where('intake_status', 1)
+                ->get();
+
+            $existingMonth = $getIntake->pluck('intake_month')->toArray();
+
+            // Identify new intakes and intakes to remove
+            $new = array_diff($request->intake, $existingMonth);
+            $remove = array_diff($existingMonth, $request->intake);
+
+            // Handle existing new intakes (reactivate if necessary)
+            $checkExistingNewIntake = stp_intake::where('course_id', $request->id)
+                ->whereIn('intake_month', $new)
+                ->get();
+
+            if (count($checkExistingNewIntake) > 0) {
+                foreach ($checkExistingNewIntake as $exist) {
+                    $new = array_diff($new, [$exist['intake_month']]);
+                    $exist->update([
+                        'intake_status' => 1,
+                        'updated_by' => $authUser->id
+                    ]);
+                }
+            }
+
+            // Insert new intakes
+            $newIntakeData = [];
+            foreach ($new as $newIntake) {
+                $newIntakeData[] = [
+                    'course_id' => $request->id,
+                    'intake_month' => $newIntake,
+                    'created_by' => $authUser->id,
+                    'updated_at' => now()
+                ];
+            }
+
+            stp_intake::insert($newIntakeData);
+
+            // Deactivate intakes that are no longer associated with the course
+            stp_intake::where('course_id', $request->id)
+                ->whereIn('intake_month', $remove)
+                ->update([
+                    'intake_status' => 0,
+                    'updated_by' => $authUser->id,
+                    'updated_at' => now()
+                ]);
+
             return response()->json([
                 'success' => true,
                 'data' => ['message' => "Update Successfully"]
@@ -835,12 +924,12 @@ class AdminController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => "Validaion Error",
+                'message' => "Validation Error",
                 'errors' => $e->errors()
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                "success" => true,
+                "success" => false,
                 "message" => "Internal Server Error",
                 "errors" => $e->getMessage()
             ]);
@@ -2086,6 +2175,408 @@ class AdminController extends Controller
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    public function addAdmin(Request $request)
+    {
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'string|max:255',
+                'ic_number' => 'nullable|integer',
+                'country_code' => 'required|string|max:255',
+                'contact_no' => 'required|string|max:255',
+                'password' => 'required|string|max:255',
+                'user_detailPostcode' => 'required|string|max:255',
+                'user_detailCountry' => 'required|string|max:255',
+                'user_detailCity' => 'required|string|max:255',
+                'user_detailState' => 'required|string|max:255',
+                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
+            ]);
+
+            $authUser = Auth::user();
+            $checkingName = User::where('id',  $authUser->id)
+                ->where('name', $request->name)
+                ->exists();
+
+            if ($checkingName) {
+                throw ValidationException::withMessages([
+                    "names" => ['This Name Already Exist.']
+                ]);
+            }
+
+            if ($request->hasFile('profile_pic')) {
+                $image = $request->file('profile_pic');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('profilePic', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'ic_number' => $request->ic_number,
+                'country_code' => $request->country_code,
+                'contact_no' => $request->contact_no,
+                'password' => $request->password,
+                'profile_pic' => $imagePath ?? '', // Image validation
+                'user_role' => 1,
+                'status' => 3,
+                'created_by' => $authUser->id,
+                'created_at' => now()
+            ]);
+
+
+
+            stp_user_detail::create([
+                'user_detailPostcode' => $request->user_detailPostcode,
+                'user_detailCountry' => $request->user_detailCountry,
+                'user_detailCity' => $request->user_detailCity,
+                'user_detailState' => $request->user_detailState,
+                'user_detailStatus' => 1,
+                'user_id' => $user->id,
+                'created_by' => $authUser->id,
+                'created_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Added the New Admin']
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    public function disableAdmin(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string|max:255'
+            ]);
+
+            $authUser = Auth::user();
+
+            if ($request->type == 'disable') {
+                $status = 0;
+                $message = "Successfully Disable the Admin";
+            }
+            $adminStatus = User::find($request->id);
+
+            $adminStatus->update([
+                'status' => $status,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => $message]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function adminList(Request $request)
+    {
+        try {
+            $adminList = User::query()
+                ->where('status', 1)
+                ->where('user_role', 1)
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('name', 'like', '%' . $request->search . '%');
+                })
+                ->paginate(10)
+                ->through(function ($admin) {
+                    $status = ($admin->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $admin->name,
+                        "email" => $admin->email,
+                        "ic_number" => $admin->ic_number,
+                        "contact_no" => $admin->contact_no,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $adminList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editAdmin(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string|max:255',
+                'email' => 'string|max:255',
+                'ic_number' => 'nullable|integer',
+                'country_code' => 'required|string|max:255',
+                'contact_no' => 'required|string|max:255',
+                'password' => 'nullable|string|max:255', // Make password nullable for edits
+                'user_detailPostcode' => 'required|string|max:255',
+                'user_detailCountry' => 'required|string|max:255',
+                'user_detailCity' => 'required|string|max:255',
+                'user_detailState' => 'required|string|max:255',
+                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
+            ]);
+
+            // Check if the name already exists for another user
+            $checkingName = User::where('id', '!=', $request->id)
+                ->where('name', $request->name)
+                ->exists();
+
+            if ($checkingName) {
+                throw ValidationException::withMessages([
+                    "names" => ['This Name Already Exists.']
+                ]);
+            }
+
+            $admin = User::findOrFail($request->id); // Find the user or throw a 404 error
+
+            // Handle profile picture upload
+            $imagePath = $admin->profile_pic; // Default to current profile picture
+            if ($request->hasFile('profile_pic')) {
+                if (!empty($admin->profile_pic)) {
+                    Storage::delete('public/' . $admin->profile_pic);
+                }
+                $image = $request->file('profile_pic');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('profilePic', $imageName, 'public');
+            }
+
+            // Update the admin user
+            $admin->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'ic_number' => $request->ic_number,
+                'country_code' => $request->country_code,
+                'contact_no' => $request->contact_no,
+                'password' => $request->password ? bcrypt($request->password) : $admin->password, // Only update password if provided
+                'profile_pic' => $imagePath,
+                'status' => 1,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+            ]);
+
+            // Update the admin user's details
+            $admin->detail->update([
+                'user_detailPostcode' => $request->user_detailPostcode,
+                'user_detailCountry' => $request->user_detailCountry,
+                'user_detailCity' => $request->user_detailCity,
+                'user_detailState' => $request->user_detailState,
+                'user_detailStatus' => 1,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'errors' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Internal Server Error",
+                "errors" => $e->getMessage()
+            ]);
+        }
+    }
+
+
+
+    public function addBanner(Request $request)
+    {
+        try {
+            $request->validate([
+                'banner_name' => 'required|string|max:255',
+                'banner_file' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'banner_url' => 'required|string|max:255',
+                'featured_id' => 'required|integer',
+                'banner_start' => 'required|date_format:Y-m-d H:i:s',
+                'banner_end' => 'required|date_format:Y-m-d H:i:s'
+            ]);
+
+            $authUser = Auth::user();
+            if ($request->hasFile('banner_file')) {
+                $image = $request->file('banner_file');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('bannerFile', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+
+            stp_advertisement_banner::create([
+                'banner_name' => $request->banner_name,
+                'banner_file' => $imagePath,
+                'banner_url' => $request->banner_url,
+                'featured_id' => $request->featured_id,
+                'banner_start' => $request->banner_start,
+                'banner_end' => $request->banner_end,
+                'created_by' => $authUser->id,
+                'banner_status' => 1,
+                'created_at' => now()
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Added the Banner']
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'error' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function editBanner(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+
+            // Adjust validation rules
+            $request->validate([
+                'id' => 'required|integer',
+                'banner_name' => 'required|string|max:255',
+                'banner_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Make banner_file nullable
+                'banner_url' => 'required|string|max:255',
+                'featured_id' => 'required|integer',
+                'banner_start' => 'required|date_format:Y-m-d H:i:s',
+                'banner_end' => 'required|date_format:Y-m-d H:i:s'
+            ]);
+
+            // Find the existing banner by id
+            $adBanner = stp_advertisement_banner::find($request->id);
+
+            if (!$adBanner) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Banner not found'
+                ]);
+            }
+
+            // Handle file upload if a new file is provided
+            if ($request->hasFile('banner_file')) {
+                // Delete the old file if it exists
+                if (!empty($adBanner->banner_file)) {
+                    Storage::delete('public/' . $adBanner->banner_file);
+                }
+
+                // Upload the new file
+                $image = $request->file('banner_file');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('bannerFile', $imageName, 'public'); // Store in 'storage/app/public/bannerFile'
+            } else {
+                // Use the existing banner file if no new file is uploaded
+                $imagePath = $adBanner->banner_file;
+            }
+
+            // Update the banner with the new or existing file path and other details
+            $adBanner->update([
+                'banner_name' => $request->banner_name,
+                'banner_file' => $imagePath, // Use the existing or new file path
+                'banner_url' => $request->banner_url,
+                'featured_id' => $request->featured_id,
+                'banner_start' => $request->banner_start,
+                'banner_end' => $request->banner_end,
+                'updated_by' => $authUser->id,
+                'updated_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Banner Successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'errors' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Internal Server Error",
+                "errors" => $e->getMessage()
+            ]);
+        }
+    }
+    public function disableBanner(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'type' => 'required|string|max:255'
+            ]);
+
+            $authUser = Auth::user();
+            if ($request->type == 'disable') {
+                $status = 0;
+                $message = "Successfully Disable the Banner";
+            }
+
+            $banner = stp_advertisement_banner::find($request->id);
+            $banner->update([
+                'banner_status' => $status,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => $message]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'Errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'succcess' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

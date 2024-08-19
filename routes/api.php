@@ -116,6 +116,15 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/deletePackage', [AdminController::class, 'deletePackage']);
     Route::post('/packageList', [AdminController::class, 'packageList']);
 
+    Route::post('/addAdmin', [AdminController::class, 'addAdmin']);
+    Route::post('/disableAdmin', [AdminController::class, 'disableAdmin']);
+    Route::post('/adminList', [AdminController::class, 'adminList']);
+    Route::post('/editAdmin', [AdminController::class, 'editAdmin']);
+
+    Route::post('/addBanner', [AdminController::class, 'addBanner']);
+    Route::post('/editBanner', [AdminController::class, 'editBanner']);
+    Route::post('/disableBanner', [AdminController::class, 'disableBanner']);
+
     Route::post('/resetAdminDummyPassword', [AdminController::class, 'resetAdminDummyPassword']);
     Route::post('/resetAdminPassword', [AdminController::class, 'resetAdminPassword']);
 
