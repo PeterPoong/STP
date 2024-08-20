@@ -82,7 +82,7 @@ class serviceFunctionController extends Controller
                 'success' => false,
                 'message' => "Validation Error",
                 'error' => $e->errors()
-            ]);
+            ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
