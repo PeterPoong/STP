@@ -97,6 +97,7 @@ class studentController extends Controller
         }
     }
 
+
     public function hpFeaturedSchoolList(Request $request)
     {
         // $test = stp_featured::find(1);
@@ -186,8 +187,6 @@ class studentController extends Controller
 
     public function courseList(Request $request)
     {
-        // $test = stp_course::find(1)->intake;
-        // return $test[0]->month;
         try {
             $request->validate([
                 'search' => 'string',
@@ -195,6 +194,7 @@ class studentController extends Controller
                 'qualification' => 'integer',
                 'location' => 'array',
                 'category' => 'array',
+                'schoolCategory' => 'integer',
                 'institute' => 'integer',
                 'studyMode' => 'array',
                 'tuitionFee' => 'numeric',
@@ -249,7 +249,7 @@ class studentController extends Controller
                     $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
                     return [
                         'id' => $course->id,
-                        'school_id' => $course->school->school_name,
+                        'school_name' => $course->school->school_name,
                         'name' => $course->course_name,
                         'description' => $course->course_description,
                         'requirement' => $course->course_requirement,
@@ -261,7 +261,8 @@ class studentController extends Controller
                         'qualification' => $course->qualification->qualification_name,
                         'mode' => $course->studyMode->core_metaName ?? null,
                         'logo' => $course->course_logo ?? $course->school->school_logo,
-                        'location' => $course->school->state->state_name
+                        'location' => $course->school->state->state_name,
+                        'institute_category' => $course->school->institueCategory->core_metaName
                     ];
                 });
 
@@ -293,34 +294,30 @@ class studentController extends Controller
         }
     }
 
-    public function studentDetail(Request $request)
+    public function studentDetail()
     {
         try {
-            $request->validate([
-                'id' => 'required|integer'
-            ]);
-            $student = stp_student::find($request->id);
-            // return $student->detail;
+            $authUser = Auth::user();
 
-            $stduentDetail = [
-                'id' => $student->id,
-                'username' => $student->student_userName,
-                'firstName' => $student->detail->student_detailFirstName,
-                'lastName' => $student->detail->student_detailLastName,
-                'ic' => $student->student_icNumber,
-                'email' => $student->student_email,
-                'contact' => $student->student_countryCode . $student->student_contactNo,
-                'profilePic' => $student->student_profilePic,
-                'gender' => $student->detail->studentGender->core_metaName,
-                'address' => $student->detail->student_detailAddress,
-                'country' => $student->detail->country->country_name,
-                'state' => $student->detail->state->state_name,
-                'city' => $student->detail->city->city_name,
-                'postcode' => $student->detail->student_detailPostcode,
+            $studentDetail = [
+                'id' => $authUser->id,
+                'username' => $authUser->student_userName,
+                'firstName' => $authUser->detail->student_detailFirstName,
+                'lastName' => $authUser->detail->student_detailLastName,
+                'ic' => $authUser->student_icNumber,
+                'email' => $authUser->student_email,
+                'contact' => $authUser->student_countryCode . $authUser->student_contactNo,
+                'profilePic' => $authUser->student_profilePic,
+                'gender' => $authUser->detail->studentGender->core_metaName ?? null,
+                'address' => $authUser->detail->student_detailAddress,
+                'country' => $authUser->detail->country->country_name ?? null,
+                'state' => $authUser->detail->state->state_name ?? null,
+                'city' => $authUser->detail->city->city_name ?? null,
+                'postcode' => $authUser->detail->student_detailPostcode,
             ];
             return response()->json([
                 'success' => true,
-                'data' => $stduentDetail
+                'data' => $studentDetail
             ]);
         } catch (\Exception $e) {
             return response()->json([

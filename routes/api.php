@@ -29,7 +29,7 @@ Route::prefix('student')->group(function () {
     Route::post('/courseList', [studentController::class, 'courseList']);
     Route::post('/courseDetail', [AdminController::class, 'courseDetail']);
 
-    Route::post('/schoolDetail', [AdminController::class, 'schoolDetail']);
+    Route::post('/schoolDetail', [studentController::class, 'schoolDetail']);
     Route::get('/countryList', [studentController::class, 'countryList']);
     Route::get('/instituteType', [studentController::class, 'instituteType']);
     Route::get('/qualificationFilterList', [studentController::class, 'qualificationFilterList']);
