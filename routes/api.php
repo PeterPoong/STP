@@ -90,6 +90,8 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCourse', [AdminController::class, 'editCourse']);
     Route::post('/editCourseStatus', [AdminController::class, 'editCourseStatus']);
     Route::post('/editCoursesFeatured', [AdminController::class, 'editCoursesFeatured']);
+    Route::post('/courseFeaturedList', [AdminController::class, 'courseFeaturedList']);
+    Route::post('/universityFeaturedList', [AdminController::class, 'universityFeaturedList']);
     Route::post('/courseTag', [AdminController::class, 'courseTag']);
 
     Route::post('/addTag', [AdminController::class, 'addTag']);
