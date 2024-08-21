@@ -460,11 +460,12 @@ class SchoolController extends Controller
             ]);
             $authUser = Auth::user();
             if (!Hash::check($request->currentPassword, $authUser->school_password)) {
-                throw ValidationException::withMessages(["password does not match"]);
+                throw ValidationException::withMessages(["The provided credentials are incorrect."]);
             }
 
             $authUser->update([
                 'school_password' => Hash::make($request->newPassword),
+                'school_status' => 1,
                 'updated_by' => $authUser->id
             ]);
 
@@ -477,13 +478,13 @@ class SchoolController extends Controller
                 'success' => false,
                 'message' => 'Validation Error',
                 'error' => $e->errors()
-            ]);
+            ], 400);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
     public function applicantDetailCocurriculum(Request $request)   //Cocurriculum list for the applicant

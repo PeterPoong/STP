@@ -247,6 +247,8 @@ class AdminController extends Controller
                         case 2:
                             $status = "Pending";
                             break;
+                        case 3:
+                            $status = "Temporary";
                     }
                     return [
                         'id' => $school->id,
