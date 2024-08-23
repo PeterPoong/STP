@@ -119,4 +119,9 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_intake::class, 'intake_month', 'id');
     }
+
+    public function schoolAccountType(): HasMany
+    {
+        return $this->hasMany(stp_school::class, 'account_type', 'id');
+    }
 }

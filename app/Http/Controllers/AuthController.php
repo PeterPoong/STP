@@ -15,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Validator;
 use PhpParser\Node\Stmt\Else_;
 use Illuminate\Support\Facades\RateLimiter;
-
+use Illuminate\Validation\ValidationData;
 
 class AuthController extends Controller
 {
@@ -273,43 +273,61 @@ class AuthController extends Controller
                 'password' => 'required|string|min:8',
                 'confirm_password' => 'required|string|min:8|same:password',
                 'country_code' => 'required',
-                'country' => 'required|integer',
-                'state' => 'required|integer',
-                'city' => 'required|integer',
+                'country' => 'integer',
+                'state' => 'integer',
+                'city' => 'integer',
                 'contact_number' => 'required|numeric|digits_between:1,15',
-                'email' => 'required|string|email|max:255|',
-                'school_fullDesc' => 'required|string|max:255',
-                'school_shortDesc' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255',
+                'school_fullDesc' => 'string|max:255',
+                'school_shortDesc' => 'string|max:255',
                 'school_address' => 'required|string|max:255',
                 'school_website' => 'required|string|max:255',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validationt
+                'person_in_charge_email' => 'required|email',
+                'person_in_charge_name' => 'required|string|max:255',
+                'person_in_charge_contact' => 'required|string|max:255'
             ]);
 
-            //check email
-            $checkingEmail = stp_school::where('school_email', $request->email)->where('school_status', 1)->exists();
-            if ($checkingEmail) {
-                throw ValidationException::withMessages([
-                    'email' => ['email has been used'],
-                ]);
+            $errors = [];
+            //check institute name
+            $checkName = stp_school::where('school_name', $request->name)->exists();
+            if ($checkName) {
+                $errors['name'] = ['The institute name has already been taken. Please choose a different name.'];
             }
 
+            //check email
+            $checkingEmail = stp_school::where('school_email', $request->email)->exists();
+            if ($checkingEmail) {
+                $errors['email'] = ['An account with this email already exists. Try logging in instead.'];
+            }
 
+            //check user
             $checkingUser = stp_school::where('school_countryCode', $request->country_code)
                 ->where('school_contactNo', $request->contact_number)
-                ->where('school_status', 1)
                 ->exists();
-
-
             if ($checkingUser) {
-                throw ValidationException::withMessages([
-                    'contact_no' => ['Contact has been used'],
-                ]);
+                $errors['contact_no'] = ['An account with this contact number already exists. Try logging in instead.'];
+            }
+
+            // //check person in charge email
+            // $checkPersonInChargeEmail = stp_school::where('person_inChargeEmail', $request->person_in_charge_email)->exists();
+            // if ($checkPersonInChargeEmail) {
+            //     $errors['person_in_charge_email'] = ['A person in charge  already exists. Try logging in instead.'];
+            // }
+
+            // //check person in charge contact
+            // $checkPersonInChargeContact = stp_school::where('person_inChargeNumber', $request->person_in_charge_contact)->exists();
+            // if ($checkPersonInChargeContact) {
+            //     $errors['person_in_charge_contact'] = ['A person in charge with this contact number already exists. Try logging in instead.'];
+            // }
+
+            if (count($errors) > 0) {
+                throw ValidationException::withMessages($errors);
             }
 
             if ($request->hasFile('logo')) {
                 $image = $request->file('logo');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
-
                 $imagePath = $image->storeAs('schoolLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
 
@@ -319,17 +337,22 @@ class AuthController extends Controller
                 'school_countryCode' => $request->country_code,
                 'school_contactNo' => $request->contact_number,
                 'school_password' => Hash::make($request->password),
-                'school_fullDesc' => $request->school_fullDesc,
-                'country_id' => $request->country,
-                'state_id' => $request->state,
-                'city_id' => $request->city,
-                'institue_category' => $request->institue_category,
-                'school_shortDesc' => $request->school_shortDesc,
+                'school_fullDesc' => $request->school_fullDesc ?? null,
+                'country_id' => $request->country ?? null,
+                'state_id' => $request->state ?? null,
+                'city_id' => $request->city ?? null,
+                'institue_category' => $request->institue_category ?? null,
+                'school_shortDesc' => $request->school_shortDesc ?? null,
                 'school_address' => $request->school_address,
-                'school_officialWebsite' => $request->school_website,
+                'school_officalWebsite' => $request->school_website,
+                'person_inChargeName' => $request->person_in_charge_name,
+                'person_inChargeNumber' => $request->person_in_charge_contact,
+                'person_inChargeEmail' => $request->person_in_charge_email,
+                'account_type' => 64,
                 'school_logo' => $imagePath ?? null,
                 'school_status' => 2
             ];
+
             stp_school::create($data);
             return response()->json(
                 [

@@ -30,7 +30,7 @@ return new class extends Migration
             $table->string('person_inChargeName')->nullable();
             $table->string('person_inChargeNumber')->nullable();
             $table->string('person_inChargeEmail')->nullable();
-            $table->integer('account_type')->nullable();
+            $table->foreignId('account_type')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->string('school_officalWebsite')->nullable();
             $table->string('school_logo')->nullable();
             $table->string('school_status')->default(1);

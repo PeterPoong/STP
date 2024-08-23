@@ -31,6 +31,10 @@ class stp_school extends Model
         'school_lat',
         'school_status',
         'school_officalWebsite',
+        'person_inChargeName',
+        'person_inChargeNumber',
+        'person_inChargeEmail',
+        'account_type',
         'school_logo',
         'created_by',
         'updated_by'
@@ -79,5 +83,10 @@ class stp_school extends Model
     public function otp(): HasMany
     {
         return $this->hasMany(stp_school_otp::class, 'school_id', 'id');
+    }
+
+    public function accountType(): BelongsTo
+    {
+        return $this->belongsTo(stp_core_meta::class, 'account_type', 'id');
     }
 }
