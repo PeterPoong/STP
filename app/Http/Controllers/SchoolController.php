@@ -40,6 +40,22 @@ class SchoolController extends Controller
         $this->serviceFunctionController = $serviceFunctionController;
     }
 
+    public function schoolDetail()
+    {
+        try {
+            $authUser = Auth::user();
+            return response()->json([
+                'success' => true,
+                'data' => $authUser
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function coursesList(Request $request)
     {
         try {

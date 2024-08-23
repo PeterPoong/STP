@@ -138,6 +138,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {
+    Route::get('/schoolDetail', [SchoolController::class, 'schoolDetail']);
     Route::post('/courseList', [SchoolController::class, 'coursesList']);
     Route::post('/addCourses', [SchoolController::class, 'addCourse']);
     Route::post('/editCourses', [SchoolController::class, 'editCourse']);

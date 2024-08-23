@@ -76,7 +76,8 @@ class studentController extends Controller
                     'country' => $school->country->country_name ?? null,
                     'state' => $school->state->state_name ?? null,
                     'city' => $school->city->city_name ?? null,
-                    'description' => $school->school_shortDesc
+                    'description' => $school->school_shortDesc,
+                    'courses' => $school->courses
                 ];
             }
 
