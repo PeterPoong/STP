@@ -7,6 +7,7 @@ use App\Models\stp_city;
 use App\Models\stp_core_meta;
 use App\Models\stp_intake;
 use App\Models\stp_package;
+use App\Models\stp_student_detail;
 use App\Models\stp_user_detail;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -35,7 +36,108 @@ use function PHPSTORM_META\type;
 
 class AdminController extends Controller
 {
-    public function addStudent() {}
+    public function addStudent(Request $request) {
+        try{
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'firt_name' => 'string|max:255',
+                'last_name' => 'string|max:255',
+                'gender' => 'integer',
+                'ic' => 'integer',
+                'postcode' => 'string',
+                'country_code' => 'required|string|max:255',
+                'contact_number' => 'required|numeric|digits_between:1,15',
+                'country' => 'integer',
+                'email' => 'required|string|email|max:255',
+                'state' => 'integer',
+                'password' => 'required|string|min:8',
+                'confirm_password' => 'required|string|min:8|same:password',
+                'city' => 'integer',
+
+            ]);
+            $authUser = Auth::user();
+            $checkingIc = stp_student::where('student_icNumber', $request->ic)
+            ->where('id', '!=', $request->id)
+            ->exists();
+
+            if ($checkingIc) {
+                throw ValidationException::withMessages([
+                    'ic' => ['ic has been used'],
+                ]);
+            }
+
+            $checkingUserContact = stp_student::where('student_countryCode', $request->country_code)
+            ->where('student_contactNo', $request->contact_number)
+            ->where('id', '!=', $request->id)
+            ->exists();
+
+            if ($checkingUserContact) {
+                throw ValidationException::withMessages([
+                    'contact_no' => ['Contact has been used'],
+                ]);
+            }
+
+            if ($request->hasFile('student_profilePic')) {
+                $image = $request->file('student_profilePic');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('student_profilePic', $imageName, 'public'); // Store in 'storage/app/public/images'
+            }
+
+            $checkingEmail = stp_student::where('student_email', $request->email)
+                ->where('id', '!=', $request->id)
+                ->exists();
+
+
+                if ($checkingEmail) {
+                    throw ValidationException::withMessages([
+                        'email' => ['Email has been taken'],
+                    ]);
+                }
+            $student = stp_student::create([
+            "student_userName" => $request->name,
+            "student_password" => Hash::make($request->password),
+            'student_icNumber' => $request->ic,
+            'student_email' => $request->email,
+            'student_countryCode' => $request->country_code,
+            'student_contactNo' => $request->contact_number,
+            'student_status'=>3,
+            'created_by' => $authUser->id,
+            'created_at'=>now()
+        ]);
+
+        stp_student_detail::create([
+            "student_id"=>$student->id,
+            "student_detailFirstName" => $request->first_name ?? "",
+            "student_detailLastName" => $request->last_name ?? "",
+            "student_detailAddress" => $request->address ?? "",
+            "country_id" => $request->country ?? "",
+            'gender' => $request->gender ?? "",
+            "city_id" => $request->city ?? "",
+            "state_id" => $request->state ?? "",
+            "student_detailPostcode" => $request->postcode ?? "",
+            'student_detailStatus'=> 1,
+            'created_by' => $authUser->id,
+            'created_at'=>now()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['message' => 'Successfully Added the New Student']
+        ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Sever Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function updateStudent() {}
 
@@ -2634,4 +2736,6 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+
 }

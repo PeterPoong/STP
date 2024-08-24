@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('id');
             $table->string('student_userName');
             $table->string('student_password');
-            $table->integer('student_icNumber')->unique()->nullable();
+            $table->bigInteger('student_icNumber')->unique()->nullable();
             $table->string('student_email')->unique()->nullable();
             $table->string('student_countryCode');
             $table->string('student_contactNo');
