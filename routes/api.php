@@ -21,13 +21,16 @@ Route::post('/school/register', [AuthController::class, 'schoolRegister']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('/countryCode', [countryController::class, 'countryCode']);
 
+
 Route::prefix('student')->group(function () {
     Route::post('/hpFeaturedSchoolList', [studentController::class, 'hpFeaturedSchoolList']);
     Route::post('/hpFeaturedCoursesList', [studentController::class, 'hpFeaturedCoursesList']);
     Route::post('/schoolList', [studentController::class, 'schoolList']);
+    Route::post('/schoolDetail', [studentController::class, 'schoolDetail']);
     Route::post('/categoryList', [studentController::class, 'categoryList']);
     Route::post('/courseList', [studentController::class, 'courseList']);
     Route::post('/courseDetail', [AdminController::class, 'courseDetail']);
+    Route::get('/genderList', [studentController::class, 'genderList']);
 
     Route::post('/schoolDetail', [studentController::class, 'schoolDetail']);
     Route::get('/countryList', [studentController::class, 'countryList']);
@@ -38,10 +41,13 @@ Route::prefix('student')->group(function () {
     Route::get('/categoryFilterList', [studentController::class, 'categoryFilterList']);
     Route::get('/tuitionFeeFilterRange', [studentController::class, 'tuitionFeeFilterRange']);
     Route::get('/intakeFilterList', [studentController::class, 'intakeFilterList']);
+    Route::post('/featuredInstituteList', [studentController::class, 'featuredInstituteList']);
+    Route::post('/featuredCourseList', [studentController::class, 'featuredCourseList']);
 
 
+    //student portal
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
-    Route::middleware('auth:sanctum')->post('/editDetail', [studentController::class, 'editStudent']);
+    Route::middleware('auth:sanctum')->post('/editStudentDetail', [studentController::class, 'editStudent']);
     Route::middleware('auth:sanctum')->post('/updateProfilePic', [studentController::class, 'updateProfilePic']);
     Route::middleware('auth:sanctum')->post('/subjectList', [studentController::class, 'subjectList']);
     Route::middleware('auth:sanctum')->post('/addEditTranscript', [studentController::class, 'addEditTranscript']);
@@ -49,6 +55,7 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
     Route::middleware('auth:sanctum')->get('/pendingAppList', [studentController::class, 'pendingAppList']);
     Route::middleware('auth:sanctum')->get('/historyAppList', [studentController::class, 'historyAppList']);
+    Route::middleware('auth:sanctum')->get('/courseCategoryList', [studentController::class, 'courseCategoryList']);
 
     Route::middleware('auth:sanctum')->post('/addAchievement', [studentController::class, 'addAchievement']);
     Route::middleware('auth:sanctum')->post('/editAchievement', [studentController::class, 'editAchievement']);

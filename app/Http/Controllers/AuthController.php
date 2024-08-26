@@ -386,6 +386,7 @@ class AuthController extends Controller
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255|unique:stp_students,student_email',
+                'ic' => 'required|integer|unique:stp_students,student_icNumber'
             ]);
 
             $checkingUser = stp_student::where('student_countryCode', $request->country_code)
@@ -399,13 +400,13 @@ class AuthController extends Controller
                 ]);
             }
 
-
             $data = [
                 'student_userName' => $request->name,
                 'student_email' => $request->email,
                 'student_countryCode' => $request->country_code,
                 'student_contactNo' => $request->contact_number,
                 'student_password' => Hash::make($request->password),
+                'student_icNumber' => $request->ic,
                 'user_role' => 4
             ];
             $newUser = stp_student::create($data);
