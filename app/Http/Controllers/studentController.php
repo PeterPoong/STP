@@ -89,7 +89,7 @@ class studentController extends Controller
                 'success' => true,
                 'data' => $schoolList
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Sever Error',
@@ -1762,7 +1762,7 @@ class studentController extends Controller
                 'message' => 'Validation Error',
                 'error' => $e->errors()
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
@@ -1784,7 +1784,7 @@ class studentController extends Controller
                 'success' => true,
                 'data' => $intakeList
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => "Internal Server Error",
