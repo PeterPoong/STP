@@ -352,6 +352,8 @@ class AdminController extends Controller
                             break;
                         case 3:
                             $status = "Temporary";
+                        case 4:
+                            $status ="Temporary-Disable";
                     }
                     return [
                         'id' => $school->id,
