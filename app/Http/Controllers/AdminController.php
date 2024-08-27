@@ -17,6 +17,7 @@ use App\Models\stp_country;
 use App\Models\stp_course;
 use App\Models\stp_course_tag;
 use App\Models\stp_courses_category;
+use App\Models\stp_cocurriculum;
 use App\Models\stp_featured;
 use App\Models\stp_school;
 use App\Models\stp_submited_form;
@@ -337,7 +338,7 @@ class AdminController extends Controller
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('school_name', 'like', '%' . $request->search . '%');
                 })
-                ->paginate(10)
+                ->get()
                 ->through(function ($school) {
                     switch ($school->school_status) {
                         case 0:
@@ -352,9 +353,7 @@ class AdminController extends Controller
                         case 3:
                             $status = "Temporary";
                         case 4:
-                            $status = "Temporary-Disable";
-                        case 5:
-                            $status = "Pending -Disable";
+                            $status ="Temporary-Disable";
                     }
                     return [
                         'id' => $school->id,
@@ -561,86 +560,79 @@ class AdminController extends Controller
         }
     }
 
-    public function editSchoolStatus(Request $request)
-    {
-        try {
-            $authUser = Auth::user();
-            $request->validate([
-                "id" => 'required|integer',
-                "type" => 'required|string'
-            ]);
-    
-            $school = stp_school::find($request->id);
-            if (!$school) {
-                return response()->json([
-                    "success" => false,
-                    "message" => "School not found"
-                ], 404);
-            }
-    
-            switch ($request->type) {
-                case 'disable':
-                    if ($school->school_status == 3) {
-                        $status = 4;
-                        $message = "successfully disabled (status changed from 3 to 4)";
-                    } else if ($school->school_status == 2){
-                        $status = 5;
-                        $message = "successfully disabled (status changed from 2 to 5)";
-                    } else {
-                        $status = 0;
-                        $message = "successfully disabled (status set to 0)";
-                    }
-                    break;
-    
-                case 'enable':
-                    if ($school->school_status == 4) {
-                        $status = 3;
-                        $message = "successfully enabled (status changed from 4 to 3)";
-                    } elseif ($school->school_status == 5) {
-                        $status = 2;
-                        $message = "successfully enabled (status changed from 5 to 2)";
-                    } elseif ($school->school_status == 0) {
-                        $status = 1;
-                        $message = "successfully enabled (status changed from 0 to 1)";
-                    } else {
-                        $status = $school->school_status;
-                        $message = "status unchanged";
-                    }
-                    break;
-    
-    
-                default:
-                    return response()->json([
-                        "success" => false,
-                        "message" => "Invalid type"
-                    ], 400);
-            }
-    
-            $school->update([
-                "school_status" => $status,
-                "updated_by" => $authUser->id
-            ]);
-    
-            return response()->json([
-                "success" => true,
-                "data" => $message
-            ]);
-    
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation Error',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
+   public function editSchoolStatus(Request $request)
+{
+    try {
+        $authUser = Auth::user();
+        $request->validate([
+            "id" => 'required|integer',
+            "type" => 'required|string'
+        ]);
+
+        $school = stp_school::find($request->id);
+        if (!$school) {
             return response()->json([
                 "success" => false,
-                "message" => "Internal Server Error",
-                "error" => $e->getMessage()
-            ], 500);
+                "message" => "School not found"
+            ], 404);
         }
+
+        switch ($request->type) {
+            case 'disable':
+                if ($school->school_status == 3) {
+                    $status = 4;
+                    $message = "successfully disabled (status changed from 3 to 4)";
+                } else {
+                    $status = 0;
+                    $message = "successfully disabled (status set to 0)";
+                }
+                break;
+
+            case 'enable':
+                if ($school->school_status == 4) {
+                    $status = 3;
+                    $message = "successfully enabled (status changed from 4 to 3)";
+                } elseif ($school->school_status == 0) {
+                    $status = 1;
+                    $message = "successfully enabled (status changed from 0 to 1)";
+                } else {
+                    $status = $school->school_status;
+                    $message = "status unchanged";
+                }
+                break;
+
+            default:
+                return response()->json([
+                    "success" => false,
+                    "message" => "Invalid type"
+                ], 400);
+        }
+
+        $school->update([
+            "school_status" => $status,
+            "updated_by" => $authUser->id
+        ]);
+
+        return response()->json([
+            "success" => true,
+            "data" => $message
+        ]);
+
+    } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation Error',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        return response()->json([
+            "success" => false,
+            "message" => "Internal Server Error",
+            "error" => $e->getMessage()
+        ], 500);
     }
-    
+}
+
     public function schoolDetail(Request $request)
     {
         try {
@@ -2779,6 +2771,5 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
 
 }
