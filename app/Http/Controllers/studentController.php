@@ -2106,7 +2106,9 @@ class studentController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $getCocurriculum = stp_cocurriculum::where('student_id', $authUser->id)->get();
+            $getCocurriculum = stp_cocurriculum::where('student_id', $authUser->id)
+                ->where('cocurriculums_status', 1)
+                ->get();
             return response()->json([
                 'success' => true,
                 'data' => $getCocurriculum
