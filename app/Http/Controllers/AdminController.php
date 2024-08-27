@@ -338,7 +338,7 @@ class AdminController extends Controller
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('school_name', 'like', '%' . $request->search . '%');
                 })
-                ->get()
+                ->paginate(10)
                 ->through(function ($school) {
                     switch ($school->school_status) {
                         case 0:
