@@ -75,6 +75,12 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/otherFileCertList', [studentController::class, 'otherFileCertList']);
     Route::middleware('auth:sanctum')->post('/resetStudentPassword', [studentController::class, 'resetStudentPassword']);
     Route::middleware('auth:sanctum',)->post('/resetDummyAccountPassword', [studentController::class, 'resetDummyAccountPassword']);
+
+    Route::middleware('auth:sanctum')->post('/addCocurriculumList', [studentController::class, 'addCocurriculumList']);
+    Route::middleware('auth:sanctum')->post('/editCocurriculum', [studentController::class, 'editCocurriculum']);
+    Route::middleware('auth:sanctum')->post('/disableCocurriculum', [studentController::class, 'disableCocurriculum']);
+
+    Route::middleware('auth:sanctum')->get('/co-curriculumList', [studentController::class, 'cocurriculumList']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {

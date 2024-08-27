@@ -22,6 +22,7 @@ use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\serviceFunctionController;
+use App\Models\stp_cocurriculum;
 use App\Models\stp_intake;
 use Illuminate\Support\Facades\Storage;
 // use Dotenv\Exception\ValidationException;
@@ -1989,6 +1990,133 @@ class studentController extends Controller
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function addCocurriculumList(Request $request)
+    {
+        try {
+            $request->validate([
+                'club_name' => 'required|string|max:255',
+                'position' => 'required|string|max:255',
+                'institute_name' => 'required|string|max:255',
+                'year' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            $newdata = [
+                'student_id' => $authUser->id,
+                'club_name' => $request->club_name,
+                'student_position' => $request->position,
+                'location' => $request->institute_name,
+                'year' => $request->year,
+                'created_by' => $authUser->id
+            ];
+            stp_cocurriculum::create($newdata);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "successfully create cocurriculum"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editCocurriculum(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'club_name' => 'required|string|max:255',
+                'position' => 'required|string|max:255',
+                'institute_name' => 'required|string|max:255',
+                'year' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            $updateData = [
+                'club_name' => $request->club_name,
+                'student_position' => $request->position,
+                'location' => $request->institute_name,
+                'year' => $request->year,
+                'updated_by' => $authUser->id
+            ];
+            $getCocurriculum = stp_cocurriculum::find($request->id);
+            if (empty($getCocurriculum)) {
+                throw ValidationException::withMessages(['cocurriculum' => 'Co-curriculum not found']);
+            }
+            $getCocurriculum->update($updateData);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update co-curriculum successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function disableCocurriculum(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            $getCocurriculum = stp_cocurriculum::find($request->id);
+            if (empty($getCocurriculum)) {
+                throw ValidationException::withMessages(['co-curriculum' => "co-curriculum not found"]);
+            }
+            $getCocurriculum->update([
+                'cocurriculums_status' => 0,
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Cocurriculum being disable successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->errors()
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function cocurriculumList()
+    {
+        try {
+            $authUser = Auth::user();
+            $getCocurriculum = stp_cocurriculum::where('student_id', $authUser->id)->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getCocurriculum
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }
