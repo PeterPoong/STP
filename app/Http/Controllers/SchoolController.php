@@ -1008,4 +1008,37 @@ class SchoolController extends Controller
             ]);
         }
     }
+
+    public function updateSchoolLogo(Request $request)
+    {
+        try {
+            $request->validate([
+                'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+            ]);
+            $authUser = Auth::user();
+            if (!empty($authUser->school_logo)) {
+                Storage::delete('public/' . $authUser->school_logo);
+            }
+
+            $image = $request->file('logo');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('schoolLogo', $imageName, 'public');
+
+            $authUser->update([
+                'school_logo' => $imagePath,
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $imagePath
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

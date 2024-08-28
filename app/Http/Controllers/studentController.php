@@ -79,8 +79,14 @@ class studentController extends Controller
                     return !$request->filled('courseCategory') || $course->category_id == $request->courseCategory;
                 })->values();
 
-                $numberCourses = count($filteredCourses);
 
+                $numberCourses = count($filteredCourses);
+                $monthList = [];
+                foreach ($filteredCourses as $courses) {
+                    foreach ($courses->intake as $c) {
+                        $monthList[] = $c->month->core_metaName;
+                    }
+                }
                 $schoolList[] = [
                     'id' => $school->id,
                     'name' => $school->school_name,
@@ -91,7 +97,8 @@ class studentController extends Controller
                     'state' => $school->state->state_name ?? null,
                     'city' => $school->city->city_name ?? null,
                     'description' => $school->school_shortDesc,
-                    'courses' => $numberCourses
+                    'courses' => $numberCourses,
+                    'intake' => $monthList
                 ];
             }
 
@@ -1799,6 +1806,7 @@ class studentController extends Controller
                 ->through(function ($cert) {
                     $status = ($cert->certificate_status == 1) ? "Active" : "Inactive";
                     return [
+                        "id" => $cert->id,
                         "name" => $cert->certificate_name,
                         "media" => $cert->certificate_media,
                         "status" => "Active"
