@@ -323,9 +323,14 @@ class AdminController extends Controller
     public function schoolList(Request $request)
     {
         try {
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== "" 
+                ? ($request->per_page === 'All' ? stp_school::count() : (int)$request->per_page) 
+                : 10;
+    
             $schoolList = stp_school::when($request->filled('country'), function ($query) use ($request) {
-                $query->orWhere('country_id', $request->country);
-            })
+                    $query->orWhere('country_id', $request->country);
+                })
                 ->when($request->filled('state'), function ($query) use ($request) {
                     $query->orWhere('state_id', $request->state);
                 })
@@ -338,7 +343,7 @@ class AdminController extends Controller
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('school_name', 'like', '%' . $request->search . '%');
                 })
-                ->paginate(10)
+                ->paginate($perPage)
                 ->through(function ($school) {
                     switch ($school->school_status) {
                         case 0:
@@ -352,8 +357,12 @@ class AdminController extends Controller
                             break;
                         case 3:
                             $status = "Temporary";
+                            break;
                         case 4:
-                            $status ="Temporary-Disable";
+                            $status = "Temporary-Disable";
+                            break;
+                        default:
+                            $status = null;
                     }
                     return [
                         'id' => $school->id,
@@ -364,22 +373,20 @@ class AdminController extends Controller
                         'contact' => $school->school_countryCode . $school->school_contactNo,
                         'state' => $school->state->state_name ?? null,
                         'city' => $school->city->city_name ?? null,
-                        'status' => $status ?? null
+                        'status' => $status
                     ];
                 });
-
-            return response()->json([
-                $schoolList
-            ]);
+    
+            return response()->json($schoolList);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
-                'error' => $e
-            ]);
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
-
+    
     public function addSchool(Request $request)
     {
         try {
