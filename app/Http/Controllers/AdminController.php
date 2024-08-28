@@ -37,8 +37,9 @@ use function PHPSTORM_META\type;
 
 class AdminController extends Controller
 {
-    public function addStudent(Request $request) {
-        try{
+    public function addStudent(Request $request)
+    {
+        try {
             $request->validate([
                 'name' => 'required|string|max:255',
                 'firt_name' => 'string|max:255',
@@ -58,8 +59,8 @@ class AdminController extends Controller
             ]);
             $authUser = Auth::user();
             $checkingIc = stp_student::where('student_icNumber', $request->ic)
-            ->where('id', '!=', $request->id)
-            ->exists();
+                ->where('id', '!=', $request->id)
+                ->exists();
 
             if ($checkingIc) {
                 throw ValidationException::withMessages([
@@ -68,9 +69,9 @@ class AdminController extends Controller
             }
 
             $checkingUserContact = stp_student::where('student_countryCode', $request->country_code)
-            ->where('student_contactNo', $request->contact_number)
-            ->where('id', '!=', $request->id)
-            ->exists();
+                ->where('student_contactNo', $request->contact_number)
+                ->where('id', '!=', $request->id)
+                ->exists();
 
             if ($checkingUserContact) {
                 throw ValidationException::withMessages([
@@ -89,42 +90,42 @@ class AdminController extends Controller
                 ->exists();
 
 
-                if ($checkingEmail) {
-                    throw ValidationException::withMessages([
-                        'email' => ['Email has been taken'],
-                    ]);
-                }
+            if ($checkingEmail) {
+                throw ValidationException::withMessages([
+                    'email' => ['Email has been taken'],
+                ]);
+            }
             $student = stp_student::create([
-            "student_userName" => $request->name,
-            "student_password" => Hash::make($request->password),
-            'student_icNumber' => $request->ic,
-            'student_email' => $request->email,
-            'student_countryCode' => $request->country_code,
-            'student_contactNo' => $request->contact_number,
-            'student_status'=>3,
-            'created_by' => $authUser->id,
-            'created_at'=>now()
-        ]);
+                "student_userName" => $request->name,
+                "student_password" => Hash::make($request->password),
+                'student_icNumber' => $request->ic,
+                'student_email' => $request->email,
+                'student_countryCode' => $request->country_code,
+                'student_contactNo' => $request->contact_number,
+                'student_status' => 3,
+                'created_by' => $authUser->id,
+                'created_at' => now()
+            ]);
 
-        stp_student_detail::create([
-            "student_id"=>$student->id,
-            "student_detailFirstName" => $request->first_name ?? "",
-            "student_detailLastName" => $request->last_name ?? "",
-            "student_detailAddress" => $request->address ?? "",
-            "country_id" => $request->country ?? "",
-            'gender' => $request->gender ?? "",
-            "city_id" => $request->city ?? "",
-            "state_id" => $request->state ?? "",
-            "student_detailPostcode" => $request->postcode ?? "",
-            'student_detailStatus'=> 1,
-            'created_by' => $authUser->id,
-            'created_at'=>now()
-        ]);
+            stp_student_detail::create([
+                "student_id" => $student->id,
+                "student_detailFirstName" => $request->first_name ?? "",
+                "student_detailLastName" => $request->last_name ?? "",
+                "student_detailAddress" => $request->address ?? "",
+                "country_id" => $request->country ?? "",
+                'gender' => $request->gender ?? "",
+                "city_id" => $request->city ?? "",
+                "state_id" => $request->state ?? "",
+                "student_detailPostcode" => $request->postcode ?? "",
+                'student_detailStatus' => 1,
+                'created_by' => $authUser->id,
+                'created_at' => now()
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'data' => ['message' => 'Successfully Added the New Student']
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Added the New Student']
+            ]);
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -323,6 +324,11 @@ class AdminController extends Controller
     public function schoolList(Request $request)
     {
         try {
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_school::count() : (int)$request->per_page)
+                : 10;
+
             $schoolList = stp_school::when($request->filled('country'), function ($query) use ($request) {
                 $query->orWhere('country_id', $request->country);
             })
@@ -338,7 +344,7 @@ class AdminController extends Controller
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('school_name', 'like', '%' . $request->search . '%');
                 })
-                ->paginate(10)
+                ->paginate($perPage)
                 ->through(function ($school) {
                     switch ($school->school_status) {
                         case 0:
@@ -352,8 +358,12 @@ class AdminController extends Controller
                             break;
                         case 3:
                             $status = "Temporary";
+                            break;
                         case 4:
-                            $status ="Temporary-Disable";
+                            $status = "Temporary-Disable";
+                            break;
+                        default:
+                            $status = null;
                     }
                     return [
                         'id' => $school->id,
@@ -364,19 +374,17 @@ class AdminController extends Controller
                         'contact' => $school->school_countryCode . $school->school_contactNo,
                         'state' => $school->state->state_name ?? null,
                         'city' => $school->city->city_name ?? null,
-                        'status' => $status ?? null
+                        'status' => $status
                     ];
                 });
 
-            return response()->json([
-                $schoolList
-            ]);
+            return response()->json($schoolList);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
-                'error' => $e
-            ]);
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -560,78 +568,77 @@ class AdminController extends Controller
         }
     }
 
-   public function editSchoolStatus(Request $request)
-{
-    try {
-        $authUser = Auth::user();
-        $request->validate([
-            "id" => 'required|integer',
-            "type" => 'required|string'
-        ]);
+    public function editSchoolStatus(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                "id" => 'required|integer',
+                "type" => 'required|string'
+            ]);
 
-        $school = stp_school::find($request->id);
-        if (!$school) {
-            return response()->json([
-                "success" => false,
-                "message" => "School not found"
-            ], 404);
-        }
-
-        switch ($request->type) {
-            case 'disable':
-                if ($school->school_status == 3) {
-                    $status = 4;
-                    $message = "successfully disabled (status changed from 3 to 4)";
-                } else {
-                    $status = 0;
-                    $message = "successfully disabled (status set to 0)";
-                }
-                break;
-
-            case 'enable':
-                if ($school->school_status == 4) {
-                    $status = 3;
-                    $message = "successfully enabled (status changed from 4 to 3)";
-                } elseif ($school->school_status == 0) {
-                    $status = 1;
-                    $message = "successfully enabled (status changed from 0 to 1)";
-                } else {
-                    $status = $school->school_status;
-                    $message = "status unchanged";
-                }
-                break;
-
-            default:
+            $school = stp_school::find($request->id);
+            if (!$school) {
                 return response()->json([
                     "success" => false,
-                    "message" => "Invalid type"
-                ], 400);
+                    "message" => "School not found"
+                ], 404);
+            }
+
+            switch ($request->type) {
+                case 'disable':
+                    if ($school->school_status == 3) {
+                        $status = 4;
+                        $message = "successfully disabled (status changed from 3 to 4)";
+                    } else {
+                        $status = 0;
+                        $message = "successfully disabled (status set to 0)";
+                    }
+                    break;
+
+                case 'enable':
+                    if ($school->school_status == 4) {
+                        $status = 3;
+                        $message = "successfully enabled (status changed from 4 to 3)";
+                    } elseif ($school->school_status == 0) {
+                        $status = 1;
+                        $message = "successfully enabled (status changed from 0 to 1)";
+                    } else {
+                        $status = $school->school_status;
+                        $message = "status unchanged";
+                    }
+                    break;
+
+                default:
+                    return response()->json([
+                        "success" => false,
+                        "message" => "Invalid type"
+                    ], 400);
+            }
+
+            $school->update([
+                "school_status" => $status,
+                "updated_by" => $authUser->id
+            ]);
+
+            return response()->json([
+                "success" => true,
+                "data" => $message
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Internal Server Error",
+                "error" => $e->getMessage()
+            ], 500);
         }
-
-        $school->update([
-            "school_status" => $status,
-            "updated_by" => $authUser->id
-        ]);
-
-        return response()->json([
-            "success" => true,
-            "data" => $message
-        ]);
-
-    } catch (ValidationException $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation Error',
-            'errors' => $e->errors()
-        ], 422);
-    } catch (\Exception $e) {
-        return response()->json([
-            "success" => false,
-            "message" => "Internal Server Error",
-            "error" => $e->getMessage()
-        ], 500);
     }
-}
 
     public function schoolDetail(Request $request)
     {
@@ -2730,7 +2737,7 @@ class AdminController extends Controller
                     $status = ($featured->status == 1) ? "Active" : "Inactive";
                     return [
                         "name" => $featured->core_metaName,
-                        "id"=>$featured->id,
+                        "id" => $featured->id,
                         "status" => "Active"
                     ];
                 });
@@ -2757,7 +2764,7 @@ class AdminController extends Controller
                     $status = ($featured->status == 1) ? "Active" : "Inactive";
                     return [
                         "name" => $featured->core_metaName,
-                        "id"=>$featured->id,
+                        "id" => $featured->id,
                         "status" => "Active"
                     ];
                 });
@@ -2771,5 +2778,4 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
 }
