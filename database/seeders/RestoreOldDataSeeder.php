@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -12,74 +13,34 @@ class RestoreOldDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // Define the tables and their respective backup files
-        $tables = [
-            'stp_core_metas' => 'old_coreMetaData.json',
-            'stp_countries' => 'old_countriesData.json',
-            'stp_states' => 'old_statesData.json',
-            'stp_cities' => 'old_citiesData.json',
-            'stp_schools' => 'old_schoolData.json',
-            'stp_courses_categories' => 'old_courses_categories.json',
-            'stp_qualifications' => 'old_stp_qualifications.json',
-            'stp_courses' => 'old_coursesData.json',
-            'stp_tags' => 'old_tags.json',
-            'stp_featureds' => 'old_featuredsData.json'
-        ];
+        $oldData = json_decode(file_get_contents(database_path('backups/old_coreMetaData.json')), true);
+        DB::table('stp_core_metas')->insert($oldData);
 
-        // Process each table and its corresponding backup file
-        foreach ($tables as $table => $filename) {
-            $this->restoreTableData($table, database_path('backups/' . $filename));
-        }
-    }
+        $oldCountriesData = json_decode(file_get_contents(database_path('backups/old_countriesData.json')), true);
+        DB::table('stp_countries')->insert($oldCountriesData);
 
-    /**
-     * Restore the data of a table from a JSON backup in chunks.
-     *
-     * @param string $table
-     * @param string $filePath
-     * @return void
-     */
-    private function restoreTableData(string $table, string $filePath): void
-    {
-        // Open the backup file for reading
-        $file = fopen($filePath, 'r');
+        $oldStatesData = json_decode(file_get_contents(database_path('backups/old_statesData.json')), true);
+        DB::table('stp_states')->insert($oldStatesData);
 
-        // Read the first character (start of JSON array)
-        fseek($file, 1);
+        $oldCitiesData = json_decode(file_get_contents(database_path('backups/old_citiesData.json')), true);
+        DB::table('stp_cities')->insert($oldCitiesData);
 
-        $chunkSize = 100; // Number of records per chunk
-        $data = [];
-        $buffer = '';
+        $oldSchoolData = json_decode(file_get_contents(database_path('backups/old_schoolData.json')), true);
+        DB::table('stp_schools')->insert($oldSchoolData);
 
-        // Read data in chunks
-        while (($line = fgets($file)) !== false) {
-            // Remove the trailing comma and newline character
-            $line = rtrim($line, ",\n");
+        $oldCoursesCategoryData = json_decode(file_get_contents(database_path('backups/old_courses_categories.json')), true);
+        DB::table('stp_courses_categories')->insert($oldCoursesCategoryData);
 
-            // Accumulate the line into the buffer
-            $buffer .= $line;
+        $oldCoursesQualification = json_decode(file_get_contents(database_path('backups/old_stp_qualifications.json')), true);
+        DB::table('stp_qualifications')->insert($oldCoursesQualification);
 
-            // Try decoding to ensure the line completes a valid JSON object
-            $decoded = json_decode($buffer, true);
+        $oldCoursesData = json_decode(file_get_contents(database_path('backups/old_coursesData.json')), true);
+        DB::table('stp_courses')->insert($oldCoursesData);
 
-            if ($decoded !== null) {
-                $data[] = $decoded; // Add the decoded JSON object to the chunk
-                $buffer = ''; // Reset the buffer
+        $oldTag = json_decode(file_get_contents(database_path('backups/old_tags.json')), true);
+        DB::table('stp_tags')->insert($oldTag);
 
-                // If the chunk size is reached, insert data and clear the array
-                if (count($data) >= $chunkSize) {
-                    DB::table($table)->insert($data);
-                    $data = [];
-                }
-            }
-        }
-
-        // Insert any remaining data
-        if (!empty($data)) {
-            DB::table($table)->insert($data);
-        }
-
-        // Close the file after reading
-        fclose($file);
+        $oldFeaturedData = json_decode(file_get_contents(database_path('backups/old_featuredsData.json')), true);
+        DB::table('stp_featureds')->insert($oldFeaturedData);
     }
 }
