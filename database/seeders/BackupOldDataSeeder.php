@@ -14,38 +14,57 @@ class BackupOldDataSeeder extends Seeder
      */
     public function run(): void
     {
+        // Ensure the backup directory exists
         if (!file_exists(database_path('backups'))) {
             mkdir(database_path('backups'), 0755, true);
         }
 
-        $oldCoreMetaData = DB::table('stp_core_metas')->get()->toArray();
-        file_put_contents(database_path('backups/old_coreMetaData.json'), json_encode($oldCoreMetaData));
+        // List of tables and their corresponding backup file names
+        $tables = [
+            'stp_core_metas' => 'old_coreMetaData.json',
+            'stp_schools' => 'old_schoolData.json',
+            'stp_countries' => 'old_countriesData.json',
+            'stp_states' => 'old_statesData.json',
+            'stp_cities' => 'old_citiesData.json',
+            'stp_featureds' => 'old_featuredsData.json',
+            'stp_courses' => 'old_coursesData.json',
+            'stp_courses_categories' => 'old_courses_categories.json',
+            'stp_qualifications' => 'old_stp_qualifications.json',
+            'stp_tags' => 'old_tags.json'
+        ];
 
-        $oldSchoolData = DB::table('stp_schools')->get()->toArray();
-        file_put_contents(database_path('backups/old_schoolData.json'), json_encode($oldSchoolData));
+        // Process each table one by one
+        foreach ($tables as $table => $filename) {
+            $backupFilePath = database_path('backups/' . $filename);
+            $this->backupTableData($table, $backupFilePath);
+        }
+    }
 
-        $oldCountriesData = DB::table('stp_countries')->get()->toArray();
-        file_put_contents(database_path('backups/old_countriesData.json'), json_encode($oldCountriesData));
+    /**
+     * Backup the data of a table in chunks.
+     *
+     * @param string $table
+     * @param string $filePath
+     * @return void
+     */
+    private function backupTableData(string $table, string $filePath): void
+    {
+        // Open the file in write mode
+        $backupFile = fopen($filePath, 'w');
+        fwrite($backupFile, '['); // Start the JSON array
 
-        $oldStateData = DB::table('stp_states')->get()->toArray();
-        file_put_contents(database_path('backups/old_statesData.json'), json_encode($oldStateData));
+        $firstRecord = true;
+        foreach (DB::table($table)->cursor() as $row) {
+            if (!$firstRecord) {
+                fwrite($backupFile, ','); // Add a comma between JSON objects
+            } else {
+                $firstRecord = false;
+            }
 
-        $oldCitiesData = DB::table('stp_cities')->get()->toArray();
-        file_put_contents(database_path('backups/old_citiesData.json'), json_encode($oldCitiesData));
+            fwrite($backupFile, json_encode($row)); // Write the JSON-encoded row
+        }
 
-        $oldFeaturedData = DB::table('stp_featureds')->get()->toArray();
-        file_put_contents(database_path('backups/old_featuredsData.json'), json_encode($oldFeaturedData));
-
-        $oldCoursesData = DB::table('stp_courses')->get()->toArray();
-        file_put_contents(database_path('backups/old_coursesData.json'), json_encode($oldCoursesData));
-
-        $oldCoursesCategoryData = DB::table('stp_courses_categories')->get()->toArray();
-        file_put_contents(database_path('backups/old_courses_categories.json'), json_encode($oldCoursesCategoryData));
-
-        $oldCoursesQualification = DB::table('stp_qualifications')->get()->toArray();
-        file_put_contents(database_path('backups/old_stp_qualifications.json'), json_encode($oldCoursesQualification));
-
-        $oldTag = DB::table('stp_tags')->get()->toArray();
-        file_put_contents(database_path('backups/old_tags.json'), json_encode($oldTag));
+        fwrite($backupFile, ']'); // End the JSON array
+        fclose($backupFile);
     }
 }

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('city_name');
             $table->decimal('city_lat')->nullable();
             $table->decimal('city_lg')->nullable();
-            $table->foreignId('city_id')->nullable()->constrained('stp_states')->onDelete('set null');
+            $table->foreignId('state_id')->nullable()->constrained('stp_states')->onDelete('set null');
             $table->integer('city_status')->default(1);
             $table->integer('created_by')->nullable();
             $table->integer('updated_by')->nullable();

@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\stp_city;
+use App\Models\stp_country;
 use App\Models\stp_course;
 use App\Models\stp_school;
 use App\Models\stp_school_otp;
+use App\Models\stp_state;
 use App\Models\stp_student;
 use App\Models\stp_student_otp;
 use App\Models\stp_user_otp;
@@ -289,6 +292,111 @@ class serviceFunctionController extends Controller
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    public function importCountry(Request $request)
+    {
+        try {
+            // Access the data from the request
+            $countries = $request->all(); // or $request->input() if data is nested inside a specific key
+            $newData = [];
+            foreach ($countries as $country) {
+                $newData[] = [
+                    'country_name' => $country['name'],
+                    'country_code' => $country['isoCode'],
+                    'country_flag' => $country['flag']
+                ];
+            }
+
+
+            stp_country::insert($newData);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function importState(Request $request)
+    {
+        try {
+            $newData = [];
+            $stateList = $request->all();
+            foreach ($stateList as $state) {
+                $country = stp_country::where('country_code', $state['countryCode'])->first();
+                $newData[] = [
+                    'state_name' => $state['name'],
+                    'state_isoCode' => $state['isoCode'],
+                    'country_code' => $state['countryCode'],
+                    'state_lg' => $state['longitude'],
+                    'state_lat' => $state['latitude'],
+                    'country_id' => $country->id
+                ];
+            }
+            stp_state::insert($newData);
+            return response()->json([
+                'success' => true
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function importCity(Request $request)
+    {
+        // Increase memory limit and execution time
+        ini_set('memory_limit', '512M');
+        set_time_limit(600);
+
+        try {
+            // Get all city data from the request
+            $cityList = $request->all();
+            $newData = [];
+            $chunkSize = 100; // Define chunk size
+
+            foreach ($cityList as $city) {
+                // Find the state matching the city data
+                $state = stp_state::where('state_isoCode', $city[2])
+                    ->where('country_code', $city[1])
+                    ->first();
+
+                // Prepare the city data for insertion
+                $newData[] = [
+                    'city_name' => $city[0],
+                    'city_lat' => $city[3],
+                    'city_lg' => $city[4],
+                    'state_id' => $state->id
+                ];
+
+                // Insert the data in chunks of 100
+                if (count($newData) === $chunkSize) {
+                    stp_city::insert($newData); // Insert the chunk into the database
+                    $newData = []; // Reset the array for the next chunk
+                }
+            }
+
+            // Insert any remaining data that didn't fit into the last full chunk
+            if (!empty($newData)) {
+                stp_city::insert($newData);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data imported successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

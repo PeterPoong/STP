@@ -180,6 +180,13 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/resetDummySchoolPassword', [SchoolController::class, 'resetDummySchoolPassword']);
 });
 
+
+Route::post('/importCountry', [serviceFunctionController::class, 'importCountry']);
+Route::post('/importState', [serviceFunctionController::class, 'importState']);
+Route::post('/importCity', [serviceFunctionController::class, 'importCity']);
+
+
+
 Route::post('/sendOtp', [serviceFunctionController::class, 'sendingOtp']);
 Route::post('/validateOtp', [serviceFunctionController::class, 'validateOtp']);
 Route::post('/resetPassword', [serviceFunctionController::class, 'resetPassword']);

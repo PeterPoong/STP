@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('stp_states', function (Blueprint $table) {
             $table->id();
             $table->string('state_name');
+            $table->string('state_isoCode');
+            $table->string('country_code');
             $table->decimal('state_lg')->nullable();
             $table->decimal('state_lat')->nullable();
             $table->foreignId('country_id')->nullable()->constrained('stp_countries')->onDelete('set null');
