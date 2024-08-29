@@ -174,10 +174,10 @@ class AdminController extends Controller
                 case 1:
                     $status = "Active";
                     break;
-                case 2:
+                case 3:
                     $status = "Temporary";
                     break;
-                case 3:
+                case 4:
                     $status = "Temporary-Disable";
                     break;
                 default:
@@ -328,31 +328,51 @@ class AdminController extends Controller
                 'type' => 'required'
             ]);
 
-            $user = stp_student::find($request->id);
-            if ($request->type == "disable") {
-                $data = [
-                    "student_status" => 0,
-                    "updated_by" => $authUser->id
-                ];
-                $successMessage = [
-                    "success" => true,
-                    "data" => ["message" => "successfully remove student"]
-                ];
-            } else {
-                $data = [
-                    "student_status" => 1,
-                    "updated_by" => $authUser->id
-                ];
-                $successMessage = [
-                    "success" => true,
-                    "data" => ["message" => "successfully enable student"]
-                ];
+            $student = stp_student::find($request->id);
+            if (!$student) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "School not found"
+                ], 404);
             }
 
-            $disableStudent = $user->update($data);
-            if ($disableStudent) {
-                return response()->json($successMessage, 200);
+            switch ($request->type) {
+                case 'disable':
+                    if ($student->student_status == 3) {
+                        $status = 4;
+                        $message = "successfully disabled (status changed from 3 to 4)";
+                    } else {
+                        $status = 0;
+                        $message = "successfully disabled (status set to 0)";
+                    }
+                    break;
+
+                case 'enable':
+                    if ($student->student_status == 4) {
+                        $status = 3;
+                        $message = "successfully enabled (status changed from 4 to 3)";
+                    } else {
+                        $status = 1;
+                        $message = "successfully enabled";
+                    } 
+                    break;
+
+                default:
+                    return response()->json([
+                        "success" => false,
+                        "message" => "Invalid type"
+                    ], 400);
             }
+
+            $student->update([
+                "student_status" => $status,
+                "updated_by" => $authUser->id
+            ]);
+
+            return response()->json([
+                "success" => true,
+                "data" => $message
+            ]);
         } catch (ValidationException $e) {
             return response()->json([
                 "success" => false,
