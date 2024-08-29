@@ -353,7 +353,7 @@ class studentController extends Controller
                         'qualification' => $course->qualification->qualification_name,
                         'mode' => $course->studyMode->core_metaName ?? null,
                         'logo' => $course->course_logo ?? $course->school->school_logo,
-                        'location' => $course->school->state->state_name,
+                        'location' => $course->school->state->state_name ?? null,
                         'institute_category' => $course->school->institueCategory->core_metaName
                     ];
                 });

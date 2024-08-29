@@ -351,40 +351,40 @@ class serviceFunctionController extends Controller
 
     public function importCity(Request $request)
     {
-        // Increase memory limit and execution time
         ini_set('memory_limit', '512M');
-        set_time_limit(600);
+        set_time_limit(1000);
 
         try {
-            // Get all city data from the request
             $cityList = $request->all();
-            $newData = [];
             $chunkSize = 100; // Define chunk size
 
-            foreach ($cityList as $city) {
-                // Find the state matching the city data
-                $state = stp_state::where('state_isoCode', $city[2])
-                    ->where('country_code', $city[1])
-                    ->first();
+            foreach (array_chunk($cityList, $chunkSize) as $chunk) {
+                $newData = [];
 
-                // Prepare the city data for insertion
-                $newData[] = [
-                    'city_name' => $city[0],
-                    'city_lat' => $city[3],
-                    'city_lg' => $city[4],
-                    'state_id' => $state->id
-                ];
+                foreach ($chunk as $city) {
+                    $state = stp_state::where('state_isoCode', $city[2])
+                        ->where('country_code', $city[1])
+                        ->first();
 
-                // Insert the data in chunks of 100
-                if (count($newData) === $chunkSize) {
-                    stp_city::insert($newData); // Insert the chunk into the database
-                    $newData = []; // Reset the array for the next chunk
+                    // Check if the city already exists
+                    $existingCity = stp_city::where('city_name', $city[0])
+                        ->where('state_id', $state->id)
+                        ->first();
+
+                    if (!$existingCity) {
+                        $newData[] = [
+                            'city_name' => $city[0],
+                            'city_lat' => $city[3],
+                            'city_lg' => $city[4],
+                            'state_id' => $state->id
+                        ];
+                    }
                 }
-            }
 
-            // Insert any remaining data that didn't fit into the last full chunk
-            if (!empty($newData)) {
-                stp_city::insert($newData);
+                // Insert unique data
+                if (!empty($newData)) {
+                    stp_city::insert($newData);
+                }
             }
 
             return response()->json([
@@ -397,6 +397,49 @@ class serviceFunctionController extends Controller
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+
+    public function getState(Request $request)
+    {
+
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+
+            $getState = stp_state::where('country_id', $request->id)->where('state_status', 1)->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getState ?? []
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'Message' => "Internal Server Error",
+                'Error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getCities(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $getCities = stp_city::where('state_id', $request->id)->where('city_status', 1)->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getCities
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

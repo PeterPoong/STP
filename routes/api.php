@@ -175,6 +175,11 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/editApplicantStatus', [SchoolController::class, 'editApplicantStatus']);
     Route::post('/applicantDetailRelatedDocument', [SchoolController::class, 'applicantDetailRelatedDocument']);
 
+    Route::get('/instituteType', [studentController::class, 'instituteType']);
+    Route::get('/countryList', [studentController::class, 'countryList']);
+
+
+
     Route::post('/updateSchoolLogo', [SchoolController::class, 'updateSchoolLogo']);
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
     Route::post('/resetDummySchoolPassword', [SchoolController::class, 'resetDummySchoolPassword']);
@@ -184,6 +189,9 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 Route::post('/importCountry', [serviceFunctionController::class, 'importCountry']);
 Route::post('/importState', [serviceFunctionController::class, 'importState']);
 Route::post('/importCity', [serviceFunctionController::class, 'importCity']);
+
+Route::post('/getState', [serviceFunctionController::class, 'getState']);
+Route::post('/getCities', [serviceFunctionController::class, 'getCities']);
 
 
 
