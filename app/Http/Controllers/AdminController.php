@@ -152,7 +152,54 @@ class AdminController extends Controller
             "data" => $studentList
         ]);
     }
-
+    public function studentListAdmin(Request $request)
+   
+    {
+        try{
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
+            : 10;
+ 
+            $studentList = stp_student::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('student_userName', 'like', '%' . $request->search . '%');
+        })
+ 
+        ->paginate($perPage)
+        ->through(function ($student) {
+            switch ($student->student_status) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Active";
+                    break;
+                case 2:
+                    $status = "Temporary";
+                    break;
+                case 3:
+                    $status = "Temporary-Disable";
+                    break;
+                default:
+                    $status = null;
+            }
+ 
+            return [
+                'id' => $student->id,
+                'name' => $student->student_userName,
+                'email' => $student->student_email,
+                'status' => $status
+            ];
+        });
+        return response()->json($studentList);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+    }
     public function editStudent(Request $request)
     {
         try {
@@ -600,10 +647,13 @@ class AdminController extends Controller
                     if ($school->school_status == 4) {
                         $status = 3;
                         $message = "successfully enabled (status changed from 4 to 3)";
-                    } else {
+                    } elseif ($school->school_status == 0) {
                         $status = 1;
-                        $message = "successfully enabled";
-                    } 
+                        $message = "successfully enabled (status changed from 0 to 1)";
+                    } else {
+                        $status = $school->school_status;
+                        $message = "status unchanged";
+                    }
                     break;
 
                 default:
