@@ -600,13 +600,10 @@ class AdminController extends Controller
                     if ($school->school_status == 4) {
                         $status = 3;
                         $message = "successfully enabled (status changed from 4 to 3)";
-                    } elseif ($school->school_status == 0) {
-                        $status = 1;
-                        $message = "successfully enabled (status changed from 0 to 1)";
                     } else {
-                        $status = $school->school_status;
-                        $message = "status unchanged";
-                    }
+                        $status = 1;
+                        $message = "successfully enabled";
+                    } 
                     break;
 
                 default:
