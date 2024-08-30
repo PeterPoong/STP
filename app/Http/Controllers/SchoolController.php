@@ -328,13 +328,17 @@ class SchoolController extends Controller
     {
         try {
             $request->validate([
-                'id' => 'required|integer',
+                // 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|max:255',
                 'countryCode' => 'required|string|max:255',
                 'contact' => 'required|string|max:255',
-                'password' => 'required|string|min:8',
-                'confirm_password' => 'required|string|min:8|same:password',
+                'school_website' => 'required|string|max:255',
+                // 'password' => 'required|string|min:8',
+                // 'confirm_password' => 'required|string|min:8|same:password',
+                'school_fullDesc' => 'required|string|max:255',
+                'school_shortDesc' => 'required|string|max:255',
+                'school_address' => 'required|string|max:255',
                 'country' => 'required|integer',
                 'state' => 'required|integer',
                 'city' => 'required|integer',
@@ -343,7 +347,7 @@ class SchoolController extends Controller
             ]);
             $authUser = Auth::user();
 
-            $checkingEmail = stp_school::where('id', '!=', $request->id)
+            $checkingEmail = stp_school::where('id', '!=', $authUser->id)
                 ->where('school_email', $request->email)
                 ->exists();
 
@@ -355,7 +359,7 @@ class SchoolController extends Controller
 
             $checkingUserContact = stp_school::where('school_countryCode', $request->countryCode)
                 ->where('school_contactNo', $request->contact)
-                ->where('id', '!=', $request->id)
+                ->where('id', '!=', $authUser)
                 ->exists();
 
             if ($checkingUserContact) {
@@ -364,7 +368,7 @@ class SchoolController extends Controller
                 ]);
             }
 
-            $school = stp_school::find($request->id);
+            $school = stp_school::find($authUser->id);
 
             if ($request->hasFile('logo')) {
                 if (!empty($school->school_logo)) {
@@ -379,22 +383,21 @@ class SchoolController extends Controller
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->countryCode,
-                'school_password' => Hash::make($request->password),
-                'school_fullDesc' => $request->fullDesc,
-                'school_shortDesc' => $request->shortDesc,
-                'school_address' => $request->address,
+                'school_fullDesc' => $request->school_fullDesc,
+                'school_shortDesc' => $request->school_shortDesc,
+                'school_address' => $request->school_address,
                 'country_id' => $request->country,
                 'state_id' => $request->state,
                 'city_id' => $request->city,
                 'institue_category' => $request->category,
                 'school_lg' => $request->lg,
                 'school_lat' => $request->lat,
-                'person_inChargeName' => $request->PICName,
-                'person_inChargeNumber' => $request->PICNo,
-                'person_inChargeEmail' => $request->PICEmail,
+                // 'person_inChargeName' => $request->PICName,
+                // 'person_inChargeNumber' => $request->PICNo,
+                // 'person_inChargeEmail' => $request->PICEmail,
                 'account_type' => $request->account,
-                'school_officialWebsite' => $request->website,
-                'school_logo' => $imagePath ?? null,
+                'school_officalWebsite' => $request->school_website,
+                // 'school_logo' => $imagePath ?? null,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
             ]);

@@ -153,52 +153,52 @@ class AdminController extends Controller
         ]);
     }
     public function studentListAdmin(Request $request)
-   
+
     {
-        try{
+        try {
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
-            : 10;
- 
+                ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
+                : 10;
+
             $studentList = stp_student::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_userName', 'like', '%' . $request->search . '%');
-        })
- 
-        ->paginate($perPage)
-        ->through(function ($student) {
-            switch ($student->student_status) {
-                case 0:
-                    $status = "Disable";
-                    break;
-                case 1:
-                    $status = "Active";
-                    break;
-                case 3:
-                    $status = "Temporary";
-                    break;
-                case 4:
-                    $status = "Temporary-Disable";
-                    break;
-                default:
-                    $status = null;
-            }
- 
-            return [
-                'id' => $student->id,
-                'name' => $student->student_userName,
-                'email' => $student->student_email,
-                'status' => $status
-            ];
-        });
-        return response()->json($studentList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
-    }
+            })
+
+                ->paginate($perPage)
+                ->through(function ($student) {
+                    switch ($student->student_status) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                        case 3:
+                            $status = "Temporary";
+                            break;
+                        case 4:
+                            $status = "Temporary-Disable";
+                            break;
+                        default:
+                            $status = null;
+                    }
+
+                    return [
+                        'id' => $student->id,
+                        'name' => $student->student_userName,
+                        'email' => $student->student_email,
+                        'status' => $status
+                    ];
+                });
+            return response()->json($studentList);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
     public function editStudent(Request $request)
     {
@@ -354,7 +354,7 @@ class AdminController extends Controller
                     } else {
                         $status = 1;
                         $message = "successfully enabled";
-                    } 
+                    }
                     break;
 
                 default:

@@ -243,7 +243,7 @@ class studentController extends Controller
                         "course_logo" => $logo,
                         "course_qualification" => $courses->courses->qualification->qualification_name,
                         'course_school' => $courses->courses->school->school_name,
-                        'location' => $courses->courses->school->city->city_name,
+                        'location' => $courses->courses->school->city->city_name ?? null,
                     ];
                 });
 

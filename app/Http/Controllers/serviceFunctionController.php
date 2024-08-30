@@ -439,7 +439,7 @@ class serviceFunctionController extends Controller
                 'success' => false,
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 }
