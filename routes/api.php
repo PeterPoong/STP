@@ -107,6 +107,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editSchoolFeatured', [AdminController::class, 'editSchoolFeatured']);
 
     Route::post('/courseList', [AdminController::class, 'coursesList']);
+    Route::post('/courseListAdmin', [AdminController::class, 'courseListAdmin']);
     Route::post('/courseDetail', [AdminController::class, 'courseDetail']);
     Route::post('/addCourses', [AdminController::class, 'addCourse']);
     Route::post('/editCourse', [AdminController::class, 'editCourse']);
@@ -125,11 +126,13 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCategory', [AdminController::class, 'editCategory']);
     Route::post('/editHotPick', [AdminController::class, 'editHotPick']);
     Route::post('/editCategoryStatus', [AdminController::class, 'editCategoryStatus']);
+    Route::post('/categoryListAdmin', [AdminController::class, 'categoryListAdmin']);
 
     Route::post('/addSubject', [AdminController::class, 'addSubject']);
     Route::post('/editSubject', [AdminController::class, 'editSubject']);
     Route::post('/editSubjectStatus', [AdminController::class, 'editSubjectStatus']);
     Route::post('/subjectList', [AdminController::class, 'subjectList']);
+    Route::post('/subjectListAdmin', [AdminController::class, 'subjectListAdmin']);
 
     Route::post('/applicantDetailInfo', [AdminController::class, 'applicantDetailInfo']);
     Route::post('/editApplicantStatus', [AdminController::class, 'editApplicantStatus']);
@@ -143,11 +146,13 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/addAdmin', [AdminController::class, 'addAdmin']);
     Route::post('/disableAdmin', [AdminController::class, 'disableAdmin']);
     Route::post('/adminList', [AdminController::class, 'adminList']);
+    Route::post('/adminListAdmin', [AdminController::class, 'adminListAdmin']);
     Route::post('/editAdmin', [AdminController::class, 'editAdmin']);
 
     Route::post('/addBanner', [AdminController::class, 'addBanner']);
     Route::post('/editBanner', [AdminController::class, 'editBanner']);
     Route::post('/disableBanner', [AdminController::class, 'disableBanner']);
+    Route::post('/bannerListAdmin', [AdminController::class, 'bannerListAdmin']);
 
     Route::post('/resetAdminDummyPassword', [AdminController::class, 'resetAdminDummyPassword']);
     Route::post('/resetAdminPassword', [AdminController::class, 'resetAdminPassword']);

@@ -667,13 +667,9 @@ class AdminController extends Controller
                     if ($school->school_status == 4) {
                         $status = 3;
                         $message = "successfully enabled (status changed from 4 to 3)";
-                    } elseif ($school->school_status == 0) {
+                    } else
                         $status = 1;
-                        $message = "successfully enabled (status changed from 0 to 1)";
-                    } else {
-                        $status = $school->school_status;
-                        $message = "status unchanged";
-                    }
+                        $message = "successfully enabled ";
                     break;
 
                 default:
@@ -969,6 +965,51 @@ class AdminController extends Controller
         }
     }
 
+    public function courseListAdmin(Request $request)
+   
+    {
+        try{
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? stp_course::count() : (int)$request->per_page)
+            : 10;
+ 
+            $courseList = stp_course::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('course_name', 'like', '%' . $request->search . '%');
+        })
+ 
+        ->paginate($perPage)
+        ->through(function ($course) {
+            switch ($course->course_status) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Active";
+                    break;
+                default:
+                    $status = null;
+            }
+ 
+            return [
+                'id' => $course->id,
+                'name' => $course->course_name,
+                'school' => $course->school->school_name,
+                "category" => $course->category->category_name,
+                "qualification"=>$course->qualification->qualification_name,
+                "status" => $status
+            ];
+        });
+        return response()->json($courseList);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+    }
+
     public function courseDetail(Request $request)
     {
         try {
@@ -1156,6 +1197,7 @@ class AdminController extends Controller
                 'id' => 'required|integer',
                 'type' => 'required|string|max:255'
             ]);
+
             $authUser = Auth::user();
 
             if ($request->type == 'disable') {
@@ -1743,6 +1785,49 @@ class AdminController extends Controller
         }
     }
 
+    public function subjectListAdmin(Request $request)
+   
+    {
+        try{
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? stp_subject::count() : (int)$request->per_page)
+            : 10;
+ 
+            $subjectList = stp_subject::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('subject_name', 'like', '%' . $request->search . '%');
+        })
+ 
+        ->paginate($perPage)
+        ->through(function ($subject) {
+            switch ($subject->subject_status) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Active";
+                    break;
+                default:
+                    $status = null;
+            }
+ 
+            return [
+                'id' => $subject->id,
+                    'name' => $subject->subject_name,
+                    'category' => $subject->category->core_metaName ?? '',
+                    'status' => $status
+            ];
+        });
+        return response()->json($subjectList);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+    }
+
     public function categoryList(Request $request)
     {
         try {
@@ -1798,6 +1883,49 @@ class AdminController extends Controller
         }
     }
 
+    public function categoryListAdmin(Request $request)
+   
+    {
+        try{
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? stp_courses_category::count() : (int)$request->per_page)
+            : 10;
+ 
+            $categoryList = stp_courses_category::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('student_userName', 'like', '%' . $request->search . '%');
+        })
+ 
+        ->paginate($perPage)
+        ->through(function ( $category) {
+            switch ( $category-> category_status) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Active";
+                    break;
+                default:
+                    $status = null;
+            }
+ 
+            return [
+                'id' =>  $category->id,
+                'name' =>  $category->category_name,
+                "course_hotPick" => $category->course_hotPick ?? 0,
+                "category_status" => $status
+            ];
+        });
+        return response()->json($categoryList);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+    }
+
     public function resetAdminPassword(Request $request)
     {
         try {
@@ -1840,15 +1968,23 @@ class AdminController extends Controller
         try {
             // Get the authenticated user
             $authUser = Auth::user();
-
+    
             $request->validate([
                 'form_status' => 'integer|nullable',
                 'student_id' => 'integer|nullable',
                 'courses_id' => 'integer|nullable'
             ]);
-
+    
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_submited_form::count() : (int)$request->per_page)
+                : 10;
+    
+            $studentList = stp_student_detail::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('student_detailFirstName', 'like', '%' . $request->search . '%');
+            });
+    
             $applicantInfo = stp_submited_form::query()
-
                 ->when($request->filled('student_id'), function ($query) use ($request) {
                     $query->where('student_id', $request->student_id);
                 })
@@ -1858,30 +1994,50 @@ class AdminController extends Controller
                 ->when($request->filled('form_status'), function ($query) use ($request) {
                     $query->where('form_status', $request->form_status);
                 })
-                ->paginate(10)
+                ->paginate($perPage)
                 ->through(function ($applicant) {
+                    switch ($applicant->form_status) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                        case 2:
+                            $status = "Pending";
+                            break;
+                        case 3:
+                            $status = "Rejected";
+                            break;
+                        case 4:
+                            $status = "Accepted";
+                            break;
+                        default:
+                            $status = null;
+                    }
                     return [
                         "courses_id" => $applicant->id ?? 'N/A',
                         "course_name" => $applicant->course->course_name ?? 'N/A',
-                        "form_status" => $applicant->form_status == 2 ? "Pending" : ($applicant->form_status == 3 ? "Rejected" : "Accepted"),
+                        "institution"=>$applicant->course->school->school_name,
+                        "form_status" => $status,
                         "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
                         "country_code" => $applicant->student->student_countryCode ?? 'N/A',
                         "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
                         'student_id' => $applicant->id, // Add student_id to the result
                     ];
                 });
-            return response()->json([
-                'success' => true,
-                'data' => $applicantInfo
-            ]);
+    
+            return response()->json($applicantInfo);
+    
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Internal Sever Error',
-                'error' => $e
-            ]);
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+    
 
     public function editApplicantStatus(Request $request)
     {
@@ -2148,6 +2304,11 @@ class AdminController extends Controller
     public function packageList(Request $request)
     {
         try {
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? stp_package::count() : (int)$request->per_page)
+            : 10;
+
             $packageList = stp_package::query()
                 ->when($request->filled('package_type'), function ($query) use ($request) {
                     $query->where('package_type', $request->package_type);
@@ -2155,9 +2316,9 @@ class AdminController extends Controller
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('package_name', 'like', '%' . $request->search . '%');
                 })
-                ->paginate(10)
+                ->paginate($perPage)
                 ->through(function ($package) {
-                    $status = ($package->package_status == 1) ? "Active" : "Inactive";
+                    $status = ($package->package_status == 1) ? "Active" : "Disable";
                     return [
                         "package_name" => $package->package_name,
                         "package_detail" => $package->package_detail,
@@ -2166,7 +2327,7 @@ class AdminController extends Controller
                         "package_status" => $status
                     ];
                 });
-            return $packageList;
+                return response()->json($packageList);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -2542,6 +2703,59 @@ class AdminController extends Controller
         }
     }
 
+    public function adminListAdmin(Request $request)
+   
+    {
+        try{
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? User::count() : (int)$request->per_page)
+            : 10;
+ 
+            $adminList = User::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+        })
+ 
+        ->paginate($perPage)
+        ->through(function ($admin) {
+            switch ($admin->status) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Active";
+                    break;
+                case 2:
+                    $status = "Pending";
+                    break;
+                case 3:
+                    $status = "Temporary";
+                    break;
+                case 4:
+                    $status = "Temporary-Disable";
+                    break;
+                default:
+                    $status = null;
+            }
+ 
+            return [
+                'id' => $admin->id,
+                "name" => $admin->name,
+                "email" => $admin->email,
+                "ic_number" => $admin->ic_Number,
+                "contact_no" => $admin->contact_no,
+                'status' => $status
+            ];
+        });
+        return response()->json($adminList);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+    }
     public function editAdmin(Request $request)
     {
         try {
@@ -2629,7 +2843,50 @@ class AdminController extends Controller
         }
     }
 
-
+    public function bannerListAdmin(Request $request)
+   
+    {
+        try{
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? stp_advertisement_banner::count() : (int)$request->per_page)
+            : 10;
+ 
+            $bannerList = stp_advertisement_banner::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('banner_name', 'like', '%' . $request->search . '%');
+        })
+ 
+        ->paginate($perPage)
+        ->through(function ($banner) {
+            switch ($banner->banner_status) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Active";
+                    break;
+                default:
+                    $status = null;
+            }
+ 
+            return [
+                'id' => $banner->id,
+                'name' => $banner->banner_name,
+                'file' => $banner->banner_file,
+                'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
+                'featured' => $banner->banner->core_metaName ?? '',
+                'status' => $status
+            ];
+        });
+        return response()->json($bannerList);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+    }
 
     public function addBanner(Request $request)
     {
