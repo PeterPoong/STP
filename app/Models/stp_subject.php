@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class stp_subject extends Model
 {
@@ -26,6 +27,7 @@ class stp_subject extends Model
 
     public function category(): BelongsTo
     {
-        return $this->BelongsTo(stp_transcript::class);
+        return $this->belongsTo(stp_core_meta::class, 'subject_category', 'id');
     }
+
 }
