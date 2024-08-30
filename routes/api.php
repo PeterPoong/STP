@@ -94,6 +94,7 @@ Route::prefix('student')->group(function () {
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/adminList', [AdminController::class, 'adminList']);
     Route::post('/studentList', [AdminController::class, 'studentList']);
+    Route::post('/studentListAdmin', [AdminController::class, 'studentListAdmin']);
     Route::post('/addStudent', [AdminController::class, 'addStudent']);
     Route::post('/editStudent', [AdminController::class, 'editStudent']);
     Route::post('/editStatus', [AdminController::class, 'editStudentStatus']);
