@@ -153,52 +153,52 @@ class AdminController extends Controller
         ]);
     }
     public function studentListAdmin(Request $request)
-
+   
     {
-        try {
+        try{
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-                ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
-                : 10;
-
+            ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
+            : 10;
+ 
             $studentList = stp_student::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_userName', 'like', '%' . $request->search . '%');
-            })
-
-                ->paginate($perPage)
-                ->through(function ($student) {
-                    switch ($student->student_status) {
-                        case 0:
-                            $status = "Disable";
-                            break;
-                        case 1:
-                            $status = "Active";
-                            break;
-                        case 3:
-                            $status = "Temporary";
-                            break;
-                        case 4:
-                            $status = "Temporary-Disable";
-                            break;
-                        default:
-                            $status = null;
-                    }
-
-                    return [
-                        'id' => $student->id,
-                        'name' => $student->student_userName,
-                        'email' => $student->student_email,
-                        'status' => $status
-                    ];
-                });
-            return response()->json($studentList);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Internal Server Error',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        })
+ 
+        ->paginate($perPage)
+        ->through(function ($student) {
+            switch ($student->student_status) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Active";
+                    break;
+                case 3:
+                    $status = "Temporary";
+                    break;
+                case 4:
+                    $status = "Temporary-Disable";
+                    break;
+                default:
+                    $status = null;
+            }
+ 
+            return [
+                'id' => $student->id,
+                'name' => $student->student_userName,
+                'email' => $student->student_email,
+                'status' => $status
+            ];
+        });
+        return response()->json($studentList);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
+    }
     }
     public function editStudent(Request $request)
     {
@@ -354,7 +354,7 @@ class AdminController extends Controller
                     } else {
                         $status = 1;
                         $message = "successfully enabled";
-                    }
+                    } 
                     break;
 
                 default:
@@ -464,15 +464,10 @@ class AdminController extends Controller
                 'password' => 'required|string|min:8',
                 'confirm_password' => 'required|string|min:8|same:password',
                 'country_code' => 'required',
-                'country' => 'required|integer',
-                'state' => 'required|integer',
-                'city' => 'required|integer',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255|',
                 'school_fullDesc' => 'required|string|max:255',
                 'school_shortDesc' => 'required|string|max:255',
-                'school_address' => 'required|string|max:255',
-                'school_website' => 'required|string|max:255',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
             ]);
 
@@ -709,10 +704,42 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer'
             ]);
-            $school = stp_school::find($request->id);
+    
+            // Fetch the school along with its courses, course featured data, and school featured data
+            $school = stp_school::with(['courses.featured', 'featured'])->find($request->id);
+    
+            if (!$school) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'School not found'
+                ]);
+            }
+    
+            // Prepare the courses data
+            $courses = $school->courses->map(function($course) {
+                return [
+                    'course_name' => $course->course_name,
+                    'course_featured' => $course->featured->map(function($featured) {
+                        return [
+                            'featured_type' => $featured->featured_type,
+                            'featured_startTime' => $featured->featured_startTime,
+                            'featured_endTime' => $featured->featured_endTime,
+                        ];
+                    }),
+                ];
+            });
+    
+            // Prepare the school featured data
+            $schoolFeatured = $school->featured->map(function($featured) {
+                return [
+                    'featured_type' => $featured->featured_type,
+                    'featured_startTime' => $featured->featured_startTime,
+                    'featured_endTime' => $featured->featured_endTime,
+                ];
+            });
+    
             return response()->json([
                 'success' => true,
-                // 'data' => $school
                 'data' => [
                     'id' => $school->id,
                     'name' => $school->school_name,
@@ -721,12 +748,13 @@ class AdminController extends Controller
                     'fullDescripton' => $school->school_fullDesc,
                     'shortDescription' => $school->school_shortDesc,
                     'address' => $school->school_address,
-                    'country' => $school->country->country_name,
-                    'state' => $school->state->state_name,
-                    'city' => $school->city->city_name,
-                    'institueCategory' => $school->institueCategory->core_metaName,
-                    'logo' => $school->school_logo,
-                    'website' => $school->school_officalWebsite
+                    'country' => $school->country->country_name ?? '',
+                    'state' => $school->state->state_name ?? '',
+                    'city' => $school->city->city_name ?? '',
+                    'logo' => $school->school_logo ?? '',
+                    'website' => $school->school_officalWebsite ?? '',
+                    'courses' => $courses, // List of courses with featured data
+                    'schoolFeatured' => $schoolFeatured, // List of school's featured data
                 ]
             ]);
         } catch (\Exception $e) {
@@ -737,6 +765,7 @@ class AdminController extends Controller
             ]);
         }
     }
+    
 
     public function editSchoolFeatured(Request $request)
     {
