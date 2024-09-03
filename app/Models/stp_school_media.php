@@ -7,7 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class stp_school_media extends Model
 {
+
+
     use HasFactory;
+
+    protected $fillable = ([
+        'schoolMedia_name',
+        'school_id',
+        'schoolMedia_location',
+        'schoolMedia_type',
+        'schoolMedia_status',
+        'updated_by',
+        'created_by'
+    ]);
 
     public function school()
     {

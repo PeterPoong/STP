@@ -172,6 +172,7 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCourseStatus', [SchoolController::class, 'editCourseStatus']);
 
     Route::post('/editSchool', [SchoolController::class, 'editSchoolDetail']);
+    Route::post('/editPersonInCharge', [SchoolController::class, 'editPersonInCharge']);
     Route::post('/applicantDetailList', [SchoolController::class, 'applicantDetailList']);
     Route::post('/applicantDetailInfo', [SchoolController::class, 'applicantDetailInfo']);
     Route::post('/applicantDetailCocurriculum', [SchoolController::class, 'applicantDetailCocurriculum']);
@@ -184,6 +185,15 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::get('/instituteType', [studentController::class, 'instituteType']);
     Route::get('/countryList', [studentController::class, 'countryList']);
 
+    //cover
+    Route::post('/updateSchoolCover', [SchoolController::class, 'updateSchoolCover']);
+    Route::get('/getSchoolCover', [SchoolController::class, 'getSchoolCover']);
+    Route::get('/disableSchoolCover', [SchoolController::class, 'disableSchoolCover']);
+
+    //photo
+    Route::post('/uploadSchoolPhoto', [SchoolController::class, 'uploadSchoolPhoto']);
+    Route::get('/getSchoolPhoto', [SchoolController::class, 'getSchoolPhoto']);
+    Route::post('/deleteSchoolPhoto', [SchoolController::class, 'removeSchoolPhoto']);
 
 
     Route::post('/updateSchoolLogo', [SchoolController::class, 'updateSchoolLogo']);

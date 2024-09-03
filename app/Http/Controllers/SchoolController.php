@@ -29,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Validator;
 use App\Http\Controllers\serviceFunctionController;
 use App\Models\stp_intake;
+use App\Models\stp_school_media;
 use PHPUnit\TextUI\Help;
 
 class SchoolController extends Controller
@@ -1042,6 +1043,221 @@ class SchoolController extends Controller
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function updateSchoolCover(Request $request)
+    {
+        try {
+            $request->validate([
+                'coverName' => 'required|string|max:255',
+                'cover' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+            ]);
+            $authUser = Auth::user();
+            $getBanner = stp_school_media::where('school_id', $authUser->id)
+                ->where('schoolMedia_type', 66)
+                ->first();
+
+            if (empty($getBanner)) {
+                $image = $request->file('cover');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('schoolCover', $imageName, 'public');
+                $newData = [
+                    'schoolMedia_name' => $request->coverName,
+                    'school_id' => $authUser->id,
+                    'schoolMedia_location' => $imagePath,
+                    'schoolMedia_type' => 66,
+                    'created_by' => $authUser->id
+                ];
+                $createNewCover = stp_school_media::create($newData);
+                return response()->json([
+                    'success' => true,
+                    'data' => ['message' => 'successfully upload school cover']
+                ]);
+            } else {
+                if (!empty($getBanner->schoolMedia_location)) {
+                    Storage::delete('public/' . $getBanner->schoolMedia_location);
+                }
+
+                $image = $request->file('cover');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('schoolCover', $imageName, 'public');
+
+                $getBanner->update([
+                    'schoolMedia_name' => $request->coverName,
+                    'schoolMedia_location' => $imagePath,
+                    'schoolMedia_status' => 1,
+                    'updated_by' => $authUser->id
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $imagePath
+                ]);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getSchoolCover()
+    {
+        try {
+            $authUser = AUth::user();
+            $getCover = stp_school_media::where('school_id', $authUser->id)
+                ->where('schoolMedia_type', 66)
+                ->where('schoolMedia_status', 1)
+                ->first();
+            return response()->json([
+                'success' => true,
+                'data' => $getCover ?? null
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function disableSchoolCover()
+    {
+        try {
+            $authUser = Auth::user();
+            $getCover = stp_school_media::where('school_id', $authUser->id)
+                ->where('schoolMedia_type', 66)
+                ->first();
+            $getCover->update([
+                'schoolMedia_status' => 0
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Successfully Disable Cover Photo"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function uploadSchoolPhoto(Request $request)
+    {
+        try {
+            $request->validate([
+                'photo_Name' => 'required|string|max:255',
+                'photo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+            ]);
+            $authUser = Auth::user();
+            $image = $request->file('photo');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('schoolPhoto', $imageName, 'public');
+
+            $newData = [
+                'schoolMedia_name' => $request->photo_Name,
+                'schoolMedia_location' => $imagePath,
+                'schoolMedia_type' => 67,
+                'school_id' => $authUser->id
+            ];
+            stp_school_media::create($newData);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    "message" => "Successfully upload school photo"
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getSchoolPhoto(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $getSchoolPhoto = stp_school_media::where('school_id', $authUser->id)
+                ->where('schoolMedia_type', 67)
+                ->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getSchoolPhoto
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function removeSchoolPhoto(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $findPhoto = stp_school_media::find($request->id);
+            if ($findPhoto && $findPhoto->schoolMedia_type == 67) {
+                // Delete the photo
+                $findPhoto->delete();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Photo deleted successfully',
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Photo not found',
+                ], 404);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editPersonInCharge(Request $request)
+    {
+        try {
+            $request->validate([
+                'person_name' => 'required|string|max:255',
+                'person_contact' => 'required|string|max:255',
+                'person_email' => 'required|string|max:255'
+            ]);
+            $authUser = Auth::user();
+            $school = stp_school::find($authUser->id);
+            $updateData = [
+                'person_inChargeName' => $request->person_name,
+                'person_inChargeNumber' => $request->person_contact,
+                'person_inChargeEmail' => $request->person_email
+            ];
+            $school->update($updateData);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Update Successfully']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

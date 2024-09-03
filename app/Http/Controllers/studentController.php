@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\serviceFunctionController;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_intake;
+use App\Models\stp_school_media;
 use Illuminate\Support\Facades\Storage;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
@@ -138,13 +139,23 @@ class studentController extends Controller
                 }
             }
 
+            $schoolCover = stp_school_media::where('school_id', $request->id)
+                ->where('schoolMedia_type', 66)
+                ->where('schoolMedia_status', 1)
+                ->first();
+
+            $schoolPhoto = stp_school_media::where('school_id', $request->id)
+                ->where('schoolMedia_type', 67)
+                ->where('schoolMedia_status', 1)
+                ->get();
+
+
             $intakeMonth = array_values(array_unique($intake));
             $coursesList = $school->courses->makeHidden('intake')->map(function ($course) {
                 $monthList = [];
                 foreach ($course->intake as $m) {
                     $monthList[] = $m->month->core_metaName;
                 }
-
                 return [
                     'id' => $course->id,
                     'course_name' => $course->course_name,
@@ -175,7 +186,9 @@ class studentController extends Controller
                 'school_lat' => $school->school_lat,
                 'number_courses' => count($school->courses),
                 'courses' => $coursesList,
-                'month' => $intakeMonth
+                'month' => $intakeMonth,
+                'school_cover' => $schoolCover,
+                'school_photo' => $schoolPhoto
             ];
             return response()->json([
                 'success' => true,
@@ -398,7 +411,8 @@ class studentController extends Controller
                 'lastName' => $authUser->detail->student_detailLastName,
                 'ic' => $authUser->student_icNumber,
                 'email' => $authUser->student_email,
-                'contact' => $authUser->student_countryCode . $authUser->student_contactNo,
+                'country_code' => $authUser->student_countryCode,
+                'contact' => $authUser->student_contactNo,
                 'profilePic' => $authUser->student_profilePic,
                 'gender' => $authUser->detail->studentGender->core_metaName ?? null,
                 'address' => $authUser->detail->student_detailAddress,
@@ -847,6 +861,7 @@ class studentController extends Controller
                     $course = $submittedForm->course;
                     $school = $course->school;
                     return [
+                        "id" => $course->id,
                         "course_name" => $course->course_name,
                         "school_name" => $course->school->school_name,
                         "course_period" => $course->course_period,
@@ -856,8 +871,8 @@ class studentController extends Controller
                         "category_name" => $course->category->category_name,
                         "study_mode" => $course->studyMode->core_metaName ?? 'Not Available',
                         "country_name" => $school->country->country_name,
-                        "state_name" => $school->state->state_name,
-                        "city_name" => $school->city->city_name,
+                        "state_name" => $school->state->state_name ?? null,
+                        "city_name" => $school->city->city_name ?? null,
                         "status" => "Pending",
                         'student_id' => $submittedForm->student_id,
                     ];
@@ -908,7 +923,7 @@ class studentController extends Controller
 
                     // Determine the status message based on form_status
                     $status = match ($submittedForm->form_status) {
-                        0 => "Deleted",
+                        0 => "WithDrawl",
                         3 => "Rejected",
                         4 => "Accepted",
                         default => "Unknown"
