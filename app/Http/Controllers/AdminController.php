@@ -503,7 +503,7 @@ class AdminController extends Controller
             // return $imagePath;
 
 
-            $data = [
+            $school = stp_school::create( [
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->country_code,
@@ -520,9 +520,13 @@ class AdminController extends Controller
                 'school_logo' => $imagePath ?? null,
                 'school_status' => 3,
                 'created_by' => $authUser->id
-            ];
+            ]);
 
-            stp_school::create($data);
+            stp_featured::create([
+                'school_id'=>$school->id,
+                'featured_type'=>$request->featured,
+                'featured_status'=>1
+            ]);
             return response()->json(
                 [
                     'success' => true,
