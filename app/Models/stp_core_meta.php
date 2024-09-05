@@ -94,11 +94,6 @@ class stp_core_meta extends Model
         return $this->hasMany(stp_higher_transcript::class, 'category_id', 'id');
     }
 
-    public function higherTranscriptGrade(): HasMany
-    {
-        return $this->hasMany(stp_higher_transcript::class, 'higherTranscript_grade', 'id');
-    }
-
     public function transcriptGrade(): HasMany
     {
         return $this->hasMany(stp_transcript::class, 'transcript_grade', 'id');

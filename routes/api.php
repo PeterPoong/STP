@@ -76,6 +76,8 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/deleteTranscriptFile', [studentController::class, 'deleteTranscriptFile']);
     Route::middleware('auth:sanctum')->get('/achievementTypeList', [studentController::class, 'achievementTypeList']);
     Route::middleware('auth:sanctum')->get('/transcriptSubjectList', [studentController::class, 'transcriptSubjectList']);
+    Route::middleware('auth:sanctum')->post('/higherTranscriptSubjectList', [studentController::class, 'higherTranscriptSubjectList']);
+
 
     //other cert
     Route::middleware('auth:sanctum')->post('/addOtherCertFile', [studentController::class, 'addOtherCertFile']);

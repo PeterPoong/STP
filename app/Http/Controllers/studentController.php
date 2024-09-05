@@ -57,7 +57,14 @@ class studentController extends Controller
                     $query->orWhere('state_id', $request->location);
                 })
                 ->when($request->filled('search'), function ($query) use ($request) {
-                    $query->where('school_name', 'like', '%' . $request->search . '%');
+                    $query->where(function ($q) use ($request) {
+                        // Search in school name
+                        $q->where('school_name', 'like', '%' . $request->search . '%')
+                            // Search in country name using the relationship
+                            ->orWhereHas('country', function ($q) use ($request) {
+                                $q->where('country_name', 'like', '%' . $request->search . '%'); // Adjust field name as needed
+                            });
+                    });
                 })
                 ->when($request->filled('courseCategory'), function ($query) use ($request) {
                     $query->whereHas('courses', function ($q) use ($request) {
@@ -67,6 +74,7 @@ class studentController extends Controller
                 ->paginate(10);
 
             $schoolList = [];
+
 
             foreach ($getSchoolList as $school) {
 
@@ -256,6 +264,8 @@ class studentController extends Controller
                         "course_name" => $courses->courses->course_name,
                         "course_logo" => $logo,
                         "course_qualification" => $courses->courses->qualification->qualification_name,
+                        "course_qualification_color" => $courses->courses->qualification->qualification_color_code,
+
                         'course_school' => $courses->courses->school->school_name,
                         'location' => $courses->courses->school->city->city_name ?? null,
                     ];
@@ -368,10 +378,11 @@ class studentController extends Controller
                         'mode' => $course->studyMode->core_metaName ?? null,
                         'logo' => $course->course_logo ?? $course->school->school_logo,
                         'location' => $course->school->state->state_name ?? null,
-                        'institute_category' => $course->school->institueCategory->core_metaName
+                        'institute_category' => $course->school->institueCategory->core_metaName ?? null
                     ];
                 });
 
+            return  $getCourses;
 
             $sortedCourses = $getCourses->sortByDesc('featured')->values();
             $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
@@ -553,13 +564,13 @@ class studentController extends Controller
                 'category' => 'required|integer',
                 'data' => ['required', 'array', new UniqueInArray('name')],
                 'data.*.name' => 'required|string|max:255',
-                'data.*.grade' => 'required|integer'
+                'data.*.grade' => 'required|string|max:255'
             ]);
 
             $authUser = Auth::user();
             $data = $request->data;
 
-            $existData = stp_higher_transcript::get();
+            $existData = stp_higher_transcript::where('category_id', $request->category)->get();
             $existName = $existData->map(function ($test) {
                 return $test->highTranscript_name;
             });
@@ -608,8 +619,10 @@ class studentController extends Controller
                     ]);
                 }
             }
-
-            return 'success';
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "successfully update your result"]
+            ]);
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -851,7 +864,6 @@ class studentController extends Controller
                 'course.school.country',
                 'course.school.state',
                 'course.school.city'
-
             ])
                 ->where('form_status', 2)
                 ->where('student_id', $studentID)
@@ -866,7 +878,6 @@ class studentController extends Controller
                     $school = $course->school;
                     $dateTime = new \DateTime($submittedForm->created_at);
                     $appliedDate = $dateTime->format('Y-m-d H:i:s');
-
                     return [
                         "id" => $submittedForm->id,
                         "course_name" => $course->course_name,
@@ -2006,7 +2017,16 @@ class studentController extends Controller
             };
             $featuredInstituteList = stp_featured::where('school_id', '!=', null)
                 ->where('featured_type', $featuredType)
-                ->get();
+                ->where('featured_status', 1)
+                ->get()
+                ->map(function ($institute) {
+                    return [
+                        'school_id' => $institute->id,
+                        'school_name' => $institute->school->school_name,
+                        'school_logo' => $institute->school->school_logo,
+
+                    ];
+                });
             return response()->json([
                 'success' => true,
                 'data' => $featuredInstituteList
@@ -2041,7 +2061,18 @@ class studentController extends Controller
 
             $featuredCoursesList = stp_featured::where('course_id', '!=', null)
                 ->where('featured_type', $featuredType)
-                ->get();
+                ->where('featured_status', 1)
+                ->get()
+                ->map(function ($featured) {
+                    return [
+                        'course_id' => $featured->courses->id,
+                        'course_logo' => $featured->courses->course_logo ?? $featured->courses->school->school_logo,
+                        'course_qualification' => $featured->courses->qualification->qualification_name,
+                        'course_qualification_color' => $featured->courses->qualification->qualification_color_code,
+                        'course_school' => $featured->courses->school->school_name,
+                        'location' => $featured->courses->school->state->state_name ?? null,
+                    ];
+                });
             return response()->json([
                 'success' => true,
                 'data' => $featuredCoursesList
@@ -2203,5 +2234,56 @@ class studentController extends Controller
         }
     }
 
-    public function transcriptSubjectList() {}
+    public function transcriptSubjectList()
+    {
+        try {
+            $authUser = Auth::user();
+            $getTranscriptSubject = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_status', 1)
+                ->get()
+                ->map(function ($subject) {
+                    return [
+                        'subject_id' => $subject->subject->id,
+                        'subject_name' => $subject->subject->subject_name,
+                        'subject_grade_id' => $subject->grade->id,
+                        'subject_grade' => $subject->grade->core_metaName,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $getTranscriptSubject
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function higherTranscriptSubjectList(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => "required|integer"
+            ]);
+            $authUser = Auth::user();
+            $getHigherTranscriptSubject = stp_higher_transcript::where('category_id', $request->id)
+                ->where('student_id', $authUser->id)
+                ->where('highTranscript_status', 1)
+                ->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getHigherTranscriptSubject
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

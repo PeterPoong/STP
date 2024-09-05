@@ -29,9 +29,4 @@ class stp_higher_transcript extends Model
     {
         return $this->belongsTo(stp_student::class, 'student_id', 'id');
     }
-
-    public function grade(): BelongsTo
-    {
-        return $this->belongsTo(stp_core_meta::class, 'higherTranscript_grade', 'id');
-    }
 }
