@@ -1260,4 +1260,24 @@ class SchoolController extends Controller
             ]);
         }
     }
+
+    public function filterCourseList(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $getCourse = stp_course::where('school_id', $authUser->id)
+                ->where('course_status', 1)
+                ->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getCourse
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('student_id')->nullable()->constrained('stp_students')->onDelete('set null');
             $table->foreignId('transcript_category')->nullable()->constrained('stp_core_metas')->onDelete('set null');
+            $table->string('program_name')->nullable();
             $table->decimal('cgpa', 8, 2);
             $table->string('cgpa_status')->default('1');
             $table->integer('updated_by')->nullable();

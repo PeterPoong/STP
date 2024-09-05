@@ -23,9 +23,10 @@ class BackupOldDataSeeder extends Seeder
         $tables = [
             'stp_core_metas' => 'old_coreMetaData.json',
             'stp_schools' => 'old_schoolData.json',
-            'stp_countries' => 'old_countriesData.json',
-            'stp_states' => 'old_statesData.json',
-            'stp_cities' => 'old_citiesData.json',
+            'stp_subjects' => 'old_subjectsData.json',
+            // 'stp_countries' => 'old_countriesData.json',
+            // 'stp_states' => 'old_statesData.json',
+            // 'stp_cities' => 'old_citiesData.json',
             'stp_featureds' => 'old_featuredsData.json',
             'stp_courses' => 'old_coursesData.json',
             'stp_courses_categories' => 'old_courses_categories.json',

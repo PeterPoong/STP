@@ -54,6 +54,8 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/addEditHigherTranscript', [studentController::class, 'addEditHigherTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
     Route::middleware('auth:sanctum')->get('/pendingAppList', [studentController::class, 'pendingAppList']);
+    Route::middleware('auth:sanctum')->post('/withdrawApplicant', [studentController::class, 'withdrawApplicant']);
+
     Route::middleware('auth:sanctum')->get('/historyAppList', [studentController::class, 'historyAppList']);
     Route::middleware('auth:sanctum')->get('/courseCategoryList', [studentController::class, 'courseCategoryList']);
 
@@ -65,12 +67,15 @@ Route::prefix('student')->group(function () {
 
     Route::middleware('auth:sanctum')->post('/sendReminder', [studentController::class, 'sendReminder']);
 
+    //transcript
     Route::middleware('auth:sanctum')->post('/transcriptCategoryList', [studentController::class, 'transcriptCategoryList']);
     Route::middleware('auth:sanctum')->post('/subjectListByCategory', [studentController::class, 'subjectListByCategory']);
     Route::middleware('auth:sanctum')->post('/mediaListByCategory', [studentController::class, 'mediaListByCategory']);
     Route::middleware('auth:sanctum')->post('/addTranscriptFile', [studentController::class, 'addTranscriptFile']);
     Route::middleware('auth:sanctum')->post('/editTranscriptFile', [studentController::class, 'editTranscriptFile']);
     Route::middleware('auth:sanctum')->post('/deleteTranscriptFile', [studentController::class, 'deleteTranscriptFile']);
+    Route::middleware('auth:sanctum')->get('/achievementTypeList', [studentController::class, 'achievementTypeList']);
+    Route::middleware('auth:sanctum')->get('/transcriptSubjectList', [studentController::class, 'transcriptSubjectList']);
 
     //other cert
     Route::middleware('auth:sanctum')->post('/addOtherCertFile', [studentController::class, 'addOtherCertFile']);
@@ -195,6 +200,8 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::get('/getSchoolPhoto', [SchoolController::class, 'getSchoolPhoto']);
     Route::post('/deleteSchoolPhoto', [SchoolController::class, 'removeSchoolPhoto']);
 
+    //applicant filter
+    Route::get('/dropDownCourseList', [SchoolController::class, 'filterCourseList']);
 
     Route::post('/updateSchoolLogo', [SchoolController::class, 'updateSchoolLogo']);
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);

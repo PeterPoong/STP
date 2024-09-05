@@ -32,6 +32,8 @@ use Illuminate\Validation\ValidationException;
 use App\Rules\UniqueInArray;
 use Exception;
 
+
+
 class studentController extends Controller
 {
     protected $serviceFunctionController;
@@ -201,7 +203,6 @@ class studentController extends Controller
             ]);
         }
     }
-
 
     public function hpFeaturedSchoolList(Request $request)
     {
@@ -476,6 +477,7 @@ class studentController extends Controller
     public function addEditTranscript(Request $request)
     {
         try {
+
             $request->validate([
                 'category' => 'required|integer',
                 'data' => 'required|array',
@@ -484,11 +486,13 @@ class studentController extends Controller
             ]);
 
             $authUser = Auth::user();
+
             $existingSubject = stp_transcript::where('transcript_category', $request->category)
                 ->where('student_id', $authUser->id)
                 ->where('transcript_status', 1)
                 ->pluck('subject_id')
                 ->toArray();
+
 
             $requestSubject = collect($request->data)->pluck('subjectID')->toArray();
             // $newArray = array_diff($requestSubject, $existingSubject);
@@ -860,8 +864,11 @@ class studentController extends Controller
                 ->through(function ($submittedForm) {
                     $course = $submittedForm->course;
                     $school = $course->school;
+                    $dateTime = new \DateTime($submittedForm->created_at);
+                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
+
                     return [
-                        "id" => $course->id,
+                        "id" => $submittedForm->id,
                         "course_name" => $course->course_name,
                         "school_name" => $course->school->school_name,
                         "course_period" => $course->course_period,
@@ -875,6 +882,8 @@ class studentController extends Controller
                         "city_name" => $school->city->city_name ?? null,
                         "status" => "Pending",
                         'student_id' => $submittedForm->student_id,
+                        'feedback' => $submittedForm->form_feedback,
+                        'date_applied' => $appliedDate,
                     ];
                 });
 
@@ -928,7 +937,10 @@ class studentController extends Controller
                         4 => "Accepted",
                         default => "Unknown"
                     };
+                    $dateTime = new \DateTime($submittedForm->created_at);
+                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
                     return [
+                        "id" => $submittedForm->id,
                         "course_name" => $course->course_name,
                         "school_name" => $course->school->school_name,
                         "course_period" => $course->course_period,
@@ -938,10 +950,12 @@ class studentController extends Controller
                         "category_name" => $course->category->category_name,
                         "study_mode" => $course->studyMode->core_metaName ?? 'Not Available',
                         "country_name" => $school->country->country_name,
-                        "state_name" => $school->state->state_name,
-                        "city_name" => $school->city->city_name,
+                        "state_name" => $school->state->state_name ?? null,
+                        "city_name" => $school->city->city_name ?? null,
                         "status" => $status,
                         'student_id' => $submittedForm->student_id,
+                        'feedback' => $submittedForm->form_feedback,
+                        'date_applied' => $appliedDate,
                     ];
                 });
 
@@ -958,12 +972,37 @@ class studentController extends Controller
         }
     }
 
+    public function withdrawApplicant(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $applicant = stp_submited_form::find($request->id);
+            $applicant->update([
+                'form_status' => 0
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Successfully withdraw"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
+
     public function editStudent(Request $request)
     {
         try {
             $request->validate([
                 'name' => 'required|string|max:255',
-                'firt_name' => 'string|max:255',
+                'first_name' => 'string|max:255',
                 'last_name' => 'string|max:255',
                 'address' => 'string|max:255',
                 'country' => 'integer',
@@ -2144,4 +2183,25 @@ class studentController extends Controller
             ]);
         }
     }
+
+    public function achievementTypeList()
+    {
+        try {
+            $achievementTypeList = stp_core_meta::where('core_metaType', 'achievementType')
+                ->where('core_metaStatus', 1)
+                ->get();
+            return response()->json([
+                'success' => true,
+                'data' => $achievementTypeList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function transcriptSubjectList() {}
 }

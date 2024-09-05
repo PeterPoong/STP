@@ -40,7 +40,13 @@ class RestoreOldDataSeeder extends Seeder
         $oldTag = json_decode(file_get_contents(database_path('backups/old_tags.json')), true);
         DB::table('stp_tags')->insert($oldTag);
 
+        $oldTag = json_decode(file_get_contents(database_path('backups/old_tags.json')), true);
+        DB::table('stp_tags')->insert($oldTag);
+
         $oldFeaturedData = json_decode(file_get_contents(database_path('backups/old_featuredsData.json')), true);
         DB::table('stp_featureds')->insert($oldFeaturedData);
+
+        $oldSubjectsData = json_decode(file_get_contents(database_path('backups/old_subjectsData.json')), true);
+        DB::table('stp_subjects')->insert($oldSubjectsData);
     }
 }

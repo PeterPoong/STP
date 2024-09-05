@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('transcript_marks')->nullable();
             $table->foreignId('student_id')->nullable()->constrained('stp_students')->onDelete('set null');
             $table->foreignId('transcript_category')->nullable()->constrained('stp_core_metas')->onDelete('set null');
-            $table->integer('tanscript_status')->default(1);
+            $table->integer('transcript_status')->default(1);
             $table->integer('updated_by')->nullable();
             $table->integer('created_by')->nullable();
             $table->timestamps();
