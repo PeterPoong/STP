@@ -48,13 +48,13 @@ class studentController extends Controller
         try {
             $getSchoolList = stp_school::where('school_status', 1)
                 ->when($request->filled('category'), function ($query) use ($request) {
-                    $query->orWhere('institue_category', $request->category);
+                    $query->Where('institue_category', $request->category);
                 })
                 ->when($request->filled('country'), function ($query) use ($request) {
                     $query->Where('country_id', $request->country);
                 })
                 ->when($request->filled('location'), function ($query) use ($request) {
-                    $query->orWhere('state_id', $request->location);
+                    $query->Where('state_id', $request->location);
                 })
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where(function ($q) use ($request) {
