@@ -51,7 +51,7 @@ class studentController extends Controller
                     $query->orWhere('institue_category', $request->category);
                 })
                 ->when($request->filled('country'), function ($query) use ($request) {
-                    $query->orWhere('country_id', $request->country);
+                    $query->Where('country_id', $request->country);
                 })
                 ->when($request->filled('location'), function ($query) use ($request) {
                     $query->orWhere('state_id', $request->location);
@@ -304,7 +304,7 @@ class studentController extends Controller
     public function courseList(Request $request)
     {
         try {
-            
+
             $request->validate([
                 'search' => 'string',
                 'country' => 'integer',
@@ -327,10 +327,10 @@ class studentController extends Controller
                 })
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('course_name', 'like', '%' . $request->search . '%')
-                          ->orWhereHas('school', function ($query) use ($request) {
-                              $query->where('school_name', 'like', '%' . $request->search . '%');
-                          });
-                })                
+                        ->orWhereHas('school', function ($query) use ($request) {
+                            $query->where('school_name', 'like', '%' . $request->search . '%');
+                        });
+                })
                 ->when($request->filled('country'), function ($query) use ($request) {
                     $query->whereHas('school', function ($query) use ($request) {
                         $query->where('country_id', $request->country);
