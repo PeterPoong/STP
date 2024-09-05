@@ -503,7 +503,7 @@ class AdminController extends Controller
             // return $imagePath;
 
 
-            $data = [
+            $school = stp_school::create( [
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->country_code,
@@ -520,9 +520,13 @@ class AdminController extends Controller
                 'school_logo' => $imagePath ?? null,
                 'school_status' => 3,
                 'created_by' => $authUser->id
-            ];
+            ]);
 
-            stp_school::create($data);
+            stp_featured::create([
+                'school_id'=>$school->id,
+                'featured_type'=>$request->featured,
+                'featured_status'=>1
+            ]);
             return response()->json(
                 [
                     'success' => true,
@@ -3112,6 +3116,33 @@ class AdminController extends Controller
             $featuredList = stp_core_meta::query()
                 ->where('core_metaStatus', 1)
                 ->whereIn('id', [28, 30, 31])
+                ->paginate(10)
+                ->through(function ($featured) {
+                    $status = ($featured->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $featured->core_metaName,
+                        "id" => $featured->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $featuredList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function bannerFeaturedList(Request $request)
+    {
+        try {
+            $featuredList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [68, 69, 70, 71, 72, 73, 74])
                 ->paginate(10)
                 ->through(function ($featured) {
                     $status = ($featured->status == 1) ? "Active" : "Inactive";
