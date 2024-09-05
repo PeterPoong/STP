@@ -294,6 +294,7 @@ class studentController extends Controller
     public function courseList(Request $request)
     {
         try {
+            
             $request->validate([
                 'search' => 'string',
                 'country' => 'integer',
@@ -307,6 +308,7 @@ class studentController extends Controller
                 'intake' => 'array'
             ]);
 
+
             $getCourses = stp_course::when($request->filled('qualification'), function ($query) use ($request) {
                 $query->where('qualification_id', $request->qualification);
             })
@@ -314,8 +316,11 @@ class studentController extends Controller
                     $query->whereIn('category_id', $request->category);
                 })
                 ->when($request->filled('search'), function ($query) use ($request) {
-                    $query->where('course_name', 'like', '%' . $request->search . '%');
-                })
+                    $query->where('course_name', 'like', '%' . $request->search . '%')
+                          ->orWhereHas('school', function ($query) use ($request) {
+                              $query->where('school_name', 'like', '%' . $request->search . '%');
+                          });
+                })                
                 ->when($request->filled('country'), function ($query) use ($request) {
                     $query->whereHas('school', function ($query) use ($request) {
                         $query->where('country_id', $request->country);
