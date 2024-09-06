@@ -2923,36 +2923,45 @@ public function addSchool(Request $request)
     public function addBanner(Request $request)
     {
         try {
+            // Validate the incoming request data
             $request->validate([
                 'banner_name' => 'required|string|max:255',
                 'banner_file' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'banner_url' => 'required|string|max:255',
-                'featured_id' => 'required|integer',
+                'featured_id' => 'required|array',  // Validate as array
+                'featured_id.*' => 'integer',       // Each item in the array should be an integer
                 'banner_start' => 'required|date_format:Y-m-d H:i:s',
                 'banner_end' => 'required|date_format:Y-m-d H:i:s'
             ]);
-
+    
             $authUser = Auth::user();
+            $imagePath = null;
+    
+            // Handle the banner file upload
             if ($request->hasFile('banner_file')) {
                 $image = $request->file('banner_file');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('bannerFile', $imageName, 'public'); // Store in 'storage/app/public/images'
+                $imagePath = $image->storeAs('bannerFile', $imageName, 'public');
             }
-
-            stp_advertisement_banner::create([
-                'banner_name' => $request->banner_name,
-                'banner_file' => $imagePath,
-                'banner_url' => $request->banner_url,
-                'featured_id' => $request->featured_id,
-                'banner_start' => $request->banner_start,
-                'banner_end' => $request->banner_end,
-                'created_by' => $authUser->id,
-                'banner_status' => 1,
-                'created_at' => now()
-            ]);
+    
+            // Loop through each featured_id and create a banner for each
+            foreach ($request->featured_id as $featuredId) {
+                stp_advertisement_banner::create([
+                    'banner_name' => $request->banner_name,
+                    'banner_file' => $imagePath,
+                    'banner_url' => $request->banner_url,
+                    'featured_id' => $featuredId,  // Insert each featured_id here
+                    'banner_start' => $request->banner_start,
+                    'banner_end' => $request->banner_end,
+                    'created_by' => $authUser->id,
+                    'banner_status' => 1,
+                    'created_at' => now()
+                ]);
+            }
+    
             return response()->json([
                 'success' => true,
-                'data' => ['message' => 'Successfully Added the Banner']
+                'data' => ['message' => 'Successfully Added the Banner(s)']
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -2968,7 +2977,7 @@ public function addSchool(Request $request)
             ]);
         }
     }
-
+    
     public function editBanner(Request $request)
     {
         try {
