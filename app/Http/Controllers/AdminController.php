@@ -472,7 +472,8 @@ public function addSchool(Request $request)
             'featured.*' => 'integer', // Validate each element as an integer and existing in the features table
             'person_in_charge_name'=>'required|string|max:255',
             'person_in_charge_contact' => 'required|string|max:255',
-            'person_in_charge_email' => 'required|email'
+            'person_in_charge_email' => 'required|email',
+            'category'=>'required|integer'
         ]);
 
         $authUser = Auth::user();
@@ -512,7 +513,7 @@ public function addSchool(Request $request)
             'country_id' => $request->country,
             'state_id' => $request->state,
             'city_id' => $request->city,
-            'institue_category' => $request->institue_category,
+            'institue_category' => $request->category,
             'school_shortDesc' => $request->school_shortDesc,
             'school_address' => $request->school_address,
             'school_officialWebsite' => $request->school_website,
@@ -3168,6 +3169,32 @@ public function addSchool(Request $request)
                 });
 
             return $featuredList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function instituteCategoryList(Request $request)
+    {
+        try {
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [14,15,16])
+                ->paginate(10)
+                ->through(function ($category) {
+                    $status = ($category->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $category->core_metaName,
+                        "id" => $category->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $categoryList;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
