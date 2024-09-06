@@ -469,7 +469,10 @@ public function addSchool(Request $request)
             'school_shortDesc' => 'required|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'featured' => 'nullable|array', // Validate as an array
-            'featured.*' => 'integer' // Validate each element as an integer and existing in the features table
+            'featured.*' => 'integer', // Validate each element as an integer and existing in the features table
+            'person_in_charge_name'=>'required|string|max:255',
+            'person_in_charge_contact' => 'required|string|max:255',
+            'person_in_charge_email' => 'required|email'
         ]);
 
         $authUser = Auth::user();
@@ -513,6 +516,9 @@ public function addSchool(Request $request)
             'school_shortDesc' => $request->school_shortDesc,
             'school_address' => $request->school_address,
             'school_officialWebsite' => $request->school_website,
+            'person_inChargeName' => $request->person_in_charge_name,
+            'person_inChargeNumber' => $request->person_in_charge_contact,
+            'person_inChargeEmail' => $request->person_in_charge_email,
             'school_logo' => $imagePath ?? null,
             'school_status' => 3,
             'created_by' => $authUser->id
