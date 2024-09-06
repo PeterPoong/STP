@@ -455,99 +455,98 @@ class AdminController extends Controller
         }
     }
 
-    public function addSchool(Request $request)
-    {
-        try {
+public function addSchool(Request $request)
+{
+    try {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'password' => 'required|string|min:8',
+            'confirm_password' => 'required|string|min:8|same:password',
+            'country_code' => 'required',
+            'contact_number' => 'required|numeric|digits_between:1,15',
+            'email' => 'required|string|email|max:255',
+            'school_fullDesc' => 'required|string|max:255',
+            'school_shortDesc' => 'required|string|max:255',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'featured' => 'nullable|array', // Validate as an array
+            'featured.*' => 'integer' // Validate each element as an integer and existing in the features table
+        ]);
 
-            $request->validate([
-                'name' => 'required|string|max:255',
-                'password' => 'required|string|min:8',
-                'confirm_password' => 'required|string|min:8|same:password',
-                'country_code' => 'required',
-                'contact_number' => 'required|numeric|digits_between:1,15',
-                'email' => 'required|string|email|max:255|',
-                'school_fullDesc' => 'required|string|max:255',
-                'school_shortDesc' => 'required|string|max:255',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+        $authUser = Auth::user();
+
+        // Check email
+        $checkingEmail = stp_school::where('school_email', $request->email)->where('school_status', 1)->exists();
+        if ($checkingEmail) {
+            throw ValidationException::withMessages([
+                'email' => ['Email has been used'],
             ]);
-
-            $authUser = Auth::user();
-
-            //check email
-            $checkingEmail = stp_school::where('school_email', $request->email)->where('school_status', 1)->exists();
-            if ($checkingEmail) {
-                throw ValidationException::withMessages([
-                    'email' => ['email has been used'],
-                ]);
-            }
-
-
-            $checkingUser = stp_school::where('school_countryCode', $request->country_code)
-                ->where('school_contactNo', $request->contact_number)
-                ->where('school_status', 1)
-                ->exists();
-
-
-            if ($checkingUser) {
-                throw ValidationException::withMessages([
-                    'contact_no' => ['Contact has been used'],
-                ]);
-            }
-
-            if ($request->hasFile('logo')) {
-                $image = $request->file('logo');
-                $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('schoolLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
-            }
-
-            // return $imagePath;
-
-
-            $school = stp_school::create( [
-                'school_name' => $request->name,
-                'school_email' => $request->email,
-                'school_countryCode' => $request->country_code,
-                'school_contactNo' => $request->contact_number,
-                'school_password' => Hash::make($request->password),
-                'school_fullDesc' => $request->school_fullDesc,
-                'country_id' => $request->country,
-                'state_id' => $request->state,
-                'city_id' => $request->city,
-                'institue_category' => $request->institue_category,
-                'school_shortDesc' => $request->school_shortDesc,
-                'school_address' => $request->school_address,
-                'school_officialWebsite' => $request->school_website,
-                'school_logo' => $imagePath ?? null,
-                'school_status' => 3,
-                'created_by' => $authUser->id
-            ]);
-
-            stp_featured::create([
-                'school_id'=>$school->id,
-                'featured_type'=>$request->featured,
-                'featured_status'=>1
-            ]);
-            return response()->json(
-                [
-                    'success' => true,
-                    'data' => ['message' => 'school registered successfully']
-                ],
-                201
-            );
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation Error',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Internal Sever Error',
-                'error' => $e
-            ], 500);
         }
+
+        // Check contact number
+        $checkingUser = stp_school::where('school_countryCode', $request->country_code)
+            ->where('school_contactNo', $request->contact_number)
+            ->where('school_status', 1)
+            ->exists();
+        if ($checkingUser) {
+            throw ValidationException::withMessages([
+                'contact_no' => ['Contact number has been used'],
+            ]);
+        }
+
+        if ($request->hasFile('logo')) {
+            $image = $request->file('logo');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('schoolLogo', $imageName, 'public');
+        }
+
+        $school = stp_school::create([
+            'school_name' => $request->name,
+            'school_email' => $request->email,
+            'school_countryCode' => $request->country_code,
+            'school_contactNo' => $request->contact_number,
+            'school_password' => Hash::make($request->password),
+            'school_fullDesc' => $request->school_fullDesc,
+            'country_id' => $request->country,
+            'state_id' => $request->state,
+            'city_id' => $request->city,
+            'institue_category' => $request->institue_category,
+            'school_shortDesc' => $request->school_shortDesc,
+            'school_address' => $request->school_address,
+            'school_officialWebsite' => $request->school_website,
+            'school_logo' => $imagePath ?? null,
+            'school_status' => 3,
+            'created_by' => $authUser->id
+        ]);
+
+        // Insert each featured type into the stp_featureds table
+        if ($request->has('featured')) {
+            foreach ($request->featured as $featureId) {
+                stp_featured::create([
+                    'school_id' => $school->id,
+                    'featured_type' => $featureId,
+                    'featured_status' => 1
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => ['message' => 'School registered successfully']
+        ], 201);
+    } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation Error',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function editSchool(Request $request)
     {
