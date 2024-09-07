@@ -17,6 +17,7 @@ class stp_school_media extends Model
         'schoolMedia_location',
         'schoolMedia_type',
         'schoolMedia_status',
+        'schoolMedia_format',
         'updated_by',
         'created_by'
     ]);

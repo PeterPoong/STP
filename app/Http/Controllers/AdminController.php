@@ -20,6 +20,7 @@ use App\Models\stp_courses_category;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_featured;
 use App\Models\stp_school;
+use App\Models\stp_school_media;
 use App\Models\stp_submited_form;
 use App\Models\stp_state;
 use App\Models\stp_subject;
@@ -468,12 +469,15 @@ public function addSchool(Request $request)
             'school_fullDesc' => 'required|string|max:255',
             'school_shortDesc' => 'required|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add cover photo validation
+            'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add album photo validation
             'featured' => 'nullable|array', // Validate as an array
             'featured.*' => 'integer', // Validate each element as an integer and existing in the features table
             'person_in_charge_name'=>'required|string|max:255',
             'person_in_charge_contact' => 'required|string|max:255',
             'person_in_charge_email' => 'required|email',
-            'category'=>'required|integer'
+            'category'=>'required|integer',
+            'account'=>'required|integer'
         ]);
 
         $authUser = Auth::user();
@@ -521,10 +525,65 @@ public function addSchool(Request $request)
             'person_inChargeNumber' => $request->person_in_charge_contact,
             'person_inChargeEmail' => $request->person_in_charge_email,
             'school_logo' => $imagePath ?? null,
+            'account'=>$request ->account_type,
             'school_status' => 3,
             'created_by' => $authUser->id
         ]);
 
+            // Handle cover photo
+    if ($request->hasFile('cover')) {
+        // Check if a cover already exists for the school
+        $existingCover = stp_school_media::where('school_id', $school->id)->where('schoolMedia_type', 66)->first();
+        if ($existingCover) {
+            // Delete the old cover image from storage
+            Storage::delete('public/' . $existingCover->schoolMedia_location);
+            // Delete the old record from the database
+            $existingCover->delete();
+        }
+
+        // Upload the new cover
+        $cover = $request->file('cover');
+        $coverName = $school->school_name . '_cover.' . $cover->getClientOriginalExtension();
+        $coverPath = $cover->storeAs('schoolMedia', $coverName, 'public');
+
+        // Extract the file extension
+        $coverFormat = $cover->getClientOriginalExtension();
+
+        // Save cover photo in the stp_school_media table
+        stp_school_media::create([
+            'school_id' => $school->id,
+            'schoolMedia_type' => 66, // Cover photo type
+            'schoolMedia_name' => $coverName,
+            'schoolMedia_location' => $coverPath,
+            'schoolMedia_format' => $coverFormat, // Save file extension
+            'schoolMedia_status' => 1,
+            'created_by' => $authUser->id,
+            'created_at' => now()
+        ]);
+    }
+
+    // Handle photo album
+    if ($request->hasFile('album')) {
+        foreach ($request->file('album') as $albumPhoto) {
+            $albumPhotoName = $albumPhoto->getClientOriginalName();
+            $albumPhotoPath = $albumPhoto->storeAs('schoolMedia', $albumPhotoName, 'public');
+
+            // Extract the file extension
+            $albumPhotoFormat = $albumPhoto->getClientOriginalExtension();
+
+            // Save each photo in the stp_school_media table
+            stp_school_media::create([
+                'school_id' => $school->id,
+                'schoolMedia_type' => 67, // Album photo type
+                'schoolMedia_name' => $albumPhotoName,
+                'schoolMedia_location' => $albumPhotoPath,
+                'schoolMedia_format' => $albumPhotoFormat, // Save file extension
+                'schoolMedia_status' => 1,
+                'created_by' => $authUser->id,
+                'created_at' => now()
+            ]);
+        }
+    }
         // Insert each featured type into the stp_featureds table
         if ($request->has('featured')) {
             foreach ($request->featured as $featureId) {
@@ -613,7 +672,7 @@ public function addSchool(Request $request)
                 'country_id' => $request->country,
                 'state_id' => $request->state,
                 'city_id' => $request->city,
-                'institue_category' => $request->institue_category,
+                'institue_category' => $request->category,
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
                 'school_officalWebsite' => $request->school_website,
@@ -3184,6 +3243,32 @@ public function addSchool(Request $request)
             $categoryList = stp_core_meta::query()
                 ->where('core_metaStatus', 1)
                 ->whereIn('id', [14,15,16])
+                ->paginate(10)
+                ->through(function ($category) {
+                    $status = ($category->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $category->core_metaName,
+                        "id" => $category->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $categoryList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function accountTypeList(Request $request)
+    {
+        try {
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [64,65])
                 ->paginate(10)
                 ->through(function ($category) {
                     $status = ($category->status == 1) ? "Active" : "Inactive";
