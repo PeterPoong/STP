@@ -2114,7 +2114,7 @@ public function addSchool(Request $request)
                             $status = null;
                     }
                     return [
-                        "courses_id" => $applicant->id ?? 'N/A',
+                        "id" => $applicant->id ?? 'N/A',
                         "course_name" => $applicant->course->course_name ?? 'N/A',
                         "institution"=>$applicant->course->school->school_name,
                         "form_status" => $status,
@@ -2494,6 +2494,7 @@ public function addSchool(Request $request)
             $dataList = stp_core_meta::where('core_metaType', $request->core_meta_type)->where('core_metaStatus', 1)->get()
                 ->map(function ($list) {
                     return [
+                        'id'=>$list->id,
                         'core_metaType' => $list->core_metaType,
                         'core_metaName' => $list->core_metaName,
                         'status' => $list->core_metaStatus
