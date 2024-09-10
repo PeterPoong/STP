@@ -261,6 +261,7 @@ class studentController extends Controller
                         $logo = $courses->courses->course_logo;
                     }
                     return [
+                        "id" => $courses->courses->id,
                         "course_name" => $courses->courses->course_name,
                         "course_logo" => $logo,
                         "course_qualification" => $courses->courses->qualification->qualification_name,
@@ -382,12 +383,13 @@ class studentController extends Controller
                         'qualification' => $course->qualification->qualification_name,
                         'mode' => $course->studyMode->core_metaName ?? null,
                         'logo' => $course->course_logo ?? $course->school->school_logo,
-                        'location' => $course->school->state->state_name ?? null,
+                        'country' => $course->school->country->country_name ?? null,
+                        'state' => $course->school->state->state_name ?? null,
                         'institute_category' => $course->school->institueCategory->core_metaName ?? null
                     ];
                 });
 
-            return  $getCourses;
+
 
             $sortedCourses = $getCourses->sortByDesc('featured')->values();
             $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
@@ -397,16 +399,17 @@ class studentController extends Controller
                 $getCourses->currentPage(),
                 ['path' => $request->url(), 'query' => $request->query()]
             );
+            return  $paginatedCourses;
 
-            return response()->json([
-                'success' => true,
-                'data' => $paginatedCourses
-            ]);
+            // return response()->json([
+            //     'success' => true,
+            //     'data' => $paginatedCourses
+            // ]);
 
-            return response()->json([
-                'success' => true,
-                'data' => $coursesList
-            ]);
+            // return response()->json([
+            //     'success' => true,
+            //     'data' => $coursesList
+            // ]);
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
@@ -893,7 +896,7 @@ class studentController extends Controller
                         "course_logo" => $course->course_logo ?: $course->school->school_logo,
                         "category_name" => $course->category->category_name,
                         "study_mode" => $course->studyMode->core_metaName ?? 'Not Available',
-                        "country_name" => $school->country->country_name,
+                        "country_name" => $school->country->country_name ?? null,
                         "state_name" => $school->state->state_name ?? null,
                         "city_name" => $school->city->city_name ?? null,
                         "status" => "Pending",
@@ -1288,16 +1291,20 @@ class studentController extends Controller
                 $imagePath = $image->storeAs('achievementCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
 
-            $achievement->update([
+            $newData = [
                 'student_id' => $authUser->id,
                 'achievement_name' => $request->achievement_name,
                 'date' => $request->date,
                 'title_obtained' => $request->title,
                 'awarded_by' => $request->awarded_by,
-                'achievement_media' => $imagePath ?? null,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
-            ]);
+            ];
+
+            if ($request->hasFile('achievement_media')) {
+                $newData['achievement_media'] = $imagePath;
+            };
+            $achievement->update($newData);
 
             return response()->json([
                 'success' => true,
@@ -1528,11 +1535,14 @@ class studentController extends Controller
                 })
                 ->paginate(10) // Paginating the result
                 ->through(function ($StudentMedia) {
+                    $dateTime = new \DateTime($StudentMedia->created_at);
+                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
                     return [
                         "id" => $StudentMedia->id,
                         "studentMedia_name" => $StudentMedia->studentMedia_name,
                         "studentMedia_location" => $StudentMedia->studentMedia_location,
                         "category_id" => $StudentMedia->studentMedia_type,
+                        "created_at" => $appliedDate,
                         "status" => $StudentMedia->studentMedia_status ? "Active" : "Inactive"
                     ];
                 });
@@ -1629,6 +1639,14 @@ class studentController extends Controller
             }
             $studentMedia = stp_student_media::find($request->id);
 
+            $newData = [
+                'student_id' => $authUser->id,
+                'studentMedia_name' => $request->studentMedia_name,
+                'studentMedia_type' => $request->studentMedia_type,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+            ];
+
             if ($request->hasFile('studentMedia_location')) {
                 if (!empty($studentMedia->studentMedia_location)) {
                     Storage::delete('public/' . $studentMedia->studentMedia_location);
@@ -1636,16 +1654,15 @@ class studentController extends Controller
                 $image = $request->file('studentMedia_location');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('transcriptCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
+                $newData['studentMedia_location'] = $imagePath ?? null;
             }
 
-            $studentMedia->update([
-                'student_id' => $authUser->id,
-                'studentMedia_name' => $request->studentMedia_name,
-                'studentMedia_type' => $request->studentMedia_type,
-                'studentMedia_location' => $imagePath ?? null,
-                'updated_by' => $authUser->id,
-                'updated_at' => now(),
-            ]);
+            $studentMedia->update($newData);
+
+
+
+
+
 
             return response()->json([
                 'success' => true,
@@ -1791,13 +1808,17 @@ class studentController extends Controller
                 $imagePath = $image->storeAs('otherCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
 
-            $certificate->update([
+            $dataUpdate = [
                 'student_id' => $authUser->id,
                 'certificate_name' => $request->certificate_name,
-                'certificate_media' => $imagePath ?? null,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
-            ]);
+            ];
+            if ($request->hasFile('certificate_media')) {
+                $dataUpdate['certificate_media'] = $imagePath;
+            }
+
+            $certificate->update($dataUpdate);
 
             return response()->json([
                 'success' => true,
@@ -1874,11 +1895,14 @@ class studentController extends Controller
                 })
                 ->paginate(10) // Paginating the result
                 ->through(function ($cert) {
+                    $dateTime = new \DateTime($cert->created_at);
+                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
                     $status = ($cert->certificate_status == 1) ? "Active" : "Inactive";
                     return [
                         "id" => $cert->id,
                         "name" => $cert->certificate_name,
                         "media" => $cert->certificate_media,
+                        'created_at' => $appliedDate,
                         "status" => "Active"
                     ];
                 });
@@ -2071,11 +2095,13 @@ class studentController extends Controller
                 ->map(function ($featured) {
                     return [
                         'course_id' => $featured->courses->id,
+                        'course_name' => $featured->courses->course_name,
                         'course_logo' => $featured->courses->course_logo ?? $featured->courses->school->school_logo,
                         'course_qualification' => $featured->courses->qualification->qualification_name,
                         'course_qualification_color' => $featured->courses->qualification->qualification_color_code,
                         'course_school' => $featured->courses->school->school_name,
-                        'location' => $featured->courses->school->state->state_name ?? null,
+                        'state' => $featured->courses->school->state->state_name ?? null,
+                        'country' => $featured->courses->school->country->country_name ?? null,
                     ];
                 });
             return response()->json([
