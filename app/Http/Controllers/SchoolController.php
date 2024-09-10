@@ -59,27 +59,42 @@ class SchoolController extends Controller
     }
     public function coursesList(Request $request)
     {
+
         try {
+            $authUser = Auth::user();
+
             $courseList = stp_course::query()
                 ->where('course_status', 1)
+                ->where('school_id', $authUser->id)
                 ->when($request->filled('category'), function ($query) use ($request) {
                     $query->where('category_id', $request->category);
                 })
                 ->when($request->filled('qualification'), function ($query) use ($request) {
-                    $query->orWhere('qualification_id', $request->qualification);
+                    $query->where('qualification_id', $request->qualification);
                 })
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('course_name', 'like', '%' . $request->search . '%');
                 })
                 ->paginate(10)
-                ->through(function ($courses) {
-                    $status = ($courses->course_status == 1) ? "Active" : "Inactive";
+                ->through(function ($course) {
+                    $status = ($course->course_status == 1) ? "Active" : "Inactive";
+                    $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
+
                     return [
-                        "name" => $courses->course_name,
-                        "school" => $courses->school->school_name,
-                        "category" => $courses->category->category_name,
-                        "qualification" => $courses->qualification->qualification_name ?? null,
-                        "status" => "Active"
+                        'id' => $course->id,
+                        'school_name' => $course->school->school_name,
+                        'name' => $course->course_name,
+                        'description' => $course->course_description,
+                        'requirement' => $course->course_requirement,
+                        'cost' => $course->course_cost,
+                        'period' => $course->course_period,
+                        'intake' => $intakeMonths,
+                        'category' => $course->category->category_name,
+                        'qualification' => $course->qualification->qualification_name,
+                        'mode' => $course->studyMode->core_metaName ?? null,
+                        'logo' => $course->course_logo ?? $course->school->school_logo,
+                        'location' => $course->school->country->country_name ?? null,
+                        'institute_category' => $course->school->institueCategory->core_metaName ?? null
                     ];
                 });
 
@@ -344,7 +359,8 @@ class SchoolController extends Controller
                 'state' => 'required|integer',
                 'city' => 'required|integer',
                 'category' => 'required|integer',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'account_type' => 'required|integer'
             ]);
             $authUser = Auth::user();
 
@@ -401,6 +417,7 @@ class SchoolController extends Controller
                 // 'school_logo' => $imagePath ?? null,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
+                'account_type' => $request->account_type
             ]);
 
             return response()->json([
