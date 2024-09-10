@@ -1991,7 +1991,7 @@ public function addSchool(Request $request)
             : 10;
  
             $categoryList = stp_courses_category::when($request->filled('search'), function ($query) use ($request) {
-                $query->where('student_userName', 'like', '%' . $request->search . '%');
+                $query->where('category_name', 'like', '%' . $request->search . '%');
         })
  
         ->paginate($perPage)
