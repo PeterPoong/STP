@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\stp_city;
+use App\Models\stp_core_meta;
 use App\Models\stp_country;
 use App\Models\stp_course;
 use App\Models\stp_school;
@@ -433,6 +434,23 @@ class serviceFunctionController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $getCities
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getMonth()
+    {
+        try {
+            $getMonth = stp_core_meta::where("core_metaType", 'month')->where('core_metaStatus', 1)->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getMonth
             ]);
         } catch (\Exception $e) {
             return response()->json([

@@ -214,36 +214,37 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 });
 
 
-    Route::post('/importCountry', [serviceFunctionController::class, 'importCountry']);
-    Route::post('/importState', [serviceFunctionController::class, 'importState']);
-    Route::post('/importCity', [serviceFunctionController::class, 'importCity']);
+Route::post('/importCountry', [serviceFunctionController::class, 'importCountry']);
+Route::post('/importState', [serviceFunctionController::class, 'importState']);
+Route::post('/importCity', [serviceFunctionController::class, 'importCity']);
 
-    Route::post('/getState', [serviceFunctionController::class, 'getState']);
-    Route::post('/getCities', [serviceFunctionController::class, 'getCities']);
+Route::post('/getState', [serviceFunctionController::class, 'getState']);
+Route::post('/getCities', [serviceFunctionController::class, 'getCities']);
+Route::get('/getMonth', [serviceFunctionController::class, 'getMonth']);
 
 
 
-    Route::post('/sendOtp', [serviceFunctionController::class, 'sendingOtp']);
-    Route::post('/validateOtp', [serviceFunctionController::class, 'validateOtp']);
-    Route::post('/resetPassword', [serviceFunctionController::class, 'resetPassword']);
+Route::post('/sendOtp', [serviceFunctionController::class, 'sendingOtp']);
+Route::post('/validateOtp', [serviceFunctionController::class, 'validateOtp']);
+Route::post('/resetPassword', [serviceFunctionController::class, 'resetPassword']);
 
-    Route::middleware('auth:sanctum')->get('validateToken', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'Token is valid'
-        ]);
+Route::middleware('auth:sanctum')->get('validateToken', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'Token is valid'
+    ]);
 });
 
 
 
 
-    Route::middleware('auth:sanctum')->get('/test', [AuthController::class, 'test']);
-    Route::middleware('auth:sanctum')->get('/test5', [AuthController::class, 'test']);
-    Route::middleware('auth:sanctum')->get('/test6', [AdminController::class, 'studentList']);
+Route::middleware('auth:sanctum')->get('/test', [AuthController::class, 'test']);
+Route::middleware('auth:sanctum')->get('/test5', [AuthController::class, 'test']);
+Route::middleware('auth:sanctum')->get('/test6', [AdminController::class, 'studentList']);
 
 
 
 
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    })->middleware('auth:sanctum');
+Route::get('/user', function (Request $request) {
+    return $request->user();
+})->middleware('auth:sanctum');
