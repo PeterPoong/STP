@@ -2491,7 +2491,7 @@ public function addSchool(Request $request)
             $request->validate([
                 'core_meta_type' => 'required|string'
             ]);
-            $dataList = stp_core_meta::where('core_metaType', $request->core_meta_type)->where('core_metaStatus', 1)->get()
+            $dataList = stp_core_meta::where('core_metaType', $request->core_meta_type)->get()
                 ->map(function ($list) {
                     return [
                         'id'=>$list->id,
