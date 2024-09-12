@@ -466,7 +466,7 @@ public function addSchool(Request $request)
             'country_code' => 'required',
             'contact_number' => 'required|numeric|digits_between:1,15',
             'email' => 'required|string|email|max:255',
-            'school_fullDesc' => 'required|string|max:255',
+            'school_fullDesc' => 'required|string|max:5000',
             'school_shortDesc' => 'required|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add cover photo validation
