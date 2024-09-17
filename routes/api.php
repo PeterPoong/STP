@@ -44,6 +44,8 @@ Route::prefix('student')->group(function () {
     Route::post('/featuredInstituteList', [studentController::class, 'featuredInstituteList']);
     Route::post('/featuredCourseList', [studentController::class, 'featuredCourseList']);
 
+    Route::get('/hotPickCategoryList', [studentController::class, 'hotPickCategoryList']);
+
 
     //student portal
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
@@ -53,6 +55,12 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/addEditTranscript', [studentController::class, 'addEditTranscript']);
     Route::middleware('auth:sanctum')->post('/addEditHigherTranscript', [studentController::class, 'addEditHigherTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
+
+    Route::middleware('auth:sanctum')->post('/addProgramCgpa', [studentController::class, 'addProgramCgpa']);
+    Route::middleware('auth:sanctum')->post('/editProgramCgpa', [studentController::class, 'editProgramCgpa']);
+    Route::middleware('auth:sanctum')->post('/programCgpaList', [studentController::class, 'programCgpaList']);
+
+
     Route::middleware('auth:sanctum')->get('/pendingAppList', [studentController::class, 'pendingAppList']);
     Route::middleware('auth:sanctum')->post('/withdrawApplicant', [studentController::class, 'withdrawApplicant']);
 
@@ -178,6 +186,8 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::get('/schoolDetail', [SchoolController::class, 'schoolDetail']);
     Route::post('/courseList', [SchoolController::class, 'coursesList']);
     Route::post('/addCourses', [SchoolController::class, 'addCourse']);
+    Route::post('/courseDetail', [SchoolController::class, 'courseDetail']);
+
     Route::post('/editCourses', [SchoolController::class, 'editCourse']);
     Route::post('/editCourseStatus', [SchoolController::class, 'editCourseStatus']);
 

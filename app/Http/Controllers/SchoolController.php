@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Validator;
+use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\serviceFunctionController;
 use App\Models\stp_intake;
 use App\Models\stp_school_media;
@@ -75,7 +75,8 @@ class SchoolController extends Controller
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('course_name', 'like', '%' . $request->search . '%');
                 })
-                ->paginate(10)
+                ->orderBy('created_at', 'desc')
+                ->paginate(100)
                 ->through(function ($course) {
                     $status = ($course->course_status == 1) ? "Active" : "Inactive";
                     $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
@@ -121,18 +122,46 @@ class SchoolController extends Controller
                 'intake' => 'required|array',
                 'category' => 'required|integer',
                 'mode' => 'required|integer',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
+                // 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
             ]);
+            // $validator = Validator::make($request->all(), [
+            //     'schoolID' => 'required|integer',
+            //     'name' => 'required|string|max:255',
+            //     'description' => 'nullable|string|max:255',
+            //     'requirement' => 'nullable|string|max:255',
+            //     'cost' => 'required|regex:/^\d+(\.\d{1,2})?$/',
+            //     'period' => 'required|string|max:255',
+            //     'intake' => 'required|array',
+            //     'category' => 'required|integer',
+            //     'mode' => 'required|integer',
+            // ]);
 
             $authUser = Auth::user();
             $checkingCourse = stp_course::where('school_id', $request->schoolID)
                 ->where('course_name', $request->name)
                 ->exists();
 
+            $error = [];
+
+            //check course exist or not
             if ($checkingCourse) {
-                throw ValidationException::withMessages([
-                    "courses" => ['Courses already exist in the school']
-                ]);
+                $error["courses"] = 'Courses already exist in the school';
+            }
+
+            //check logo format correct or not
+            if ($request->hasFile('logo')) {
+                $allowedExtensions = ['jpeg', 'png', 'jpg', 'gif', 'svg'];
+                $logo = $request->file('logo');
+                $extension = strtolower($logo->getClientOriginalExtension());
+
+                // Check if the file extension is in the allowed list
+                if (!in_array($extension, $allowedExtensions)) {
+                    $error["logo"] = 'The logo must be a file of type: jpeg, png, jpg, gif, svg.';
+                }
+            }
+
+            if (count($error) > 0) {
+                throw ValidationException::withMessages($error);
             }
 
             if ($request->hasFile('logo')) {
@@ -186,6 +215,176 @@ class SchoolController extends Controller
             ]);
         }
     }
+
+    // public function addCourse(Request $request)
+    // {
+    //     try {
+    //         // Main validation for request fields excluding the logo
+    //         $validator = Validator::make($request->all(), [
+    //             'schoolID' => 'required|integer',
+    //             'name' => 'required|string|max:255',
+    //             'description' => 'nullable|string|max:255',
+    //             'requirement' => 'nullable|string|max:255',
+    //             'cost' => 'required|regex:/^\d+(\.\d{1,2})?$/',
+    //             'period' => 'required|string|max:255',
+    //             'intake' => 'required|array',
+    //             'category' => 'required|integer',
+    //             'mode' => 'required|integer',
+    //         ]);
+
+    //         $authUser = Auth::user();
+    //         $checkingCourse = stp_course::where('school_id', $request->schoolID)
+    //             ->where('course_name', $request->name)
+    //             ->exists();
+
+    //         // Add course error if the course already exists
+    //         if ($checkingCourse) {
+    //             $validator->errors()->add('courses', 'Course name already exists in the school.');
+    //         }
+
+    //         // Validate the logo separately if it exists
+    //         if ($request->hasFile('logo')) {
+    //             $logoValidator = Validator::make($request->all(), [
+    //                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+    //             ]);
+
+    //             // Merge logo errors if any
+    //             if ($logoValidator->fails()) {
+    //                 $validator->errors()->merge($logoValidator->errors());
+    //             }
+    //         }
+
+    //         // Check if any errors exist after merging
+    //         if ($validator->fails()) {
+    //             // Explicitly throw the ValidationException with the combined errors
+    //             throw new ValidationException($validator);
+    //         }
+
+    //         // Handle file upload
+    //         if ($request->hasFile('logo')) {
+    //             $image = $request->file('logo');
+    //             $imageName = time() . '.' . $image->getClientOriginalExtension();
+    //             $imagePath = $image->storeAs('courseLogo', $imageName, 'public');
+    //         }
+
+    //         // Create the course
+    //         $createCourse = stp_course::create([
+    //             'school_id' => $request->schoolID,
+    //             'course_name' => $request->name,
+    //             'course_description' => $request->description ?? null,
+    //             'course_requirement' => $request->requirement ?? null,
+    //             'course_cost' => $request->cost,
+    //             'course_period' => $request->period,
+    //             'category_id' => $request->category,
+    //             'qualification_id' => $request->qualification,
+    //             'study_mode' => $request->mode,
+    //             'course_logo' => $imagePath ?? null,
+    //             'course_status' => 1,
+    //             'created_by' => $authUser->id,
+    //             'created_at' => now(),
+    //         ]);
+
+    //         // Insert intake data
+    //         $newIntakeData = [];
+    //         foreach ($request->intake as $intakeMonth) {
+    //             $newIntakeData[] = [
+    //                 'course_id' => $createCourse->id,
+    //                 'intake_month' => $intakeMonth,
+    //                 'created_by' => $authUser->id
+    //             ];
+    //         };
+
+    //         stp_intake::insert($newIntakeData);
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => ['message' => 'Successfully Added the Course']
+    //         ]);
+    //     } catch (ValidationException $e) {
+    //         // Return combined validation errors
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation Error',
+    //             'error' => $e->errors()
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         // Handle other exceptions
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Internal Server Error',
+    //             'error' => $e->getMessage()
+    //         ]);
+    //     }
+    // }
+    public function courseDetail(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                'courseID' => 'required|integer'
+            ]);
+            $getCourseDetail = stp_course::where('id', $request->courseID)
+                ->where('school_id', $authUser->id)
+                ->first();
+            if (empty($getCourseDetail)) {
+                throw ValidationException::withMessages([
+                    'course' => ['course does not exist in your institute']
+                ]);
+            }
+
+
+            $months = [];
+            foreach ($getCourseDetail->intake as $month) {
+                $months[] = [
+                    'id' => $month->month->id,
+                    'core_metaName' => $month->month->core_metaName
+                ];
+            }
+
+
+
+            if (empty($getCourseDetail->course_logo)) {
+                $course_logo = $getCourseDetail->school->school_logo;
+            } else {
+                $course_logo = $getCourseDetail->course_logo;
+            }
+
+            $data = [
+                'id' => $getCourseDetail->id,
+                'course_name' => $getCourseDetail->course_name,
+                'course_description' => $getCourseDetail->course_description,
+                'course_requirement' => $getCourseDetail->course_requirement,
+                'course_cost' => $getCourseDetail->course_cost,
+                'course_period' => $getCourseDetail->course_period,
+                'course_intake' => $months,
+                'category' => [
+                    'categoryId' => $getCourseDetail->category->id,
+                    'categoryName' => $getCourseDetail->category->category_name
+                ],
+                'qualification' =>  [
+                    'qualificationId' => $getCourseDetail->qualification->id,
+                    'qualificationName' => $getCourseDetail->qualification->qualification_name
+                ],
+                'study_mode' => [
+                    'studyModeId' => $getCourseDetail->studyMode->id,
+                    'studyModeName' => $getCourseDetail->studyMode->core_metaName
+                ],
+                'course_logo' => $course_logo,
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 
     public function editCourse(Request $request)
     {

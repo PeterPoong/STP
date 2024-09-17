@@ -154,52 +154,52 @@ class AdminController extends Controller
         ]);
     }
     public function studentListAdmin(Request $request)
-   
+
     {
-        try{
+        try {
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
-            : 10;
- 
+                ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
+                : 10;
+
             $studentList = stp_student::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_userName', 'like', '%' . $request->search . '%');
-        })
- 
-        ->paginate($perPage)
-        ->through(function ($student) {
-            switch ($student->student_status) {
-                case 0:
-                    $status = "Disable";
-                    break;
-                case 1:
-                    $status = "Active";
-                    break;
-                case 3:
-                    $status = "Temporary";
-                    break;
-                case 4:
-                    $status = "Temporary-Disable";
-                    break;
-                default:
-                    $status = null;
-            }
- 
-            return [
-                'id' => $student->id,
-                'name' => $student->student_userName,
-                'email' => $student->student_email,
-                'status' => $status
-            ];
-        });
-        return response()->json($studentList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
-    }
+            })
+
+                ->paginate($perPage)
+                ->through(function ($student) {
+                    switch ($student->student_status) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                        case 3:
+                            $status = "Temporary";
+                            break;
+                        case 4:
+                            $status = "Temporary-Disable";
+                            break;
+                        default:
+                            $status = null;
+                    }
+
+                    return [
+                        'id' => $student->id,
+                        'name' => $student->student_userName,
+                        'email' => $student->student_email,
+                        'status' => $status
+                    ];
+                });
+            return response()->json($studentList);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
     public function editStudent(Request $request)
     {
@@ -355,7 +355,7 @@ class AdminController extends Controller
                     } else {
                         $status = 1;
                         $message = "successfully enabled";
-                    } 
+                    }
                     break;
 
                 default:
@@ -456,163 +456,163 @@ class AdminController extends Controller
         }
     }
 
-public function addSchool(Request $request)
-{
-    try {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'password' => 'required|string|min:8',
-            'confirm_password' => 'required|string|min:8|same:password',
-            'country_code' => 'required',
-            'contact_number' => 'required|numeric|digits_between:1,15',
-            'email' => 'required|string|email|max:255',
-            'school_fullDesc' => 'required|string|max:255',
-            'school_shortDesc' => 'required|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add cover photo validation
-            'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add album photo validation
-            'featured' => 'nullable|array', // Validate as an array
-            'featured.*' => 'integer', // Validate each element as an integer and existing in the features table
-            'person_in_charge_name'=>'required|string|max:255',
-            'person_in_charge_contact' => 'required|string|max:255',
-            'person_in_charge_email' => 'required|email',
-            'category'=>'required|integer',
-            'account'=>'required|integer'
-        ]);
-
-        $authUser = Auth::user();
-
-        // Check email
-        $checkingEmail = stp_school::where('school_email', $request->email)->where('school_status', 1)->exists();
-        if ($checkingEmail) {
-            throw ValidationException::withMessages([
-                'email' => ['Email has been used'],
+    public function addSchool(Request $request)
+    {
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'password' => 'required|string|min:8',
+                'confirm_password' => 'required|string|min:8|same:password',
+                'country_code' => 'required',
+                'contact_number' => 'required|numeric|digits_between:1,15',
+                'email' => 'required|string|email|max:255',
+                'school_fullDesc' => 'required|string|max:255',
+                'school_shortDesc' => 'required|string|max:255',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add cover photo validation
+                'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add album photo validation
+                'featured' => 'nullable|array', // Validate as an array
+                'featured.*' => 'integer', // Validate each element as an integer and existing in the features table
+                'person_in_charge_name' => 'required|string|max:255',
+                'person_in_charge_contact' => 'required|string|max:255',
+                'person_in_charge_email' => 'required|email',
+                'category' => 'required|integer',
+                'account' => 'required|integer'
             ]);
-        }
 
-        // Check contact number
-        $checkingUser = stp_school::where('school_countryCode', $request->country_code)
-            ->where('school_contactNo', $request->contact_number)
-            ->where('school_status', 1)
-            ->exists();
-        if ($checkingUser) {
-            throw ValidationException::withMessages([
-                'contact_no' => ['Contact number has been used'],
-            ]);
-        }
+            $authUser = Auth::user();
 
-        if ($request->hasFile('logo')) {
-            $image = $request->file('logo');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $imagePath = $image->storeAs('schoolLogo', $imageName, 'public');
-        }
-
-        $school = stp_school::create([
-            'school_name' => $request->name,
-            'school_email' => $request->email,
-            'school_countryCode' => $request->country_code,
-            'school_contactNo' => $request->contact_number,
-            'school_password' => Hash::make($request->password),
-            'school_fullDesc' => $request->school_fullDesc,
-            'country_id' => $request->country,
-            'state_id' => $request->state,
-            'city_id' => $request->city,
-            'institue_category' => $request->category,
-            'school_shortDesc' => $request->school_shortDesc,
-            'school_address' => $request->school_address,
-            'school_officialWebsite' => $request->school_website,
-            'person_inChargeName' => $request->person_in_charge_name,
-            'person_inChargeNumber' => $request->person_in_charge_contact,
-            'person_inChargeEmail' => $request->person_in_charge_email,
-            'school_logo' => $imagePath ?? null,
-            'account'=>$request ->account_type,
-            'school_status' => 3,
-            'created_by' => $authUser->id
-        ]);
-
-            // Handle cover photo
-    if ($request->hasFile('cover')) {
-        // Check if a cover already exists for the school
-        $existingCover = stp_school_media::where('school_id', $school->id)->where('schoolMedia_type', 66)->first();
-        if ($existingCover) {
-            // Delete the old cover image from storage
-            Storage::delete('public/' . $existingCover->schoolMedia_location);
-            // Delete the old record from the database
-            $existingCover->delete();
-        }
-
-        // Upload the new cover
-        $cover = $request->file('cover');
-        $coverName = $school->school_name . '_cover.' . $cover->getClientOriginalExtension();
-        $coverPath = $cover->storeAs('schoolMedia', $coverName, 'public');
-
-        // Extract the file extension
-        $coverFormat = $cover->getClientOriginalExtension();
-
-        // Save cover photo in the stp_school_media table
-        stp_school_media::create([
-            'school_id' => $school->id,
-            'schoolMedia_type' => 66, // Cover photo type
-            'schoolMedia_name' => $coverName,
-            'schoolMedia_location' => $coverPath,
-            'schoolMedia_format' => $coverFormat, // Save file extension
-            'schoolMedia_status' => 1,
-            'created_by' => $authUser->id,
-            'created_at' => now()
-        ]);
-    }
-
-    // Handle photo album
-    if ($request->hasFile('album')) {
-        foreach ($request->file('album') as $albumPhoto) {
-            $albumPhotoName = $albumPhoto->getClientOriginalName();
-            $albumPhotoPath = $albumPhoto->storeAs('schoolMedia', $albumPhotoName, 'public');
-
-            // Extract the file extension
-            $albumPhotoFormat = $albumPhoto->getClientOriginalExtension();
-
-            // Save each photo in the stp_school_media table
-            stp_school_media::create([
-                'school_id' => $school->id,
-                'schoolMedia_type' => 67, // Album photo type
-                'schoolMedia_name' => $albumPhotoName,
-                'schoolMedia_location' => $albumPhotoPath,
-                'schoolMedia_format' => $albumPhotoFormat, // Save file extension
-                'schoolMedia_status' => 1,
-                'created_by' => $authUser->id,
-                'created_at' => now()
-            ]);
-        }
-    }
-        // Insert each featured type into the stp_featureds table
-        if ($request->has('featured')) {
-            foreach ($request->featured as $featureId) {
-                stp_featured::create([
-                    'school_id' => $school->id,
-                    'featured_type' => $featureId,
-                    'featured_status' => 1
+            // Check email
+            $checkingEmail = stp_school::where('school_email', $request->email)->where('school_status', 1)->exists();
+            if ($checkingEmail) {
+                throw ValidationException::withMessages([
+                    'email' => ['Email has been used'],
                 ]);
             }
-        }
 
-        return response()->json([
-            'success' => true,
-            'data' => ['message' => 'School registered successfully']
-        ], 201);
-    } catch (ValidationException $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation Error',
-            'errors' => $e->errors()
-        ], 422);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
+            // Check contact number
+            $checkingUser = stp_school::where('school_countryCode', $request->country_code)
+                ->where('school_contactNo', $request->contact_number)
+                ->where('school_status', 1)
+                ->exists();
+            if ($checkingUser) {
+                throw ValidationException::withMessages([
+                    'contact_no' => ['Contact number has been used'],
+                ]);
+            }
+
+            if ($request->hasFile('logo')) {
+                $image = $request->file('logo');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('schoolLogo', $imageName, 'public');
+            }
+
+            $school = stp_school::create([
+                'school_name' => $request->name,
+                'school_email' => $request->email,
+                'school_countryCode' => $request->country_code,
+                'school_contactNo' => $request->contact_number,
+                'school_password' => Hash::make($request->password),
+                'school_fullDesc' => $request->school_fullDesc,
+                'country_id' => $request->country,
+                'state_id' => $request->state,
+                'city_id' => $request->city,
+                'institue_category' => $request->category,
+                'school_shortDesc' => $request->school_shortDesc,
+                'school_address' => $request->school_address,
+                'school_officialWebsite' => $request->school_website,
+                'person_inChargeName' => $request->person_in_charge_name,
+                'person_inChargeNumber' => $request->person_in_charge_contact,
+                'person_inChargeEmail' => $request->person_in_charge_email,
+                'school_logo' => $imagePath ?? null,
+                'account' => $request->account_type,
+                'school_status' => 3,
+                'created_by' => $authUser->id
+            ]);
+
+            // Handle cover photo
+            if ($request->hasFile('cover')) {
+                // Check if a cover already exists for the school
+                $existingCover = stp_school_media::where('school_id', $school->id)->where('schoolMedia_type', 66)->first();
+                if ($existingCover) {
+                    // Delete the old cover image from storage
+                    Storage::delete('public/' . $existingCover->schoolMedia_location);
+                    // Delete the old record from the database
+                    $existingCover->delete();
+                }
+
+                // Upload the new cover
+                $cover = $request->file('cover');
+                $coverName = $school->school_name . '_cover.' . $cover->getClientOriginalExtension();
+                $coverPath = $cover->storeAs('schoolMedia', $coverName, 'public');
+
+                // Extract the file extension
+                $coverFormat = $cover->getClientOriginalExtension();
+
+                // Save cover photo in the stp_school_media table
+                stp_school_media::create([
+                    'school_id' => $school->id,
+                    'schoolMedia_type' => 66, // Cover photo type
+                    'schoolMedia_name' => $coverName,
+                    'schoolMedia_location' => $coverPath,
+                    'schoolMedia_format' => $coverFormat, // Save file extension
+                    'schoolMedia_status' => 1,
+                    'created_by' => $authUser->id,
+                    'created_at' => now()
+                ]);
+            }
+
+            // Handle photo album
+            if ($request->hasFile('album')) {
+                foreach ($request->file('album') as $albumPhoto) {
+                    $albumPhotoName = $albumPhoto->getClientOriginalName();
+                    $albumPhotoPath = $albumPhoto->storeAs('schoolMedia', $albumPhotoName, 'public');
+
+                    // Extract the file extension
+                    $albumPhotoFormat = $albumPhoto->getClientOriginalExtension();
+
+                    // Save each photo in the stp_school_media table
+                    stp_school_media::create([
+                        'school_id' => $school->id,
+                        'schoolMedia_type' => 67, // Album photo type
+                        'schoolMedia_name' => $albumPhotoName,
+                        'schoolMedia_location' => $albumPhotoPath,
+                        'schoolMedia_format' => $albumPhotoFormat, // Save file extension
+                        'schoolMedia_status' => 1,
+                        'created_by' => $authUser->id,
+                        'created_at' => now()
+                    ]);
+                }
+            }
+            // Insert each featured type into the stp_featureds table
+            if ($request->has('featured')) {
+                foreach ($request->featured as $featureId) {
+                    stp_featured::create([
+                        'school_id' => $school->id,
+                        'featured_type' => $featureId,
+                        'featured_status' => 1
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'School registered successfully']
+            ], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
     public function editSchool(Request $request)
     {
@@ -733,7 +733,7 @@ public function addSchool(Request $request)
                         $message = "successfully enabled (status changed from 4 to 3)";
                     } else
                         $status = 1;
-                        $message = "successfully enabled ";
+                    $message = "successfully enabled ";
                     break;
 
                 default:
@@ -773,22 +773,22 @@ public function addSchool(Request $request)
             $request->validate([
                 'id' => 'required|integer'
             ]);
-    
+
             // Fetch the school along with its courses, course featured data, and school featured data
             $school = stp_school::with(['courses.featured', 'featured'])->find($request->id);
-    
+
             if (!$school) {
                 return response()->json([
                     'success' => false,
                     'message' => 'School not found'
                 ]);
             }
-    
+
             // Prepare the courses data
-            $courses = $school->courses->map(function($course) {
+            $courses = $school->courses->map(function ($course) {
                 return [
                     'course_name' => $course->course_name,
-                    'course_featured' => $course->featured->map(function($featured) {
+                    'course_featured' => $course->featured->map(function ($featured) {
                         return [
                             'featured_type' => $featured->featured_type,
                             'featured_startTime' => $featured->featured_startTime,
@@ -797,16 +797,16 @@ public function addSchool(Request $request)
                     }),
                 ];
             });
-    
+
             // Prepare the school featured data
-            $schoolFeatured = $school->featured->map(function($featured) {
+            $schoolFeatured = $school->featured->map(function ($featured) {
                 return [
                     'featured_type' => $featured->featured_type,
                     'featured_startTime' => $featured->featured_startTime,
                     'featured_endTime' => $featured->featured_endTime,
                 ];
             });
-    
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -834,7 +834,7 @@ public function addSchool(Request $request)
             ]);
         }
     }
-    
+
 
     public function editSchoolFeatured(Request $request)
     {
@@ -964,6 +964,7 @@ public function addSchool(Request $request)
                 'intake' => 'required|array',
                 'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
                 'category' => 'required|integer',
+                'mode' => 'required|integer',
                 'qualification' => 'required|integer',
                 'course_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
@@ -991,6 +992,7 @@ public function addSchool(Request $request)
                 'course_period' => $request->period,
                 'course_intake' => $request->intake,
                 'category_id' => $request->category,
+                'study_mode' => $request->mode,
                 'qualification_id' => $request->qualification,
                 'course_logo' => $imagePath ?? '',
                 'created_by' => $authUser->id,
@@ -1064,48 +1066,48 @@ public function addSchool(Request $request)
     }
 
     public function courseListAdmin(Request $request)
-   
+
     {
-        try{
+        try {
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_course::count() : (int)$request->per_page)
-            : 10;
- 
+                ? ($request->per_page === 'All' ? stp_course::count() : (int)$request->per_page)
+                : 10;
+
             $courseList = stp_course::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('course_name', 'like', '%' . $request->search . '%');
-        })
- 
-        ->paginate($perPage)
-        ->through(function ($course) {
-            switch ($course->course_status) {
-                case 0:
-                    $status = "Disable";
-                    break;
-                case 1:
-                    $status = "Active";
-                    break;
-                default:
-                    $status = null;
-            }
- 
-            return [
-                'id' => $course->id,
-                'name' => $course->course_name,
-                'school' => $course->school->school_name,
-                "category" => $course->category->category_name,
-                "qualification"=>$course->qualification->qualification_name,
-                "status" => $status
-            ];
-        });
-        return response()->json($courseList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
-    }
+            })
+
+                ->paginate($perPage)
+                ->through(function ($course) {
+                    switch ($course->course_status) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                        default:
+                            $status = null;
+                    }
+
+                    return [
+                        'id' => $course->id,
+                        'name' => $course->course_name,
+                        'school' => $course->school->school_name,
+                        "category" => $course->category->category_name,
+                        "qualification" => $course->qualification->qualification_name,
+                        "status" => $status
+                    ];
+                });
+            return response()->json($courseList);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function courseDetail(Request $request)
@@ -1116,12 +1118,23 @@ public function addSchool(Request $request)
             ]);
 
             $courseList = stp_course::find($request->courseID);
+            $schoolID = $courseList->school->id;
 
             if (empty($courseList->course_logo)) {
                 $logo = $courseList->school->school_logo;
             } else {
                 $logo = $courseList->course_logo;
             }
+
+            $schoolCover = stp_school_media::where('school_id', $schoolID)
+                ->where('schoolMedia_type', 66)
+                ->where('schoolMedia_status', 1)
+                ->first();
+
+            $schoolPhoto = stp_school_media::where('school_id', $schoolID)
+                ->where('schoolMedia_type', 67)
+                ->where('schoolMedia_status', 1)
+                ->get();
 
             $courseTag = $courseList->tag;
             $tagList = [];
@@ -1131,6 +1144,8 @@ public function addSchool(Request $request)
                     "tagName" => $tag->tag['tag_name']
                 ];
             }
+
+
             // Fetch all intakes associated with the course
             $intakeList = [];
             foreach ($courseList->intake as $intake) {
@@ -1149,7 +1164,9 @@ public function addSchool(Request $request)
                 'qualification' => $courseList->qualification->qualifiation_name,
                 'mode' => $courseList->studyMode->core_metaName ?? null,
                 'logo' => $logo,
-                'tag' => $tagList
+                'tag' => $tagList,
+                'cover' => $schoolCover,
+                'photo' => $schoolPhoto
             ];
 
             return response()->json([
@@ -1884,46 +1901,46 @@ public function addSchool(Request $request)
     }
 
     public function subjectListAdmin(Request $request)
-   
+
     {
-        try{
+        try {
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_subject::count() : (int)$request->per_page)
-            : 10;
- 
+                ? ($request->per_page === 'All' ? stp_subject::count() : (int)$request->per_page)
+                : 10;
+
             $subjectList = stp_subject::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('subject_name', 'like', '%' . $request->search . '%');
-        })
- 
-        ->paginate($perPage)
-        ->through(function ($subject) {
-            switch ($subject->subject_status) {
-                case 0:
-                    $status = "Disable";
-                    break;
-                case 1:
-                    $status = "Active";
-                    break;
-                default:
-                    $status = null;
-            }
- 
-            return [
-                'id' => $subject->id,
-                    'name' => $subject->subject_name,
-                    'category' => $subject->category->core_metaName ?? '',
-                    'status' => $status
-            ];
-        });
-        return response()->json($subjectList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
-    }
+            })
+
+                ->paginate($perPage)
+                ->through(function ($subject) {
+                    switch ($subject->subject_status) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                        default:
+                            $status = null;
+                    }
+
+                    return [
+                        'id' => $subject->id,
+                        'name' => $subject->subject_name,
+                        'category' => $subject->category->core_metaName ?? '',
+                        'status' => $status
+                    ];
+                });
+            return response()->json($subjectList);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function categoryList(Request $request)
@@ -1982,46 +1999,46 @@ public function addSchool(Request $request)
     }
 
     public function categoryListAdmin(Request $request)
-   
+
     {
-        try{
+        try {
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_courses_category::count() : (int)$request->per_page)
-            : 10;
- 
+                ? ($request->per_page === 'All' ? stp_courses_category::count() : (int)$request->per_page)
+                : 10;
+
             $categoryList = stp_courses_category::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('category_name', 'like', '%' . $request->search . '%');
-        })
- 
-        ->paginate($perPage)
-        ->through(function ( $category) {
-            switch ( $category-> category_status) {
-                case 0:
-                    $status = "Disable";
-                    break;
-                case 1:
-                    $status = "Active";
-                    break;
-                default:
-                    $status = null;
-            }
- 
-            return [
-                'id' =>  $category->id,
-                'name' =>  $category->category_name,
-                "course_hotPick" => $category->course_hotPick ?? 0,
-                "category_status" => $status
-            ];
-        });
-        return response()->json($categoryList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
-    }
+            })
+
+                ->paginate($perPage)
+                ->through(function ($category) {
+                    switch ($category->category_status) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                        default:
+                            $status = null;
+                    }
+
+                    return [
+                        'id' =>  $category->id,
+                        'name' =>  $category->category_name,
+                        "course_hotPick" => $category->course_hotPick ?? 0,
+                        "category_status" => $status
+                    ];
+                });
+            return response()->json($categoryList);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function resetAdminPassword(Request $request)
@@ -2066,22 +2083,22 @@ public function addSchool(Request $request)
         try {
             // Get the authenticated user
             $authUser = Auth::user();
-    
+
             $request->validate([
                 'form_status' => 'integer|nullable',
                 'student_id' => 'integer|nullable',
                 'courses_id' => 'integer|nullable'
             ]);
-    
+
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_submited_form::count() : (int)$request->per_page)
                 : 10;
-    
+
             $studentList = stp_student_detail::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_detailFirstName', 'like', '%' . $request->search . '%');
             });
-    
+
             $applicantInfo = stp_submited_form::query()
                 ->when($request->filled('student_id'), function ($query) use ($request) {
                     $query->where('student_id', $request->student_id);
@@ -2116,7 +2133,7 @@ public function addSchool(Request $request)
                     return [
                         "id" => $applicant->id ?? 'N/A',
                         "course_name" => $applicant->course->course_name ?? 'N/A',
-                        "institution"=>$applicant->course->school->school_name,
+                        "institution" => $applicant->course->school->school_name,
                         "form_status" => $status,
                         "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
                         "country_code" => $applicant->student->student_countryCode ?? 'N/A',
@@ -2124,9 +2141,8 @@ public function addSchool(Request $request)
                         'student_id' => $applicant->id, // Add student_id to the result
                     ];
                 });
-    
+
             return response()->json($applicantInfo);
-    
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -2135,7 +2151,7 @@ public function addSchool(Request $request)
             ], 500);
         }
     }
-    
+
 
     public function editApplicantStatus(Request $request)
     {
@@ -2404,8 +2420,8 @@ public function addSchool(Request $request)
         try {
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_package::count() : (int)$request->per_page)
-            : 10;
+                ? ($request->per_page === 'All' ? stp_package::count() : (int)$request->per_page)
+                : 10;
 
             $packageList = stp_package::query()
                 ->when($request->filled('package_type'), function ($query) use ($request) {
@@ -2425,7 +2441,7 @@ public function addSchool(Request $request)
                         "package_status" => $status
                     ];
                 });
-                return response()->json($packageList);
+            return response()->json($packageList);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -2494,7 +2510,7 @@ public function addSchool(Request $request)
             $dataList = stp_core_meta::where('core_metaType', $request->core_meta_type)->get()
                 ->map(function ($list) {
                     return [
-                        'id'=>$list->id,
+                        'id' => $list->id,
                         'core_metaType' => $list->core_metaType,
                         'core_metaName' => $list->core_metaName,
                         'status' => $list->core_metaStatus
@@ -2803,57 +2819,57 @@ public function addSchool(Request $request)
     }
 
     public function adminListAdmin(Request $request)
-   
+
     {
-        try{
+        try {
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? User::count() : (int)$request->per_page)
-            : 10;
- 
+                ? ($request->per_page === 'All' ? User::count() : (int)$request->per_page)
+                : 10;
+
             $adminList = User::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('name', 'like', '%' . $request->search . '%');
-        })
- 
-        ->paginate($perPage)
-        ->through(function ($admin) {
-            switch ($admin->status) {
-                case 0:
-                    $status = "Disable";
-                    break;
-                case 1:
-                    $status = "Active";
-                    break;
-                case 2:
-                    $status = "Pending";
-                    break;
-                case 3:
-                    $status = "Temporary";
-                    break;
-                case 4:
-                    $status = "Temporary-Disable";
-                    break;
-                default:
-                    $status = null;
-            }
- 
-            return [
-                'id' => $admin->id,
-                "name" => $admin->name,
-                "email" => $admin->email,
-                "ic_number" => $admin->ic_Number,
-                "contact_no" => $admin->contact_no,
-                'status' => $status
-            ];
-        });
-        return response()->json($adminList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
-    }
+            })
+
+                ->paginate($perPage)
+                ->through(function ($admin) {
+                    switch ($admin->status) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                        case 2:
+                            $status = "Pending";
+                            break;
+                        case 3:
+                            $status = "Temporary";
+                            break;
+                        case 4:
+                            $status = "Temporary-Disable";
+                            break;
+                        default:
+                            $status = null;
+                    }
+
+                    return [
+                        'id' => $admin->id,
+                        "name" => $admin->name,
+                        "email" => $admin->email,
+                        "ic_number" => $admin->ic_Number,
+                        "contact_no" => $admin->contact_no,
+                        'status' => $status
+                    ];
+                });
+            return response()->json($adminList);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
     public function editAdmin(Request $request)
     {
@@ -2943,48 +2959,48 @@ public function addSchool(Request $request)
     }
 
     public function bannerListAdmin(Request $request)
-   
+
     {
-        try{
+        try {
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_advertisement_banner::count() : (int)$request->per_page)
-            : 10;
- 
+                ? ($request->per_page === 'All' ? stp_advertisement_banner::count() : (int)$request->per_page)
+                : 10;
+
             $bannerList = stp_advertisement_banner::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('banner_name', 'like', '%' . $request->search . '%');
-        })
- 
-        ->paginate($perPage)
-        ->through(function ($banner) {
-            switch ($banner->banner_status) {
-                case 0:
-                    $status = "Disable";
-                    break;
-                case 1:
-                    $status = "Active";
-                    break;
-                default:
-                    $status = null;
-            }
- 
-            return [
-                'id' => $banner->id,
-                'name' => $banner->banner_name,
-                'file' => $banner->banner_file,
-                'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
-                'featured' => $banner->banner->core_metaName ?? '',
-                'status' => $status
-            ];
-        });
-        return response()->json($bannerList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
-    }
+            })
+
+                ->paginate($perPage)
+                ->through(function ($banner) {
+                    switch ($banner->banner_status) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                        default:
+                            $status = null;
+                    }
+
+                    return [
+                        'id' => $banner->id,
+                        'name' => $banner->banner_name,
+                        'file' => $banner->banner_file,
+                        'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
+                        'featured' => $banner->banner->core_metaName ?? '',
+                        'status' => $status
+                    ];
+                });
+            return response()->json($bannerList);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function addBanner(Request $request)
@@ -3000,17 +3016,17 @@ public function addSchool(Request $request)
                 'banner_start' => 'required|date_format:Y-m-d H:i:s',
                 'banner_end' => 'required|date_format:Y-m-d H:i:s'
             ]);
-    
+
             $authUser = Auth::user();
             $imagePath = null;
-    
+
             // Handle the banner file upload
             if ($request->hasFile('banner_file')) {
                 $image = $request->file('banner_file');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('bannerFile', $imageName, 'public');
             }
-    
+
             // Loop through each featured_id and create a banner for each
             foreach ($request->featured_id as $featuredId) {
                 stp_advertisement_banner::create([
@@ -3025,7 +3041,7 @@ public function addSchool(Request $request)
                     'created_at' => now()
                 ]);
             }
-    
+
             return response()->json([
                 'success' => true,
                 'data' => ['message' => 'Successfully Added the Banner(s)']
@@ -3044,7 +3060,7 @@ public function addSchool(Request $request)
             ]);
         }
     }
-    
+
     public function editBanner(Request $request)
     {
         try {
@@ -3243,7 +3259,7 @@ public function addSchool(Request $request)
         try {
             $categoryList = stp_core_meta::query()
                 ->where('core_metaStatus', 1)
-                ->whereIn('id', [14,15,16])
+                ->whereIn('id', [14, 15, 16])
                 ->paginate(10)
                 ->through(function ($category) {
                     $status = ($category->status == 1) ? "Active" : "Inactive";
@@ -3269,7 +3285,7 @@ public function addSchool(Request $request)
         try {
             $categoryList = stp_core_meta::query()
                 ->where('core_metaStatus', 1)
-                ->whereIn('id', [64,65])
+                ->whereIn('id', [64, 65])
                 ->paginate(10)
                 ->through(function ($category) {
                     $status = ($category->status == 1) ? "Active" : "Inactive";

@@ -20,6 +20,7 @@ class stp_course extends Model
         'course_period',
         'course_intake',
         'category_id',
+        'study_mode',
         'qualification_id',
         'course_logo',
         'course_status',

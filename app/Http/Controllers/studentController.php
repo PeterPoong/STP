@@ -22,6 +22,7 @@ use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\serviceFunctionController;
+use App\Models\stp_cgpa;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_intake;
 use App\Models\stp_school_media;
@@ -850,6 +851,96 @@ class studentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function addProgramCgpa(Request $request)
+    {
+
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                'programName' => 'string',
+                'transcriptCategory' => 'required|integer',
+                'cgpa' => 'required|numeric'
+            ]);
+
+            $createCgpa = stp_cgpa::create([
+                'student_id' => $authUser->id,
+                'program_name' => $request->programName ?? null,
+                'transcript_category' => $request->transcriptCategory,
+                'cgpa' => $request->cgpa,
+                'created_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'successfully added the cgpa']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => "Internal Server Error",
+                    'error' => $e->getMessage()
+                ]
+            );
+        }
+    }
+
+    public function editProgramCgpa(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                'cgpaId' => 'required|integer',
+                'programName' => "string",
+                'cgpa' => 'required|numeric'
+            ]);
+
+
+            $cgpa = stp_cgpa::find($request->cgpaId);
+
+            $update = $cgpa->update([
+                'program_name' => $request->programName ?? null,
+                'cgpa' => $request->cgpa,
+                'updated_by' => $authUser->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "update successfully"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function programCgpaList(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                'transcriptCategory' => 'required|integer'
+            ]);
+            $list = stp_cgpa::where('student_id', $authUser->id)
+                ->where('transcript_category', $request->transcriptCategory)
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'data' => $list
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ]);
         }
@@ -2308,6 +2399,25 @@ class studentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $getHigherTranscriptSubject
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function hotPickCategoryList(Request $request)
+    {
+        try {
+            $getHotPickList = stp_courses_category::where("course_hotPick", 1)
+                ->where("category_status", 1)
+                ->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getHotPickList
             ]);
         } catch (\Exception $e) {
             return response()->json([
