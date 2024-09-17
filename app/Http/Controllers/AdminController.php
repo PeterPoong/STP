@@ -456,7 +456,6 @@ class AdminController extends Controller
         }
     }
 
-<<<<<<< HEAD
     public function addSchool(Request $request)
     {
         try {
@@ -467,7 +466,7 @@ class AdminController extends Controller
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255',
-                'school_fullDesc' => 'required|string|max:255',
+                'school_fullDesc' => 'required|string|max:5000',
                 'school_shortDesc' => 'required|string|max:255',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add cover photo validation
@@ -479,39 +478,6 @@ class AdminController extends Controller
                 'person_in_charge_email' => 'required|email',
                 'category' => 'required|integer',
                 'account' => 'required|integer'
-=======
-public function addSchool(Request $request)
-{
-    try {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'password' => 'required|string|min:8',
-            'confirm_password' => 'required|string|min:8|same:password',
-            'country_code' => 'required',
-            'contact_number' => 'required|numeric|digits_between:1,15',
-            'email' => 'required|string|email|max:255',
-            'school_fullDesc' => 'required|string|max:5000',
-            'school_shortDesc' => 'required|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add cover photo validation
-            'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add album photo validation
-            'featured' => 'nullable|array', // Validate as an array
-            'featured.*' => 'integer', // Validate each element as an integer and existing in the features table
-            'person_in_charge_name'=>'required|string|max:255',
-            'person_in_charge_contact' => 'required|string|max:255',
-            'person_in_charge_email' => 'required|email',
-            'category'=>'required|integer',
-            'account'=>'required|integer'
-        ]);
-
-        $authUser = Auth::user();
-
-        // Check email
-        $checkingEmail = stp_school::where('school_email', $request->email)->where('school_status', 1)->exists();
-        if ($checkingEmail) {
-            throw ValidationException::withMessages([
-                'email' => ['Email has been used'],
->>>>>>> origin/prescia(backup)
             ]);
 
             $authUser = Auth::user();
@@ -2043,7 +2009,6 @@ public function addSchool(Request $request)
 
             $categoryList = stp_courses_category::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('category_name', 'like', '%' . $request->search . '%');
-<<<<<<< HEAD
             })
 
                 ->paginate($perPage)
@@ -2074,38 +2039,6 @@ public function addSchool(Request $request)
                 'error' => $e->getMessage()
             ], 500);
         }
-=======
-        })
- 
-        ->paginate($perPage)
-        ->through(function ( $category) {
-            switch ( $category-> category_status) {
-                case 0:
-                    $status = "Disable";
-                    break;
-                case 1:
-                    $status = "Active";
-                    break;
-                default:
-                    $status = null;
-            }
- 
-            return [
-                'id' =>  $category->id,
-                'name' =>  $category->category_name,
-                "course_hotPick" => $category->course_hotPick ?? 0,
-                "category_status" => $status
-            ];
-        });
-        return response()->json($categoryList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
-    }
->>>>>>> origin/prescia(backup)
     }
 
     public function resetAdminPassword(Request $request)
@@ -3378,7 +3311,7 @@ public function addSchool(Request $request)
         try {
             $categoryList = stp_core_meta::query()
                 ->where('core_metaStatus', 1)
-                ->whereIn('id', [60,61,62,63,76,77])
+                ->whereIn('id', [60, 61, 62, 63, 76, 77])
                 ->paginate(10)
                 ->through(function ($category) {
                     $status = ($category->status == 1) ? "Active" : "Inactive";
