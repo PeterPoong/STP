@@ -3289,4 +3289,30 @@ public function addSchool(Request $request)
             ], 500);
         }
     }
+
+    public function packageTypeList(Request $request)
+    {
+        try {
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [60,61,62,63,76,77])
+                ->paginate(10)
+                ->through(function ($category) {
+                    $status = ($category->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $category->core_metaName,
+                        "id" => $category->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $categoryList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

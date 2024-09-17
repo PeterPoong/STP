@@ -151,6 +151,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editPackage', [AdminController::class, 'editPackage']);
     Route::post('/deletePackage', [AdminController::class, 'deletePackage']);
     Route::post('/packageList', [AdminController::class, 'packageList']);
+    Route::post('/packageTypeList', [AdminController::class, 'packageTypeList']);
 
     Route::post('/addAdmin', [AdminController::class, 'addAdmin']);
     Route::post('/disableAdmin', [AdminController::class, 'disableAdmin']);
