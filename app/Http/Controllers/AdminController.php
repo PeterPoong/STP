@@ -466,7 +466,7 @@ class AdminController extends Controller
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255',
-                'school_fullDesc' => 'required|string|max:255',
+                'school_fullDesc' => 'required|string|max:5000',
                 'school_shortDesc' => 'required|string|max:255',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add cover photo validation
@@ -957,7 +957,7 @@ class AdminController extends Controller
             $request->validate([
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
-                'description' => 'string|max:255',
+                'description' => 'string|max:5000',
                 'requirement' => 'string|max:255',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
@@ -2039,6 +2039,37 @@ class AdminController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+                $query->where('category_name', 'like', '%' . $request->search . '%');
+        })
+ 
+        ->paginate($perPage)
+        ->through(function ( $category) {
+            switch ( $category-> category_status) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Active";
+                    break;
+                default:
+                    $status = null;
+            }
+ 
+            return [
+                'id' =>  $category->id,
+                'name' =>  $category->category_name,
+                "course_hotPick" => $category->course_hotPick ?? 0,
+                "category_status" => $status
+            ];
+        });
+        return response()->json($categoryList);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
+    }
     }
 
     public function resetAdminPassword(Request $request)
@@ -2267,7 +2298,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'package_name' => 'required|string|max:255',
-                'package_detail' => 'required|string|max:255',
+                'package_detail' => 'required|string|max:5000',
                 'package_type' => 'required|integer',
                 'package_price' => 'required|numeric|regex:/^\d+(\.\d{1,2})?$/'
             ]);
@@ -3285,7 +3316,33 @@ class AdminController extends Controller
         try {
             $categoryList = stp_core_meta::query()
                 ->where('core_metaStatus', 1)
-                ->whereIn('id', [64, 65])
+                ->whereIn('id', [64,65])
+                ->paginate(10)
+                ->through(function ($category) {
+                    $status = ($category->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $category->core_metaName,
+                        "id" => $category->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $categoryList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function packageTypeList(Request $request)
+    {
+        try {
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [60,61,62,63,76,77])
                 ->paginate(10)
                 ->through(function ($category) {
                     $status = ($category->status == 1) ? "Active" : "Inactive";
