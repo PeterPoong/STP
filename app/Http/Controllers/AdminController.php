@@ -2251,7 +2251,7 @@ public function addSchool(Request $request)
         try {
             $request->validate([
                 'package_name' => 'required|string|max:255',
-                'package_detail' => 'required|string|max:255',
+                'package_detail' => 'required|string|max:5000',
                 'package_type' => 'required|integer',
                 'package_price' => 'required|numeric|regex:/^\d+(\.\d{1,2})?$/'
             ]);
