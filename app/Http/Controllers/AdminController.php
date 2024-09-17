@@ -957,7 +957,7 @@ public function addSchool(Request $request)
             $request->validate([
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
-                'description' => 'string|max:255',
+                'description' => 'string|max:5000',
                 'requirement' => 'string|max:255',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
