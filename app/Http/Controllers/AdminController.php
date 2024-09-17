@@ -1999,7 +1999,6 @@ class AdminController extends Controller
     }
 
     public function categoryListAdmin(Request $request)
-
     {
         try {
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -2007,12 +2006,13 @@ class AdminController extends Controller
                 ? ($request->per_page === 'All' ? stp_courses_category::count() : (int)$request->per_page)
                 : 10;
 
+            // Query to get the category list with optional search filtering
             $categoryList = stp_courses_category::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('category_name', 'like', '%' . $request->search . '%');
             })
-
                 ->paginate($perPage)
                 ->through(function ($category) {
+                    // Determine the category status
                     switch ($category->category_status) {
                         case 0:
                             $status = "Disable";
@@ -2024,53 +2024,26 @@ class AdminController extends Controller
                             $status = null;
                     }
 
+                    // Return category data
                     return [
-                        'id' =>  $category->id,
-                        'name' =>  $category->category_name,
+                        'id' => $category->id,
+                        'name' => $category->category_name,
                         "course_hotPick" => $category->course_hotPick ?? 0,
                         "category_status" => $status
                     ];
                 });
+
             return response()->json($categoryList);
         } catch (\Exception $e) {
+            // Handle the exception
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ], 500);
         }
-                $query->where('category_name', 'like', '%' . $request->search . '%');
-        })
- 
-        ->paginate($perPage)
-        ->through(function ( $category) {
-            switch ( $category-> category_status) {
-                case 0:
-                    $status = "Disable";
-                    break;
-                case 1:
-                    $status = "Active";
-                    break;
-                default:
-                    $status = null;
-            }
- 
-            return [
-                'id' =>  $category->id,
-                'name' =>  $category->category_name,
-                "course_hotPick" => $category->course_hotPick ?? 0,
-                "category_status" => $status
-            ];
-        });
-        return response()->json($categoryList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
     }
-    }
+
 
     public function resetAdminPassword(Request $request)
     {
@@ -3316,33 +3289,7 @@ class AdminController extends Controller
         try {
             $categoryList = stp_core_meta::query()
                 ->where('core_metaStatus', 1)
-                ->whereIn('id', [64,65])
-                ->paginate(10)
-                ->through(function ($category) {
-                    $status = ($category->status == 1) ? "Active" : "Inactive";
-                    return [
-                        "name" => $category->core_metaName,
-                        "id" => $category->id,
-                        "status" => "Active"
-                    ];
-                });
-
-            return $categoryList;
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Internal Server Error',
-                'errors' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function packageTypeList(Request $request)
-    {
-        try {
-            $categoryList = stp_core_meta::query()
-                ->where('core_metaStatus', 1)
-                ->whereIn('id', [60,61,62,63,76,77])
+                ->whereIn('id', [64, 65])
                 ->paginate(10)
                 ->through(function ($category) {
                     $status = ($category->status == 1) ? "Active" : "Inactive";
