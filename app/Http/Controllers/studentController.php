@@ -30,6 +30,10 @@ use Illuminate\Support\Facades\Storage;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Collection;
+
 use App\Rules\UniqueInArray;
 use Exception;
 
@@ -47,9 +51,11 @@ class studentController extends Controller
     public function schoolList(Request $request)
     {
         try {
+
+
             $getSchoolList = stp_school::where('school_status', 1)
                 ->when($request->filled('category'), function ($query) use ($request) {
-                    $query->Where('institue_category', $request->category);
+                    $query->whereIn('institue_category', $request->category);
                 })
                 ->when($request->filled('country'), function ($query) use ($request) {
                     $query->Where('country_id', $request->country);
@@ -69,10 +75,21 @@ class studentController extends Controller
                 })
                 ->when($request->filled('courseCategory'), function ($query) use ($request) {
                     $query->whereHas('courses', function ($q) use ($request) {
-                        $q->where('category_id', $request->courseCategory);
+                        $q->whereIn('category_id', $request->courseCategory);
+                    });
+                })
+                ->when($request->filled('studyLevel'), function ($query) use ($request) {
+                    $query->whereHas('courses', function ($q) use ($request) {
+                        $q->whereIn('qualification_id', $request->studyLevel);
                     });
                 })
                 ->paginate(10);
+
+
+
+
+
+
 
             $schoolList = [];
 
@@ -88,17 +105,27 @@ class studentController extends Controller
                 }
 
                 $filteredCourses = $school->courses->filter(function ($course) use ($request) {
-                    return !$request->filled('courseCategory') || $course->category_id == $request->courseCategory;
+                    if ($request->filled('courseCategory')) {
+                        // Check if courseCategory is an array and use in_array for comparison
+                        $courseCategories = is_array($request->courseCategory) ? $request->courseCategory : [$request->courseCategory];
+                        return in_array($course->category_id, $courseCategories);
+                    }
+                    return true; // If courseCategory is not filled, return all courses
                 })->values();
+
 
 
                 $numberCourses = count($filteredCourses);
                 $monthList = [];
                 foreach ($filteredCourses as $courses) {
                     foreach ($courses->intake as $c) {
-                        $monthList[] = $c->month->core_metaName;
+                        $monthName = $c->month->core_metaName;
+                        if (!in_array($monthName, $monthList)) {
+                            $monthList[] = $monthName;
+                        }
                     }
                 }
+
                 $schoolList[] = [
                     'id' => $school->id,
                     'name' => $school->school_name,
@@ -306,7 +333,7 @@ class studentController extends Controller
     public function courseList(Request $request)
     {
         try {
-
+            // Validate the request parameters
             $request->validate([
                 'search' => 'string',
                 'country' => 'integer',
@@ -320,8 +347,10 @@ class studentController extends Controller
                 'intake' => 'array'
             ]);
 
+            // Apply filters and paginate directly
+            $query = stp_course::query();
 
-            $getCourses = stp_course::when($request->filled('qualification'), function ($query) use ($request) {
+            $query->when($request->filled('qualification'), function ($query) use ($request) {
                 $query->where('qualification_id', $request->qualification);
             })
                 ->when($request->filled('category'), function ($query) use ($request) {
@@ -358,59 +387,47 @@ class studentController extends Controller
                     $query->whereHas('intake', function ($query) use ($request) {
                         $query->whereIn('intake_month', $request->intake);
                     });
-                })
-                ->paginate(10)
-                ->through(function ($course) {
-                    $featured = false;
-                    foreach ($course->featured as $c) {
-
-                        if ($c['featured_type'] == 30 && $c['featured_status'] == 1) {
-                            $featured = true;
-                            break;
-                        }
-                    };
-                    $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
-                    return [
-                        'id' => $course->id,
-                        'school_name' => $course->school->school_name,
-                        'name' => $course->course_name,
-                        'description' => $course->course_description,
-                        'requirement' => $course->course_requirement,
-                        'cost' => $course->course_cost,
-                        'featured' => $featured,
-                        'period' => $course->course_period,
-                        'intake' => $intakeMonths,
-                        'category' => $course->category->category_name,
-                        'qualification' => $course->qualification->qualification_name,
-                        'mode' => $course->studyMode->core_metaName ?? null,
-                        'logo' => $course->course_logo ?? $course->school->school_logo,
-                        'country' => $course->school->country->country_name ?? null,
-                        'state' => $course->school->state->state_name ?? null,
-                        'institute_category' => $course->school->institueCategory->core_metaName ?? null
-                    ];
                 });
 
+            // Paginate the results
+            $courses = $query->paginate(40);
 
+            // Transform the results
+            $transformedCourses = $courses->through(function ($course) {
+                $featured = false;
+                foreach ($course->featured as $c) {
+                    if ($c['featured_type'] == 30 && $c['featured_status'] == 1) {
+                        $featured = true;
+                        break;
+                    }
+                }
+                $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
+                return [
+                    'id' => $course->id,
+                    'school_name' => $course->school->school_name,
+                    'name' => $course->course_name,
+                    'description' => $course->course_description,
+                    'requirement' => $course->course_requirement,
+                    'cost' => $course->course_cost,
+                    'featured' => $featured,
+                    'period' => $course->course_period,
+                    'intake' => $intakeMonths,
+                    'category' => $course->category->category_name,
+                    'qualification' => $course->qualification->qualification_name,
+                    'mode' => $course->studyMode->core_metaName ?? null,
+                    'logo' => $course->course_logo ?? $course->school->school_logo,
+                    'country' => $course->school->country->country_name ?? null,
+                    'state' => $course->school->state->state_name ?? null,
+                    'institute_category' => $course->school->institueCategory->core_metaName ?? null
+                ];
+            });
 
-            $sortedCourses = $getCourses->sortByDesc('featured')->values();
-            $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
-                $sortedCourses->forPage($getCourses->currentPage(), $getCourses->perPage()), // Slice the collection for the current page
-                $sortedCourses->count(),
-                $getCourses->perPage(),
-                $getCourses->currentPage(),
-                ['path' => $request->url(), 'query' => $request->query()]
-            );
-            return  $paginatedCourses;
+            return $transformedCourses;
 
-            // return response()->json([
-            //     'success' => true,
-            //     'data' => $paginatedCourses
-            // ]);
-
-            // return response()->json([
-            //     'success' => true,
-            //     'data' => $coursesList
-            // ]);
+            return response()->json([
+                'success' => true,
+                'data' => $transformedCourses
+            ]);
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
@@ -419,6 +436,8 @@ class studentController extends Controller
             ], 500);
         }
     }
+
+
 
     public function studentDetail()
     {

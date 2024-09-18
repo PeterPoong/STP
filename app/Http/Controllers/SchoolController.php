@@ -1496,4 +1496,53 @@ class SchoolController extends Controller
             ], 500);
         }
     }
+
+    public function schoolApplicantList(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $Applicant = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->with('student', 'course') // Eager load related student and course data
+                ->get();
+
+
+            $total = count($Applicant);
+            $pending = 0;
+            $reject = 0;
+            $accept = 0;
+            foreach ($Applicant as $application) {
+                switch ($application->form_status) {
+                    case 2:
+                        $pending += 1;
+                        break;
+                    case 3:
+                        $reject += 1;
+                        break;
+                    case 4:
+                        $accept += 1;
+                        break;
+                }
+            }
+
+            $data = [
+                "total" => $total,
+                "pending" => $pending,
+                "reject" => $reject,
+                "accept" => $accept
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

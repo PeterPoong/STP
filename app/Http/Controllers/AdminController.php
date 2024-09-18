@@ -985,7 +985,6 @@ class AdminController extends Controller
                 'intake' => 'required|array',
                 'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
                 'category' => 'required|integer',
-                'mode' => 'required|integer',
                 'qualification' => 'required|integer',
                 'course_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
@@ -1013,7 +1012,6 @@ class AdminController extends Controller
                 'course_period' => $request->period,
                 'course_intake' => $request->intake,
                 'category_id' => $request->category,
-                'study_mode' => $request->mode,
                 'qualification_id' => $request->qualification,
                 'course_logo' => $imagePath ?? '',
                 'created_by' => $authUser->id,
@@ -1139,23 +1137,12 @@ class AdminController extends Controller
             ]);
 
             $courseList = stp_course::find($request->courseID);
-            $schoolID = $courseList->school->id;
 
             if (empty($courseList->course_logo)) {
                 $logo = $courseList->school->school_logo;
             } else {
                 $logo = $courseList->course_logo;
             }
-
-            $schoolCover = stp_school_media::where('school_id', $schoolID)
-                ->where('schoolMedia_type', 66)
-                ->where('schoolMedia_status', 1)
-                ->first();
-
-            $schoolPhoto = stp_school_media::where('school_id', $schoolID)
-                ->where('schoolMedia_type', 67)
-                ->where('schoolMedia_status', 1)
-                ->get();
 
             $courseTag = $courseList->tag;
             $tagList = [];
@@ -1165,8 +1152,6 @@ class AdminController extends Controller
                     "tagName" => $tag->tag['tag_name']
                 ];
             }
-
-
             // Fetch all intakes associated with the course
             $intakeList = [];
             foreach ($courseList->intake as $intake) {
@@ -1185,9 +1170,7 @@ class AdminController extends Controller
                 'qualification' => $courseList->qualification->qualifiation_name,
                 'mode' => $courseList->studyMode->core_metaName ?? null,
                 'logo' => $logo,
-                'tag' => $tagList,
-                'cover' => $schoolCover,
-                'photo' => $schoolPhoto
+                'tag' => $tagList
             ];
 
             return response()->json([
@@ -2020,6 +2003,7 @@ class AdminController extends Controller
     }
 
     public function categoryListAdmin(Request $request)
+
     {
         try {
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -2027,13 +2011,12 @@ class AdminController extends Controller
                 ? ($request->per_page === 'All' ? stp_courses_category::count() : (int)$request->per_page)
                 : 10;
 
-            // Query to get the category list with optional search filtering
             $categoryList = stp_courses_category::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('category_name', 'like', '%' . $request->search . '%');
             })
+
                 ->paginate($perPage)
                 ->through(function ($category) {
-                    // Determine the category status
                     switch ($category->category_status) {
                         case 0:
                             $status = "Disable";
@@ -2045,18 +2028,15 @@ class AdminController extends Controller
                             $status = null;
                     }
 
-                    // Return category data
                     return [
-                        'id' => $category->id,
-                        'name' => $category->category_name,
+                        'id' =>  $category->id,
+                        'name' =>  $category->category_name,
                         "course_hotPick" => $category->course_hotPick ?? 0,
                         "category_status" => $status
                     ];
                 });
-
             return response()->json($categoryList);
         } catch (\Exception $e) {
-            // Handle the exception
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
@@ -2064,7 +2044,6 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
 
     public function resetAdminPassword(Request $request)
     {
