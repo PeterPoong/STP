@@ -50,9 +50,9 @@ class stp_school extends Model
         return $this->hasMany(stp_course::class, 'school_id', 'id');
     }
 
-    public function media()
+    public function media(): HasMany
     {
-        return $this->belongsToMany(stp_school_media::class);
+        return $this->hasMany(stp_school_media::class, 'school_id', 'id');
     }
 
     public function featured(): HasMany

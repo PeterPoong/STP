@@ -775,7 +775,7 @@ class AdminController extends Controller
             ]);
 
             // Fetch the school along with its courses, course featured data, and school featured data
-            $school = stp_school::with(['courses.featured', 'featured'])->find($request->id);
+            $school = stp_school::with(['courses.featured', 'featured', 'media'])->find($request->id);
 
             if (!$school) {
                 return response()->json([
@@ -783,6 +783,17 @@ class AdminController extends Controller
                     'message' => 'School not found'
                 ]);
             }
+
+            $medias = $school->media->filter(function($media){
+                return $media->schoolMedia_status===1;
+            })->map(function($media){
+                return [
+                    'schoolMedia_name' => $media->schoolMedia_name,
+                    'schoolMedia_location' => $media->schoolMedia_location,
+                    'schoolMedia_type'=> $media->schoolMedia_type,
+                    
+                ];
+            });
 
             // Prepare the courses data
             $courses = $school->courses->map(function ($course) {
@@ -813,17 +824,27 @@ class AdminController extends Controller
                     'id' => $school->id,
                     'name' => $school->school_name,
                     'email' => $school->school_email,
-                    'contactNumber' => $school->school_countryCode . $school->school_contactNo,
+                    'country_code' => $school->school_countryCode,
+                    'contact_number'=>$school->school_contactNo,
                     'fullDescripton' => $school->school_fullDesc,
                     'shortDescription' => $school->school_shortDesc,
-                    'address' => $school->school_address,
+                    'school_address' => $school->school_address,
                     'country' => $school->country->country_name ?? '',
+                    'country_id'=>$school->country_id,
                     'state' => $school->state->state_name ?? '',
+                    'state_id'=> $school->state_id,
                     'city' => $school->city->city_name ?? '',
+                    'city_id'=>$school->city_id,
                     'logo' => $school->school_logo ?? '',
-                    'website' => $school->school_officalWebsite ?? '',
+                    'school_website' => $school->school_officalWebsite ?? '',
                     'courses' => $courses, // List of courses with featured data
                     'schoolFeatured' => $schoolFeatured, // List of school's featured data
+                    'category'=>$school->institue_category,
+                    'PIC_name'=>$school->person_inChargeName,
+                    'PIC_number'=>$school->person_inChargeNumber,
+                    'PIC_email'=>$school->person_inChargeEmail,
+                    'account'=>$school->account_type,
+                    'media'=>$medias
                 ]
             ]);
         } catch (\Exception $e) {
@@ -2426,7 +2447,31 @@ class AdminController extends Controller
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_package::count() : (int)$request->per_page)
                 : 10;
-
+    
+            // Check if the 'id' parameter is provided to get a specific package
+            if ($request->filled('id')) {
+                $package = stp_package::find($request->id);
+    
+                if (!$package) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Package not found'
+                    ], 404);
+                }
+    
+                $status = ($package->package_status == 1) ? "Active" : "Disable";
+    
+                return response()->json([
+                    "id" => $package->id,
+                    "package_name" => $package->package_name,
+                    "package_detail" => $package->package_detail,
+                    "package_type" => $package->package_type,
+                    "package_price" => $package->package_price,
+                    "package_status" => $status
+                ]);
+            }
+    
+            // If 'id' is not provided, return the paginated package list
             $packageList = stp_package::query()
                 ->when($request->filled('package_type'), function ($query) use ($request) {
                     $query->where('package_type', $request->package_type);
@@ -2438,7 +2483,7 @@ class AdminController extends Controller
                 ->through(function ($package) {
                     $status = ($package->package_status == 1) ? "Active" : "Disable";
                     return [
-                        "id"=>$package->id,
+                        "id" => $package->id,
                         "package_name" => $package->package_name,
                         "package_detail" => $package->package_detail,
                         "package_type" => $package->package_type,
@@ -2446,6 +2491,7 @@ class AdminController extends Controller
                         "package_status" => $status
                     ];
                 });
+    
             return response()->json($packageList);
         } catch (\Exception $e) {
             return response()->json([
@@ -2455,7 +2501,7 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
+    
     public function resetAdminDummyPassword(Request $request)
     {
         try {
