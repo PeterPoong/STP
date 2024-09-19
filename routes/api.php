@@ -217,7 +217,7 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 
     //applicant filter
     Route::get('/dropDownCourseList', [SchoolController::class, 'filterCourseList']);
-    Route::get('/schoolApplicantList', [SchoolController::class, 'schoolApplicantList']);
+    Route::post('/schoolApplicantList', [SchoolController::class, 'schoolApplicantList']);
 
     Route::post('/updateSchoolLogo', [SchoolController::class, 'updateSchoolLogo']);
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
