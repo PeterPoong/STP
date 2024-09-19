@@ -193,7 +193,6 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 
     Route::post('/editSchool', [SchoolController::class, 'editSchoolDetail']);
     Route::post('/editPersonInCharge', [SchoolController::class, 'editPersonInCharge']);
-    Route::post('/applicantDetailList', [SchoolController::class, 'applicantDetailList']);
     Route::post('/applicantDetailInfo', [SchoolController::class, 'applicantDetailInfo']);
     Route::post('/applicantDetailCocurriculum', [SchoolController::class, 'applicantDetailCocurriculum']);
     Route::post('/applicantDetailAchievement', [SchoolController::class, 'applicantDetailAchievement']);
