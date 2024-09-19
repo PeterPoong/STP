@@ -222,6 +222,9 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/updateSchoolLogo', [SchoolController::class, 'updateSchoolLogo']);
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
     Route::post('/resetDummySchoolPassword', [SchoolController::class, 'resetDummySchoolPassword']);
+
+    //statistic
+    Route::post('/countryStatistic', [SchoolController::class, 'countryStatistic']);
 });
 
 
