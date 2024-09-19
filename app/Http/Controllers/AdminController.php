@@ -3034,6 +3034,7 @@ class AdminController extends Controller
                     return [
                         'id' => $banner->id,
                         'name' => $banner->banner_name,
+                        'url'=>$banner->banner_url,
                         'file' => $banner->banner_file,
                         'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
                         'banner_start'=>$banner->banner_start,
