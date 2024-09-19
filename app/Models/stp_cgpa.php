@@ -12,6 +12,7 @@ class stp_cgpa extends Model
 
     protected $fillable = [
         'student_id',
+        'program_name',
         'transcript_category',
         'cgpa',
         'cgpa_status',

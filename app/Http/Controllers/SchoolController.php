@@ -1602,4 +1602,45 @@ class SchoolController extends Controller
             ]);
         }
     }
+
+    public function countryStatistic(Request $request)
+    {
+        try {
+
+            $authUser = Auth::user();
+            $applicants = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->get();
+
+
+            $countryCounts = [];
+
+            // Count occurrences of each country
+            foreach ($applicants as $applicant) {
+                $countryName = $applicant->student->detail->country->country_name;
+                if (isset($countryCounts[$countryName])) {
+                    $countryCounts[$countryName]++;
+                } else {
+                    $countryCounts[$countryName] = 1;
+                }
+            }
+
+            // Prepare the result in the desired format
+            $result = [];
+            foreach ($countryCounts as $countryName => $count) {
+                $result[] = [$countryName, $count];
+            }
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }
