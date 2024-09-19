@@ -13,6 +13,7 @@ use App\Models\stp_courses_category;
 use App\Models\stp_submited_form;
 use App\Models\stp_achievement;
 use App\Models\stp_student_media;
+use App\Models\stp_student_detail;
 use Illuminate\Support\Facades\DB;
 use App\Models\stp_featured;
 use App\Models\stp_school;
@@ -638,54 +639,110 @@ class SchoolController extends Controller
         }
     }
 
-    public function applicantDetailInfo(Request $request)   //Header and basic information for the applicant
-    {
-        try {
-            // Get the authenticated user
-            $authUser = Auth::user();
-            $schoolID = $authUser->id;
-            $request->validate([
-                'form_status' => 'integer|nullable',
-                'student_id' => 'integer|nullable'
-            ]);
+    public function applicantDetailInfo(Request $request)  
+{
+    try {
+        // Get the authenticated user
+        $authUser = Auth::user();
+        $schoolID = $authUser->id;
 
-            $studentInfo = stp_submited_form::with('student', 'course')
-                ->whereHas('course', function ($query) use ($schoolID) {
-                    $query->where('school_id', $schoolID);
-                })
-                ->when($request->filled('student_id'), function ($query) use ($request) {
-                    $query->where('student_id', $request->student_id);
-                })
-                ->when($request->filled('form_status'), function ($query) use ($request) {
-                    $query->where('form_status', $request->form_status);
-                })
-                ->paginate(10);
-            $formattedStudentInfo = $studentInfo->map(function ($submittedForm) {
-                $student = $submittedForm->student;
-                $course = $submittedForm->course;
+        // Validate input fields
+        $request->validate([
+            'form_status' => 'integer|nullable',
+            'student_id' => 'integer|nullable',
+            'courses_id' => 'integer|nullable',
+            'search' => 'string|nullable'
+        ]);
+
+        // Get the per_page value from the request, default to 10 if not provided or empty
+        $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? stp_submited_form::count() : (int)$request->per_page)
+            : 10;
+
+        // Define the custom order for form_status
+        $statusOrder = [
+            2 => 'Pending',
+            4 => 'Accepted',
+            1 => 'Active',
+            3 => 'Rejected',
+            0 => 'Disable'
+        ];
+
+        // Fetch applicant info with student, course, award, and cocurriculum details
+        $applicantInfo = stp_submited_form::with(['student','student.award.title', 'course', 'student.award' => function($query) {
+                $query->where('achievements_status', 1); // Filter by achievements_status = 1
+            }, 'student.cocurriculum' => function($query) {
+                $query->where('cocurriculums_status', 1); // Filter by cocurriculums_status = 1
+            }])
+            ->whereHas('course', function ($query) use ($schoolID) {
+                $query->where('school_id', $schoolID);
+            })
+            ->when($request->filled('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->when($request->filled('form_status'), function ($query) use ($request) {
+                $query->where('form_status', $request->form_status);
+            })
+            // Add search filter for student name (first or last name)
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = $request->search;
+                $query->whereHas('student.detail', function ($query) use ($search) {
+                    $query->where('student_detailFirstName', 'like', '%' . $search . '%')
+                          ->orWhere('student_detailLastName', 'like', '%' . $search . '%');
+                });
+            })
+            // Apply custom order sorting by form_status
+            ->orderByRaw("FIELD(form_status, 2, 4, 1, 3, 0)")
+            ->paginate($perPage)
+            ->through(function ($applicant) use ($statusOrder) {
+                $status = $statusOrder[$applicant->form_status] ?? null;
+
+                // Filter and get all the award names and cocurriculum details with the desired status
+                // $awardNames = $applicant->student->award->filter(function($achievement) {
+                //     return $achievement->achievements_status == 1;
+                // })->pluck('achievement_name');
+                
+                $awardTitles = $applicant->student->award->filter(function($achievement) {
+                    return $achievement->achievements_status == 1;
+                })->map(function($achievement) {
+                    return $achievement->title->core_metaName ?? null;
+                });
+                
+
+                // $cocurriculumNames = $applicant->student->cocurriculum->filter(function($cocurriculum) {
+                //     return $cocurriculum->cocurriculums_status == 1;
+                // })->pluck('club_name');
+
+                $cocurriculumPositions = $applicant->student->cocurriculum->filter(function($cocurriculum) {
+                    return $cocurriculum->cocurriculums_status == 1;
+                })->pluck('student_position');
+
                 return [
-                    "courses_id" => $course->id ?? 'N/A',
-                    "course_name" => $course->course_name ?? 'N/A',
-                    "form_status" => $submittedForm->form_status == 2 ? "Pending" : ($submittedForm->form_status == 3 ? "Rejected" : "Accepted"),
-                    "student_name" => $student->detail->student_detailFirstName . ' ' . $student->detail->student_detailLastName,
-                    "country_code" => $student->student_countryCode ?? 'N/A',
-                    "contact_number" => $student->student_contactNo ?? 'N/A',
-                    'school_id' => $course->school_id ?? 'N/A',
-                    'student_id' => $student->id ?? 'N/A', // Add student_id to the result
+                    "id" => $applicant->id ?? 'N/A',
+                    "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
+                    "email"=>$applicant->student->student_email,
+                    "course_name" => $applicant->course->course_name ?? 'N/A',
+                    "institution" => $applicant->course->school->school_name,
+                    "form_status" => $status,
+                    "country_code" => $applicant->student->student_countryCode ?? 'N/A',
+                    "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
+                    "student_id" => $applicant->student->id,
+                    "award_count" => $awardTitles->count(), // Count of award titles
+                    "cocurriculum_count" => $cocurriculumPositions->count(), // Count of cocurriculum positions
                 ];
             });
-            return response()->json([
-                'success' => true,
-                'data' => $studentInfo
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Internal Sever Error',
-                'error' => $e
-            ]);
-        }
+
+        return response()->json($applicantInfo);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
+
     public function resetSchoolPassword(Request $request)
     {
         try {

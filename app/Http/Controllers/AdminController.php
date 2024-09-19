@@ -2091,7 +2091,8 @@ class AdminController extends Controller
             $request->validate([
                 'form_status' => 'integer|nullable',
                 'student_id' => 'integer|nullable',
-                'courses_id' => 'integer|nullable'
+                'courses_id' => 'integer|nullable',
+                 'search' => 'string|nullable'
             ]);
 
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -2112,6 +2113,13 @@ class AdminController extends Controller
                 })
                 ->when($request->filled('form_status'), function ($query) use ($request) {
                     $query->where('form_status', $request->form_status);
+                })
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $search = $request->search;
+                    $query->whereHas('student.detail', function ($query) use ($search) {
+                        $query->where('student_detailFirstName', 'like', '%' . $search . '%')
+                              ->orWhere('student_detailLastName', 'like', '%' . $search . '%');
+                    });
                 })
                 ->paginate($perPage)
                 ->through(function ($applicant) {
@@ -2142,7 +2150,7 @@ class AdminController extends Controller
                         "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
                         "country_code" => $applicant->student->student_countryCode ?? 'N/A',
                         "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
-                        'student_id' => $applicant->id, // Add student_id to the result
+                        'student_id' => $applicant->student->id, // Add student_id to the result
                     ];
                 });
 
@@ -2989,19 +2997,28 @@ class AdminController extends Controller
     }
 
     public function bannerListAdmin(Request $request)
-
     {
         try {
             // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_advertisement_banner::count() : (int)$request->per_page)
                 : 10;
-
-            $bannerList = stp_advertisement_banner::when($request->filled('search'), function ($query) use ($request) {
+    
+            // Build the query
+            $query = stp_advertisement_banner::query();
+    
+            // Filter by search term if provided
+            if ($request->filled('search')) {
                 $query->where('banner_name', 'like', '%' . $request->search . '%');
-            })
-
-                ->paginate($perPage)
+            }
+    
+            // Filter by ID if provided
+            if ($request->filled('id')) {
+                $query->where('id', $request->id);
+            }
+    
+            // Paginate the results
+            $bannerList = $query->paginate($perPage)
                 ->through(function ($banner) {
                     switch ($banner->banner_status) {
                         case 0:
@@ -3013,16 +3030,19 @@ class AdminController extends Controller
                         default:
                             $status = null;
                     }
-
+    
                     return [
                         'id' => $banner->id,
                         'name' => $banner->banner_name,
                         'file' => $banner->banner_file,
                         'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
+                        'banner_start'=>$banner->banner_start,
+                        'banner_end'=>$banner->banner_end,
                         'featured' => $banner->banner->core_metaName ?? '',
                         'status' => $status
                     ];
                 });
+    
             return response()->json($bannerList);
         } catch (\Exception $e) {
             return response()->json([
@@ -3032,7 +3052,7 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
+    
     public function addBanner(Request $request)
     {
         try {
