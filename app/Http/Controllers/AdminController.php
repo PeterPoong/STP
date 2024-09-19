@@ -3042,7 +3042,7 @@ class AdminController extends Controller
                     'id' => $banner->id,
                     'name' => $banner->banner_name,
                     'url' => $banner->banner_url,
-                    'file' => url('storage/' . $banner->banner_file), // Full URL for the file
+                    'file' => $banner->banner_file,
                     'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
                     'banner_start' => $banner->banner_start,
                     'banner_end' => $banner->banner_end,
