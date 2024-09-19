@@ -22,8 +22,10 @@ class stp_advertisement_banner extends Model
         'updated_by'
     ];
 
-    public function banner(): BelongsTo
-    {
-        return $this->belongsTo(stp_core_meta::class, 'featured_id', 'id');
-    }
+// In stp_advertisement_banner.php
+        public function banner(): BelongsTo
+        {
+            return $this->belongsTo(stp_core_meta::class, 'featured_id', 'id');
+        }
+
 }

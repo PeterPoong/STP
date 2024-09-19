@@ -2997,62 +2997,70 @@ class AdminController extends Controller
     }
 
     public function bannerListAdmin(Request $request)
-    {
-        try {
-            // Get the per_page value from the request, default to 10 if not provided or empty
-            $perPage = $request->filled('per_page') && $request->per_page !== ""
-                ? ($request->per_page === 'All' ? stp_advertisement_banner::count() : (int)$request->per_page)
-                : 10;
-    
-            // Build the query
-            $query = stp_advertisement_banner::query();
-    
-            // Filter by search term if provided
-            if ($request->filled('search')) {
-                $query->where('banner_name', 'like', '%' . $request->search . '%');
-            }
-    
-            // Filter by ID if provided
-            if ($request->filled('id')) {
-                $query->where('id', $request->id);
-            }
-    
-            // Paginate the results
-            $bannerList = $query->paginate($perPage)
-                ->through(function ($banner) {
-                    switch ($banner->banner_status) {
-                        case 0:
-                            $status = "Disable";
-                            break;
-                        case 1:
-                            $status = "Active";
-                            break;
-                        default:
-                            $status = null;
-                    }
-    
-                    return [
-                        'id' => $banner->id,
-                        'name' => $banner->banner_name,
-                        'url'=>$banner->banner_url,
-                        'file' => $banner->banner_file,
-                        'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
-                        'banner_start'=>$banner->banner_start,
-                        'banner_end'=>$banner->banner_end,
-                        'featured' => $banner->banner->core_metaName ?? '',
-                        'status' => $status
-                    ];
-                });
-    
-            return response()->json($bannerList);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Internal Server Error',
-                'error' => $e->getMessage()
-            ], 500);
+{
+    try {
+        // Get the per_page value from the request, default to 10 if not provided or empty
+        $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? stp_advertisement_banner::count() : (int)$request->per_page)
+            : 10;
+
+        // Build the query
+        $query = stp_advertisement_banner::query();
+
+        // Filter by search term if provided
+        if ($request->filled('search')) {
+            $query->where('banner_name', 'like', '%' . $request->search . '%');
         }
+
+        // Filter by ID if provided
+        if ($request->filled('id')) {
+            $query->where('id', $request->id);
+        }
+
+        // Paginate the results
+        $bannerList = $query->paginate($perPage)
+            ->through(function ($banner) {
+                // Map banner_status to status label
+                switch ($banner->banner_status) {
+                    case 0:
+                        $status = "Disable";
+                        break;
+                    case 1:
+                        $status = "Active";
+                        break;
+                    default:
+                        $status = null;
+                }
+
+                // Get the featured metadata
+                $featured = $banner->banner ? [
+                    'featured_id' => $banner->banner->id,
+                    'core_metaName' => $banner->banner->core_metaName
+                ] : [];
+
+                return [
+                    'id' => $banner->id,
+                    'name' => $banner->banner_name,
+                    'url' => $banner->banner_url,
+                    'file' => url('storage/' . $banner->banner_file), // Full URL for the file
+                    'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
+                    'banner_start' => $banner->banner_start,
+                    'banner_end' => $banner->banner_end,
+                    'featured' => $featured, // Single featured_id and core_metaName
+                    'status' => $status
+                ];
+            });
+
+        return response()->json($bannerList);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
     
     public function addBanner(Request $request)
     {
@@ -3123,7 +3131,8 @@ class AdminController extends Controller
                 'banner_name' => 'required|string|max:255',
                 'banner_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Make banner_file nullable
                 'banner_url' => 'required|string|max:255',
-                'featured_id' => 'required|integer',
+                'featured_id' => 'required|array',  // Validate as array
+                'featured_id.*' => 'integer',       // Each item in the array should be an integer
                 'banner_start' => 'required|date_format:Y-m-d H:i:s',
                 'banner_end' => 'required|date_format:Y-m-d H:i:s'
             ]);
@@ -3155,16 +3164,18 @@ class AdminController extends Controller
             }
 
             // Update the banner with the new or existing file path and other details
+            foreach ($request->featured_id as $featuredId) {
             $adBanner->update([
                 'banner_name' => $request->banner_name,
                 'banner_file' => $imagePath, // Use the existing or new file path
                 'banner_url' => $request->banner_url,
-                'featured_id' => $request->featured_id,
+               'featured_id' => $featuredId,  // Insert each featured_id here
                 'banner_start' => $request->banner_start,
                 'banner_end' => $request->banner_end,
                 'updated_by' => $authUser->id,
                 'updated_at' => now()
             ]);
+        }
 
             return response()->json([
                 'success' => true,
@@ -3364,6 +3375,32 @@ class AdminController extends Controller
                 ->where('core_metaStatus', 1)
                 ->whereIn('id', [60, 61, 62, 63, 76, 77])
                 ->paginate(10)
+                ->through(function ($category) {
+                    $status = ($category->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $category->core_metaName,
+                        "id" => $category->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $categoryList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    public function intakeList(Request $request)
+    {
+        try {
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52])
+                ->paginate(20)
                 ->through(function ($category) {
                     $status = ($category->status == 1) ? "Active" : "Inactive";
                     return [
