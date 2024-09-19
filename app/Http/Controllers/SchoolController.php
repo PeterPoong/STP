@@ -32,6 +32,7 @@ use App\Http\Controllers\serviceFunctionController;
 use App\Models\stp_intake;
 use App\Models\stp_school_media;
 use PHPUnit\TextUI\Help;
+use Carbon\Carbon;
 
 class SchoolController extends Controller
 {
@@ -639,109 +640,109 @@ class SchoolController extends Controller
         }
     }
 
-    public function applicantDetailInfo(Request $request)  
-{
-    try {
-        // Get the authenticated user
-        $authUser = Auth::user();
-        $schoolID = $authUser->id;
+    public function applicantDetailInfo(Request $request)
+    {
+        try {
+            // Get the authenticated user
+            $authUser = Auth::user();
+            $schoolID = $authUser->id;
 
-        // Validate input fields
-        $request->validate([
-            'form_status' => 'integer|nullable',
-            'student_id' => 'integer|nullable',
-            'courses_id' => 'integer|nullable',
-            'search' => 'string|nullable'
-        ]);
+            // Validate input fields
+            $request->validate([
+                'form_status' => 'integer|nullable',
+                'student_id' => 'integer|nullable',
+                'courses_id' => 'integer|nullable',
+                'search' => 'string|nullable'
+            ]);
 
-        // Get the per_page value from the request, default to 10 if not provided or empty
-        $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_submited_form::count() : (int)$request->per_page)
-            : 10;
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_submited_form::count() : (int)$request->per_page)
+                : 10;
 
-        // Define the custom order for form_status
-        $statusOrder = [
-            2 => 'Pending',
-            4 => 'Accepted',
-            1 => 'Active',
-            3 => 'Rejected',
-            0 => 'Disable'
-        ];
+            // Define the custom order for form_status
+            $statusOrder = [
+                2 => 'Pending',
+                4 => 'Accepted',
+                1 => 'Active',
+                3 => 'Rejected',
+                0 => 'Disable'
+            ];
 
-        // Fetch applicant info with student, course, award, and cocurriculum details
-        $applicantInfo = stp_submited_form::with(['student','student.award.title', 'course', 'student.award' => function($query) {
+            // Fetch applicant info with student, course, award, and cocurriculum details
+            $applicantInfo = stp_submited_form::with(['student', 'student.award.title', 'course', 'student.award' => function ($query) {
                 $query->where('achievements_status', 1); // Filter by achievements_status = 1
-            }, 'student.cocurriculum' => function($query) {
+            }, 'student.cocurriculum' => function ($query) {
                 $query->where('cocurriculums_status', 1); // Filter by cocurriculums_status = 1
             }])
-            ->whereHas('course', function ($query) use ($schoolID) {
-                $query->where('school_id', $schoolID);
-            })
-            ->when($request->filled('student_id'), function ($query) use ($request) {
-                $query->where('student_id', $request->student_id);
-            })
-            ->when($request->filled('form_status'), function ($query) use ($request) {
-                $query->where('form_status', $request->form_status);
-            })
-            // Add search filter for student name (first or last name)
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $search = $request->search;
-                $query->whereHas('student.detail', function ($query) use ($search) {
-                    $query->where('student_detailFirstName', 'like', '%' . $search . '%')
-                          ->orWhere('student_detailLastName', 'like', '%' . $search . '%');
+                ->whereHas('course', function ($query) use ($schoolID) {
+                    $query->where('school_id', $schoolID);
+                })
+                ->when($request->filled('student_id'), function ($query) use ($request) {
+                    $query->where('student_id', $request->student_id);
+                })
+                ->when($request->filled('form_status'), function ($query) use ($request) {
+                    $query->where('form_status', $request->form_status);
+                })
+                // Add search filter for student name (first or last name)
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $search = $request->search;
+                    $query->whereHas('student.detail', function ($query) use ($search) {
+                        $query->where('student_detailFirstName', 'like', '%' . $search . '%')
+                            ->orWhere('student_detailLastName', 'like', '%' . $search . '%');
+                    });
+                })
+                // Apply custom order sorting by form_status
+                ->orderByRaw("FIELD(form_status, 2, 4, 1, 3, 0)")
+                ->paginate($perPage)
+                ->through(function ($applicant) use ($statusOrder) {
+                    $status = $statusOrder[$applicant->form_status] ?? null;
+
+                    // Filter and get all the award names and cocurriculum details with the desired status
+                    // $awardNames = $applicant->student->award->filter(function($achievement) {
+                    //     return $achievement->achievements_status == 1;
+                    // })->pluck('achievement_name');
+
+                    $awardTitles = $applicant->student->award->filter(function ($achievement) {
+                        return $achievement->achievements_status == 1;
+                    })->map(function ($achievement) {
+                        return $achievement->title->core_metaName ?? null;
+                    });
+
+
+                    // $cocurriculumNames = $applicant->student->cocurriculum->filter(function($cocurriculum) {
+                    //     return $cocurriculum->cocurriculums_status == 1;
+                    // })->pluck('club_name');
+
+                    $cocurriculumPositions = $applicant->student->cocurriculum->filter(function ($cocurriculum) {
+                        return $cocurriculum->cocurriculums_status == 1;
+                    })->pluck('student_position');
+
+                    return [
+                        "id" => $applicant->id ?? 'N/A',
+                        "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
+                        "profile_pic" => $applicant->student->student_profilePic,
+                        "email" => $applicant->student->student_email,
+                        "course_name" => $applicant->course->course_name ?? 'N/A',
+                        "institution" => $applicant->course->school->school_name,
+                        "form_status" => $status,
+                        "country_code" => $applicant->student->student_countryCode ?? 'N/A',
+                        "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
+                        "student_id" => $applicant->student->id,
+                        "award_count" => $awardTitles->count(), // Count of award titles
+                        "cocurriculum_count" => $cocurriculumPositions->count(), // Count of cocurriculum positions
+                    ];
                 });
-            })
-            // Apply custom order sorting by form_status
-            ->orderByRaw("FIELD(form_status, 2, 4, 1, 3, 0)")
-            ->paginate($perPage)
-            ->through(function ($applicant) use ($statusOrder) {
-                $status = $statusOrder[$applicant->form_status] ?? null;
 
-                // Filter and get all the award names and cocurriculum details with the desired status
-                // $awardNames = $applicant->student->award->filter(function($achievement) {
-                //     return $achievement->achievements_status == 1;
-                // })->pluck('achievement_name');
-                
-                $awardTitles = $applicant->student->award->filter(function($achievement) {
-                    return $achievement->achievements_status == 1;
-                })->map(function($achievement) {
-                    return $achievement->title->core_metaName ?? null;
-                });
-                
-
-                // $cocurriculumNames = $applicant->student->cocurriculum->filter(function($cocurriculum) {
-                //     return $cocurriculum->cocurriculums_status == 1;
-                // })->pluck('club_name');
-
-                $cocurriculumPositions = $applicant->student->cocurriculum->filter(function($cocurriculum) {
-                    return $cocurriculum->cocurriculums_status == 1;
-                })->pluck('student_position');
-
-                return [
-                    "id" => $applicant->id ?? 'N/A',
-                    "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
-                    "profile_pic"=>$applicant->student->student_profilePic,
-                    "email"=>$applicant->student->student_email,
-                    "course_name" => $applicant->course->course_name ?? 'N/A',
-                    "institution" => $applicant->course->school->school_name,
-                    "form_status" => $status,
-                    "country_code" => $applicant->student->student_countryCode ?? 'N/A',
-                    "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
-                    "student_id" => $applicant->student->id,
-                    "award_count" => $awardTitles->count(), // Count of award titles
-                    "cocurriculum_count" => $cocurriculumPositions->count(), // Count of cocurriculum positions
-                ];
-            });
-
-        return response()->json($applicantInfo);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
+            return response()->json($applicantInfo);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
 
     public function resetSchoolPassword(Request $request)
@@ -1562,6 +1563,38 @@ class SchoolController extends Controller
             $Applicant = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
                 $query->where('school_id', $authUser->id);
             })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
                 ->with('student', 'course') // Eager load related student and course data
                 ->get();
 
@@ -1607,12 +1640,44 @@ class SchoolController extends Controller
     public function countryStatistic(Request $request)
     {
         try {
-
             $authUser = Auth::user();
             $applicants = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
                 $query->where('school_id', $authUser->id);
             })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
                 ->get();
+
 
 
             $countryCounts = [];
