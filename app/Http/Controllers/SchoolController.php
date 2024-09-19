@@ -720,6 +720,7 @@ class SchoolController extends Controller
                 return [
                     "id" => $applicant->id ?? 'N/A',
                     "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
+                    "profile_pic"=>$applicant->student->student_profilePic,
                     "email"=>$applicant->student->student_email,
                     "course_name" => $applicant->course->course_name ?? 'N/A',
                     "institution" => $applicant->course->school->school_name,
