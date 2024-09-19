@@ -51,51 +51,54 @@ class studentController extends Controller
     public function schoolList(Request $request)
     {
         try {
-
-
+            // Start building the query
             $getSchoolList = stp_school::where('school_status', 1)
+                // Exclude schools with zero courses (ensure the school has courses)
+                ->whereHas('courses')
+                
+                // Filter by institute category (array of categories)
                 ->when($request->filled('category'), function ($query) use ($request) {
                     $query->whereIn('institue_category', $request->category);
                 })
+                // Filter by country (array of country IDs)
                 ->when($request->filled('country'), function ($query) use ($request) {
-                    $query->Where('country_id', $request->country);
+                    $query->whereIn('country_id', $request->country);
                 })
+                // Filter by location (array of state IDs)
                 ->when($request->filled('location'), function ($query) use ($request) {
-                    $query->Where('state_id', $request->location);
+                    $query->whereIn('state_id', $request->location);
                 })
+                // Handle search (multiple search terms)
                 ->when($request->filled('search'), function ($query) use ($request) {
-                    $query->where(function ($q) use ($request) {
-                        // Search in school name
-                        $q->where('school_name', 'like', '%' . $request->search . '%')
-                            // Search in country name using the relationship
-                            ->orWhereHas('country', function ($q) use ($request) {
-                                $q->where('country_name', 'like', '%' . $request->search . '%'); // Adjust field name as needed
-                            });
-                    });
+                    $searchTerms = is_array($request->search) ? $request->search : [$request->search];
+                    foreach ($searchTerms as $searchTerm) {
+                        $query->where(function ($q) use ($searchTerm) {
+                            $q->where('school_name', 'like', '%' . $searchTerm . '%')
+                                ->orWhereHas('country', function ($q) use ($searchTerm) {
+                                    $q->where('country_name', 'like', '%' . $searchTerm . '%');
+                                });
+                        });
+                    }
                 })
+                // Filter by course category (array of categories)
                 ->when($request->filled('courseCategory'), function ($query) use ($request) {
                     $query->whereHas('courses', function ($q) use ($request) {
                         $q->whereIn('category_id', $request->courseCategory);
                     });
                 })
+                // Filter by study level (array of qualification IDs)
                 ->when($request->filled('studyLevel'), function ($query) use ($request) {
                     $query->whereHas('courses', function ($q) use ($request) {
                         $q->whereIn('qualification_id', $request->studyLevel);
                     });
                 })
+                ->with(['courses.intake.month', 'featured', 'institueCategory', 'country', 'state', 'city'])
                 ->paginate(10);
-
-
-
-
-
-
-
+    
             $schoolList = [];
-
-
+    
             foreach ($getSchoolList as $school) {
-
+                // Handle featured status
                 $featured = false;
                 foreach ($school->featured as $s) {
                     if ($s['featured_type'] == 30 && $s['featured_status'] == 1) {
@@ -103,19 +106,18 @@ class studentController extends Controller
                         break;
                     }
                 }
-
+    
+                // Filter courses by category if needed
                 $filteredCourses = $school->courses->filter(function ($course) use ($request) {
                     if ($request->filled('courseCategory')) {
-                        // Check if courseCategory is an array and use in_array for comparison
                         $courseCategories = is_array($request->courseCategory) ? $request->courseCategory : [$request->courseCategory];
                         return in_array($course->category_id, $courseCategories);
                     }
                     return true; // If courseCategory is not filled, return all courses
                 })->values();
-
-
-
-                $numberCourses = count($filteredCourses);
+    
+                // No need to check for 0 courses anymore, since we've already excluded such schools
+    
                 $monthList = [];
                 foreach ($filteredCourses as $courses) {
                     foreach ($courses->intake as $c) {
@@ -125,7 +127,8 @@ class studentController extends Controller
                         }
                     }
                 }
-
+    
+                // Collect school data, with courses reflecting the filtered results
                 $schoolList[] = [
                     'id' => $school->id,
                     'name' => $school->school_name,
@@ -136,27 +139,31 @@ class studentController extends Controller
                     'state' => $school->state->state_name ?? null,
                     'city' => $school->city->city_name ?? null,
                     'description' => $school->school_shortDesc,
-                    'courses' => $numberCourses,
+                    'courses' => count($filteredCourses),  // Updated to show filtered course count
                     'intake' => $monthList
                 ];
             }
-
+    
+            // Sort the results by featured status
             usort($schoolList, function ($a, $b) {
                 return $b['featured'] <=> $a['featured'];
             });
-
+    
+            // Return the response
             return response()->json([
                 'success' => true,
                 'data' => $schoolList
             ]);
         } catch (Exception $e) {
+            // Handle errors
             return response()->json([
                 'success' => false,
-                'message' => 'Internal Sever Error',
+                'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ]);
         }
     }
+    
 
     public function schoolDetail(Request $request)
     {
