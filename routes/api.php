@@ -223,8 +223,15 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/resetSchoolPassword', [SchoolController::class, 'resetSchoolPassword']);
     Route::post('/resetDummySchoolPassword', [SchoolController::class, 'resetDummySchoolPassword']);
 
-    //statistic
-    Route::post('/countryStatistic', [SchoolController::class, 'countryStatistic']);
+    //country statistic
+    Route::post('/countryStatisticPieChart', [SchoolController::class, 'countryStatistic']);
+    Route::post('/countryStatisticBarGraph', [SchoolController::class, 'countryStatisticBarGraph']);
+    //program statistic
+    Route::post('/programStatisticPieChart', [SchoolController::class, 'programStatisticPieChart']);
+    Route::post('/programStatisticBarChart', [SchoolController::class, 'programStatisticBarChart']);
+    //gender statistic
+    Route::post('/genderStatisticPieChart', [SchoolController::class, 'genderStatisticPieChart']);
+    Route::post('/genderStatisticBarChart', [SchoolController::class, 'genderStatisticBarChart']);
 });
 
 

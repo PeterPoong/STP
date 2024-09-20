@@ -1655,6 +1655,12 @@ class SchoolController extends Controller
                         case "this_week":
                             $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
                             break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
                         case "this_month":
                             $query->whereMonth('created_at', Carbon::now()->month)
                                 ->whereYear('created_at', Carbon::now()->year);
@@ -1697,6 +1703,504 @@ class SchoolController extends Controller
             foreach ($countryCounts as $countryName => $count) {
                 $result[] = [$countryName, $count];
             }
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function countryStatisticBarGraph(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $applicants = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
+                ->get();
+
+
+
+            $countryCounts = [];
+
+            foreach ($applicants as $applicant) {
+                $countryName = $applicant->student->detail->country->country_name;
+
+                // Initialize country counts if not already set
+                if (!isset($countryCounts[$countryName])) {
+                    $countryCounts[$countryName] = [
+                        'disable' => 0,
+                        'active' => 0,
+                        'pending' => 0,
+                        'reject' => 0,
+                        'accept' => 0,
+                    ];
+                }
+
+                // Increment based on form_status
+                switch ($applicant->form_status) {
+                    case 0:
+                        $countryCounts[$countryName]['disable']++;
+                        break;
+                    case 1:
+                        $countryCounts[$countryName]['active']++;
+                        break;
+                    case 2:
+                        $countryCounts[$countryName]['pending']++;
+                        break;
+                    case 3:
+                        $countryCounts[$countryName]['reject']++;
+                        break;
+                    case 4:
+                        $countryCounts[$countryName]['accept']++;
+                        break;
+                }
+            }
+
+            // $result = [["Country", "Pending", "Accept", "Reject"]];
+            $result = [];
+
+            foreach ($countryCounts as $countryName => $counts) {
+                $result[] = [
+                    $countryName,
+                    // 'disable' => $counts['disable'],
+                    // 'active' => $counts['active'],
+                    $counts['pending'],
+                    $counts['reject'],
+                    $counts['accept'],
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function programStatisticPieChart(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $applicants = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
+                ->get();
+
+            $courseCounts = [];
+            // return $applicants[0]->course->category->category_name;
+
+            // Count occurrences of each country
+            foreach ($applicants as $applicant) {
+                $courseCat = $applicant->course->category->category_name;
+                if (isset($courseCounts[$courseCat])) {
+                    $courseCounts[$courseCat]++;
+                } else {
+                    $courseCounts[$courseCat] = 1;
+                }
+            }
+
+            // Prepare the result in the desired format
+            $result = [];
+            foreach ($courseCounts as $courseCat => $count) {
+                $result[] = [$courseCat, $count];
+            }
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+
+            return $applicants;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                "error" => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function programStatisticBarChart(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $applicants = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
+                ->get();
+
+
+
+            $courseCounts = [];
+
+            foreach ($applicants as $applicant) {
+                $courseCat = $applicant->course->category->category_name;
+
+                // Initialize country counts if not already set
+                if (!isset($courseCounts[$courseCat])) {
+                    $courseCounts[$courseCat] = [
+                        'disable' => 0,
+                        'active' => 0,
+                        'pending' => 0,
+                        'reject' => 0,
+                        'accept' => 0,
+                    ];
+                }
+
+                // Increment based on form_status
+                switch ($applicant->form_status) {
+                    case 0:
+                        $courseCounts[$courseCat]['disable']++;
+                        break;
+                    case 1:
+                        $courseCounts[$courseCat]['active']++;
+                        break;
+                    case 2:
+                        $courseCounts[$courseCat]['pending']++;
+                        break;
+                    case 3:
+                        $courseCounts[$courseCat]['reject']++;
+                        break;
+                    case 4:
+                        $courseCounts[$courseCat]['accept']++;
+                        break;
+                }
+            }
+
+            // $result = [["Country", "Pending", "Accept", "Reject"]];
+            $result = [];
+
+            foreach ($courseCounts as $courseCat => $counts) {
+                $result[] = [
+                    $courseCat,
+                    // 'disable' => $counts['disable'],
+                    // 'active' => $counts['active'],
+                    $counts['pending'],
+                    $counts['reject'],
+                    $counts['accept'],
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function genderStatisticPieChart(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $applicants = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
+                ->get();
+
+
+
+            $genderCount = [];
+            // return $applicants[0]->course->category->category_name;
+
+            // Count occurrences of each country
+            foreach ($applicants as $applicant) {
+                $courseGender = $applicant->student->detail->studentGender->core_metaName;
+                if (isset($genderCount[$courseGender])) {
+                    $genderCount[$courseGender]++;
+                } else {
+                    $genderCount[$courseGender] = 1;
+                }
+            }
+
+            // Prepare the result in the desired format
+            $result = [];
+            foreach ($genderCount as $courseGender => $count) {
+                $result[] = [$courseGender, $count];
+            }
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+
+            return $applicants;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                "error" => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function genderStatisticBarChart(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $applicants = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
+                ->get();
+
+
+
+            $genderCount = [];
+
+            foreach ($applicants as $applicant) {
+                $courseGender = $applicant->student->detail->studentGender->core_metaName;
+
+                // Initialize country counts if not already set
+                if (!isset($genderCount[$courseGender])) {
+                    $genderCount[$courseGender] = [
+                        'disable' => 0,
+                        'active' => 0,
+                        'pending' => 0,
+                        'reject' => 0,
+                        'accept' => 0,
+                    ];
+                }
+
+                // Increment based on form_status
+                switch ($applicant->form_status) {
+                    case 0:
+                        $genderCount[$courseGender]['disable']++;
+                        break;
+                    case 1:
+                        $genderCount[$courseGender]['active']++;
+                        break;
+                    case 2:
+                        $genderCount[$courseGender]['pending']++;
+                        break;
+                    case 3:
+                        $genderCount[$courseGender]['reject']++;
+                        break;
+                    case 4:
+                        $genderCount[$courseGender]['accept']++;
+                        break;
+                }
+            }
+
+            // $result = [["Country", "Pending", "Accept", "Reject"]];
+            $result = [];
+
+            foreach ($genderCount as $courseGender => $counts) {
+                $result[] = [
+                    $courseGender,
+                    // 'disable' => $counts['disable'],
+                    // 'active' => $counts['active'],
+                    $counts['pending'],
+                    $counts['reject'],
+                    $counts['accept'],
+                ];
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => $result

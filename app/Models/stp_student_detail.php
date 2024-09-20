@@ -32,6 +32,8 @@ class stp_student_detail extends Model
         return $this->belongsTo(stp_student::class, 'student_id', 'id');
     }
 
+
+
     public function country(): BelongsTo
     {
         return $this->belongsTo(stp_country::class, 'country_id', 'id');
