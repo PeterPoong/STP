@@ -3419,4 +3419,29 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+    public function schoolListAdmin(Request $request)
+    {
+        try {
+            $schoolList = stp_school::query()
+                ->where('school_status', 1)
+                ->get()
+                ->map(function ($school) {
+                    $status = ($school->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $school->school_name,
+                        "id" => $school->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $schoolList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
