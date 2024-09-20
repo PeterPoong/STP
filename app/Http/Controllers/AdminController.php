@@ -1012,6 +1012,7 @@ class AdminController extends Controller
                 'course_period' => $request->period,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
+                'study_mode'=> $request->mode,
                 'logo' => $imagePath ?? '',
                 'created_by' => $authUser->id,
                 'course_status' => 1,
