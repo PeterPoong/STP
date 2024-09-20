@@ -1472,7 +1472,8 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'name' => 'required|string|unique:stp_courses_categories,category_name',
-                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validationt
+                'description'=>'string|max:5000'
             ]);
             $authUser = Auth::user();
 
@@ -1485,6 +1486,7 @@ class AdminController extends Controller
             $data = [
                 "category_name" => $request->name,
                 "category_icon" => $imagePath ?? null,
+                "category_description"=>$request->description,
                 "created_by" => $authUser->id
             ];
 
