@@ -986,7 +986,7 @@ class AdminController extends Controller
                 'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
-                'course_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
             $authUser = Auth::user();
@@ -999,7 +999,7 @@ class AdminController extends Controller
                 ]);
             }
             if ($request->hasFile('course_logo')) {
-                $image = $request->file('course_logo');
+                $image = $request->file('logo');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('courseLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
@@ -1010,10 +1010,10 @@ class AdminController extends Controller
                 'course_requirement' => $request->requirement ?? null,
                 'course_cost' => $request->cost,
                 'course_period' => $request->period,
-                'course_intake' => $request->intake,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
-                'course_logo' => $imagePath ?? '',
+                'study_mode'=> $request->mode,
+                'logo' => $imagePath ?? '',
                 'created_by' => $authUser->id,
                 'course_status' => 1,
                 'created_at' => now()
@@ -3411,6 +3411,31 @@ class AdminController extends Controller
                 });
 
             return $categoryList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function schoolListAdmin(Request $request)
+    {
+        try {
+            $schoolList = stp_school::query()
+                ->where('school_status', 1)
+                ->get()
+                ->map(function ($school) {
+                    $status = ($school->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $school->school_name,
+                        "id" => $school->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $schoolList;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

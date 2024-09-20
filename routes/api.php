@@ -115,6 +115,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editStatus', [AdminController::class, 'editStudentStatus']);
 
     Route::post('/schoolList', [AdminController::class, 'schoolList']);
+    Route::get('/schoolListAdmin', [AdminController::class, 'schoolListAdmin']);
     Route::post('/addSchool', [AdminController::class, 'addSchool']);
     Route::post('/editSchool', [AdminController::class, 'editSchool']);
     Route::post('/editSchoolStatus', [AdminController::class, 'editSchoolStatus']);
