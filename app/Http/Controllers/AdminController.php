@@ -986,7 +986,7 @@ class AdminController extends Controller
                 'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
-                'course_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
             $authUser = Auth::user();
@@ -999,7 +999,7 @@ class AdminController extends Controller
                 ]);
             }
             if ($request->hasFile('course_logo')) {
-                $image = $request->file('course_logo');
+                $image = $request->file('logo');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('courseLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
@@ -1010,10 +1010,9 @@ class AdminController extends Controller
                 'course_requirement' => $request->requirement ?? null,
                 'course_cost' => $request->cost,
                 'course_period' => $request->period,
-                'course_intake' => $request->intake,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
-                'course_logo' => $imagePath ?? '',
+                'logo' => $imagePath ?? '',
                 'created_by' => $authUser->id,
                 'course_status' => 1,
                 'created_at' => now()
