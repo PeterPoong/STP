@@ -43,10 +43,9 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'name' => 'required|string|max:255',
-                'firt_name' => 'string|max:255',
+                'first_name' => 'string|max:255',
                 'last_name' => 'string|max:255',
                 'gender' => 'integer',
-                'ic' => 'integer',
                 'postcode' => 'string',
                 'country_code' => 'required|string|max:255',
                 'contact_number' => 'required|numeric|digits_between:1,15',
@@ -215,7 +214,7 @@ class AdminController extends Controller
                 'state' => 'integer',
                 'gender' => 'integer',
                 'postcode' => 'string',
-                'ic' => 'integer|min:6|',
+                'ic' => 'string|min:6|',
                 'password' => 'required|string|min:8',
                 'confirm_password' => 'required|string|min:8|same:password',
                 'country_code' => 'required',
@@ -1472,7 +1471,8 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'name' => 'required|string|unique:stp_courses_categories,category_name',
-                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validationt
+                'description'=>'string|max:5000'
             ]);
             $authUser = Auth::user();
 
@@ -1485,6 +1485,7 @@ class AdminController extends Controller
             $data = [
                 "category_name" => $request->name,
                 "category_icon" => $imagePath ?? null,
+                "category_description"=>$request->description,
                 "created_by" => $authUser->id
             ];
 
@@ -2711,7 +2712,6 @@ class AdminController extends Controller
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'string|max:255',
-                'ic_number' => 'nullable|integer',
                 'country_code' => 'required|string|max:255',
                 'contact_no' => 'required|string|max:255',
                 'password' => 'required|string|max:255',
@@ -2917,7 +2917,7 @@ class AdminController extends Controller
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
                 'email' => 'string|max:255',
-                'ic_number' => 'nullable|integer',
+                'ic_number' => 'nullable|string',
                 'country_code' => 'required|string|max:255',
                 'contact_no' => 'required|string|max:255',
                 'password' => 'nullable|string|max:255', // Make password nullable for edits
