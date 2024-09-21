@@ -386,7 +386,7 @@ class AuthController extends Controller
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255|unique:stp_students,student_email',
-                'ic' => 'required|integer|unique:stp_students,student_icNumber'
+                'ic' => 'required|string|unique:stp_students,student_icNumber'
             ]);
 
             $checkingUser = stp_student::where('student_countryCode', $request->country_code)
