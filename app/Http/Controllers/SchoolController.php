@@ -2213,4 +2213,200 @@ class SchoolController extends Controller
             ]);
         }
     }
+
+    public function qualificationStatisticPieChart(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $applicants = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
+                ->get();
+
+
+
+
+
+            $qualificationCount = [];
+            // return $applicants[0]->course->category->category_name;
+
+            // Count occurrences of each country
+            foreach ($applicants as $applicant) {
+                $qualification = $applicant->course->qualification->qualification_name;
+                if (isset($qualificationCount[$qualification])) {
+                    $qualificationCount[$qualification]++;
+                } else {
+                    $qualificationCount[$qualification] = 1;
+                }
+            }
+
+            // Prepare the result in the desired format
+            $result = [];
+            foreach ($qualificationCount as $qualification => $count) {
+                $result[] = [$qualification, $count];
+            }
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+
+            return $applicants;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                "error" => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function qualificationStatisticBarChart(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $applicants = stp_submited_form::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
+                ->get();
+
+
+
+            $qualificationCount = [];
+
+            foreach ($applicants as $applicant) {
+                $qualification = $applicant->course->qualification->qualification_name;
+
+                // Initialize country counts if not already set
+                if (!isset($qualificationCount[$qualification])) {
+                    $qualificationCount[$qualification] = [
+                        'disable' => 0,
+                        'active' => 0,
+                        'pending' => 0,
+                        'reject' => 0,
+                        'accept' => 0,
+                    ];
+                }
+
+                // Increment based on form_status
+                switch ($applicant->form_status) {
+                    case 0:
+                        $qualificationCount[$qualification]['disable']++;
+                        break;
+                    case 1:
+                        $qualificationCount[$qualification]['active']++;
+                        break;
+                    case 2:
+                        $qualificationCount[$qualification]['pending']++;
+                        break;
+                    case 3:
+                        $qualificationCount[$qualification]['reject']++;
+                        break;
+                    case 4:
+                        $qualificationCount[$qualification]['accept']++;
+                        break;
+                }
+            }
+
+            // $result = [["Country", "Pending", "Accept", "Reject"]];
+            $result = [];
+
+            foreach ($qualificationCount as $qualification => $counts) {
+                $result[] = [
+                    $qualification,
+                    // 'disable' => $counts['disable'],
+                    // 'active' => $counts['active'],
+                    $counts['pending'],
+                    $counts['reject'],
+                    $counts['accept'],
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

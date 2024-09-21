@@ -233,6 +233,9 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     //gender statistic
     Route::post('/genderStatisticPieChart', [SchoolController::class, 'genderStatisticPieChart']);
     Route::post('/genderStatisticBarChart', [SchoolController::class, 'genderStatisticBarChart']);
+    //qualification statistic
+    Route::post('/qualificationStatisticPieChart', [SchoolController::class, 'qualificationStatisticPieChart']);
+    Route::post('/qualificationStatisticBarChart', [SchoolController::class, 'qualificationStatisticBarChart']);
 });
 
 

@@ -55,7 +55,7 @@ class studentController extends Controller
             $getSchoolList = stp_school::where('school_status', 1)
                 // Exclude schools with zero courses (ensure the school has courses)
                 ->whereHas('courses')
-                
+
                 // Filter by institute category (array of categories)
                 ->when($request->filled('category'), function ($query) use ($request) {
                     $query->whereIn('institue_category', $request->category);
@@ -94,9 +94,9 @@ class studentController extends Controller
                 })
                 ->with(['courses.intake.month', 'featured', 'institueCategory', 'country', 'state', 'city'])
                 ->paginate(10);
-    
+
             $schoolList = [];
-    
+
             foreach ($getSchoolList as $school) {
                 // Handle featured status
                 $featured = false;
@@ -106,7 +106,7 @@ class studentController extends Controller
                         break;
                     }
                 }
-    
+
                 // Filter courses by category if needed
                 $filteredCourses = $school->courses->filter(function ($course) use ($request) {
                     if ($request->filled('courseCategory')) {
@@ -115,9 +115,9 @@ class studentController extends Controller
                     }
                     return true; // If courseCategory is not filled, return all courses
                 })->values();
-    
+
                 // No need to check for 0 courses anymore, since we've already excluded such schools
-    
+
                 $monthList = [];
                 foreach ($filteredCourses as $courses) {
                     foreach ($courses->intake as $c) {
@@ -127,7 +127,7 @@ class studentController extends Controller
                         }
                     }
                 }
-    
+
                 // Collect school data, with courses reflecting the filtered results
                 $schoolList[] = [
                     'id' => $school->id,
@@ -143,12 +143,12 @@ class studentController extends Controller
                     'intake' => $monthList
                 ];
             }
-    
+
             // Sort the results by featured status
             usort($schoolList, function ($a, $b) {
                 return $b['featured'] <=> $a['featured'];
             });
-    
+
             // Return the response
             return response()->json([
                 'success' => true,
@@ -163,7 +163,7 @@ class studentController extends Controller
             ]);
         }
     }
-    
+
 
     public function schoolDetail(Request $request)
     {
@@ -1146,7 +1146,7 @@ class studentController extends Controller
                 'state' => 'integer',
                 'gender' => 'integer',
                 'postcode' => 'string',
-                'ic' => 'integer|min:6|',
+                'ic' => 'string|min:6|',
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255',
