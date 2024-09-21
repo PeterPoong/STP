@@ -2285,30 +2285,12 @@ class AdminController extends Controller
                 'package_price' => 'required|numeric|regex:/^\d+(\.\d{1,2})?$/'
             ]);
 
-            // Convert the package_detail input into an HTML list
-            $packageDetail = $request->package_detail;
-
-            // Split the input by line breaks
-            $lines = preg_split("/\r\n|\n|\r/", $packageDetail);
-
-            // Initialize the HTML structure
-            $htmlOutput = "<ul>";
-
-            // Loop through each line, clean it, and wrap it in <li> tags
-            foreach ($lines as $line) {
-                $cleanedLine = preg_replace("/^\d+\)\s*/", '', $line);
-                $htmlOutput .= "<li>" . htmlentities($cleanedLine) . "</li>";
-            }
-
-            // Close the <ul> tag
-            $htmlOutput .= "</ul>";
-
 
             $authUser = Auth::user();
 
             stp_package::create([
                 'package_name' => $request->package_name,
-                'package_detail' => $htmlOutput, // Save the HTML list
+                'package_detail' => $request->package_detail, // Save the HTML list
                 'package_type' => $request->package_type,
                 'package_price' => $request->package_price,
                 'created_by' => $authUser->id,
