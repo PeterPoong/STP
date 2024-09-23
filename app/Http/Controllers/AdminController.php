@@ -1164,10 +1164,10 @@ class AdminController extends Controller
                 'cost' => $courseList->course_cost,
                 'period' => $courseList->course_period,
                 'intake' => $intakeList, // Updated to include all intakes
-                'category' => $courseList->category->category_name,
+                'category' => $courseList->category->id,
                 'school' => $courseList->school->school_name,
                 'qualification' => $courseList->qualification->qualifiation_name,
-                'mode' => $courseList->studyMode->core_metaName ?? null,
+                'mode' => $courseList->studyMode->id?? null,
                 'logo' => $logo,
                 'tag' => $tagList
             ];
