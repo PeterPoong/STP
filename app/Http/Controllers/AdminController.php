@@ -1280,58 +1280,140 @@ class AdminController extends Controller
         }
     }
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-        
-        const { name, schoolID, description, requirement, cost, period, category, qualification, mode } = formData;
-        
-        const formPayload = new FormData();
-        formPayload.append("name", name);
-        formPayload.append("schoolID", schoolID);
-        formPayload.append("description", description);
-        formPayload.append("requirement", requirement);
-        formPayload.append("cost", cost);
-        formPayload.append("period", period);
-        formPayload.append("category", category);
-        formPayload.append("qualification", qualification);
-        formPayload.append("mode", mode);
-        
-        // Append each selected intake value as "intake[]"
-        selectedIntakes.forEach(intake => {
-            formPayload.append("intake[]", intake);
-        });
-        selectedCourses.forEach(course => {
-            formPayload.append("course[]", course);
-        });
-    
-        setLoading(true);  // Set loading state to true
-    
+    public function editCourse(Request $request)
+    {
         try {
-            const addCourseResponse = await fetch(`${import.meta.env.VITE_BASE_URL}api/admin/editCourse`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': Authenticate,  // No need for 'Content-Type' because FormData is used
-                },
-                body: formPayload,
-            });
+            $authUser = Auth::user();
     
-            const addCourseData = await addCourseResponse.json();
+            // Validate request
+            $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string|max:255',
+                'schoolID' => 'required|integer',
+                'description' => 'nullable|string|max:5000',
+                'requirement' => 'required|string|max:255',
+                'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
+                'period' => 'required|string|max:255',
+                'intake' => 'required|array',
+                'intake.*' => 'integer|between:41,52',
+                'courseFeatured' => 'required|array',
+                'courseFeatured.*' => 'integer',
+                'category' => 'required|integer',
+                'qualification' => 'required|integer',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            ]);
     
-            if (addCourseResponse.ok) {
-                console.log('Course successfully registered:', addCourseData);
-                navigate('/adminCourses');
-            } else {
-                console.error('Validation Error:', addCourseData.errors);
-                throw new Error(`Course Registration failed: ${addCourseData.message}`);
+            // Check if the course already exists with a different ID
+            $checkingCourse = stp_course::where('school_id', $request->schoolID)
+                ->where('course_name', $request->name)
+                ->where('id', '!=', $request->id)
+                ->exists();
+    
+            if ($checkingCourse) {
+                throw ValidationException::withMessages([
+                    "courses" => ['Course already exists in the school']
+                ]);
             }
-        } catch (error) {
-            setError('An error occurred during course registration. Please try again later.');
-            console.error('Error during course registration:', error);
-        } finally {
-            setLoading(false);  // Ensure loading state is set to false after completion
-        }
-    };
     
+            // Find the course to update
+            $course = stp_course::findOrFail($request->id);
+    
+            // Handle logo upload
+            $imagePath = $course->logo; // Default to current course logo
+            if ($request->hasFile('logo')) {
+                // Delete old image if it exists
+                if ($imagePath && Storage::exists('public/' . $imagePath)) {
+                    Storage::delete('public/' . $imagePath);
+                }
+                // Store new image
+                $image = $request->file('logo');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('courseLogo', $imageName, 'public');
+            }
+    
+            // Update course details
+            $course->update([
+                'school_id' => $request->schoolID,
+                'course_name' => $request->name,
+                'course_description' => $request->description ?? null,
+                'course_requirement' => $request->requirement,
+                'course_cost' => $request->cost,
+                'course_period' => $request->period,
+                'category_id' => $request->category,
+                'qualification_id' => $request->qualification,
+                'logo' => $imagePath ?? $course->course_logo,
+                'updated_by' => $authUser->id,
+                'updated_at' => now()
+            ]);
+    
+            // Handle intake months
+            $existingIntakes = stp_intake::where('course_id', $request->id)
+                ->where('intake_status', 1)
+                ->pluck('intake_month')
+                ->toArray();
+    
+            $newIntakes = array_diff($request->intake, $existingIntakes);
+            $removeIntakes = array_diff($existingIntakes, $request->intake);
+    
+            // Insert new intakes
+            foreach ($newIntakes as $intake) {
+                stp_intake::updateOrCreate(
+                    ['course_id' => $request->id, 'intake_month' => $intake],
+                    ['intake_status' => 1, 'created_by' => $authUser->id, 'updated_at' => now()]
+                );
+            }
+    
+            // Deactivate removed intakes
+            stp_intake::where('course_id', $request->id)
+                ->whereIn('intake_month', $removeIntakes)
+                ->update([
+                    'intake_status' => 0,
+                    'updated_by' => $authUser->id,
+                    'updated_at' => now()
+                ]);
+    
+            // Handle featured courses
+            $existingFeatured = stp_featured::where('course_id', $request->id)
+                ->pluck('featured_type')
+                ->toArray();
+    
+            $newFeatured = array_diff($request->courseFeatured, $existingFeatured);
+            $removeFeatured = array_diff($existingFeatured, $request->courseFeatured);
+    
+            // Insert new featured courses
+            foreach ($newFeatured as $featured) {
+                stp_featured::updateOrCreate(
+                    ['course_id' => $request->id, 'featured_type' => $featured],
+                    ['school_id' => $request->schoolID, 'featured_status' => 1, 'created_at' => now()]
+                );
+            }
+    
+            // Deactivate removed featured courses
+            stp_featured::where('course_id', $request->id)
+                ->whereIn('featured_type', $removeFeatured)
+                ->update([
+                    'featured_status' => 0,
+                    'updated_at' => now()
+                ]);
+    
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'errors' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'errors' => $e->getMessage()
+            ]);
+        }
+    }
     
 
     public function editCourseStatus(Request $request)
