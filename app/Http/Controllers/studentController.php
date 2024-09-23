@@ -1085,7 +1085,7 @@ class studentController extends Controller
                         "course_logo" => $course->course_logo ?: $course->school->school_logo,
                         "category_name" => $course->category->category_name,
                         "study_mode" => $course->studyMode->core_metaName ?? 'Not Available',
-                        "country_name" => $school->country->country_name,
+                        "country_name" => $school->country->country_name ?? null,
                         "state_name" => $school->state->state_name ?? null,
                         "city_name" => $school->city->city_name ?? null,
                         "status" => $status,

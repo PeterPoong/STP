@@ -519,12 +519,12 @@ class AdminController extends Controller
                 'institue_category' => $request->category,
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
-                'school_officialWebsite' => $request->school_website,
+                'school_officalWebsite' => $request->school_website,
                 'person_inChargeName' => $request->person_in_charge_name,
                 'person_inChargeNumber' => $request->person_in_charge_contact,
                 'person_inChargeEmail' => $request->person_in_charge_email,
                 'school_logo' => $imagePath ?? null,
-                'account' => $request->account_type,
+                'account_type' => $request->account,
                 'school_status' => 3,
                 'created_by' => $authUser->id
             ]);
@@ -619,49 +619,122 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|',
                 'password' => 'required|string|min:8',
                 'confirm_password' => 'required|string|min:8|same:password',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+                'country_code' => 'required',
+                'contact_number' => 'required|numeric|digits_between:1,15',
+                'email' => 'required|string|email|max:255|email',
+                'school_fullDesc' => 'required|string|max:5000',
+                'school_shortDesc' => 'required|string|max:255',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'featured' => 'nullable|array',
+                'featured.*' => 'integer',
+                'person_in_charge_name' => 'required|string|max:255',
+                'person_in_charge_contact' => 'required|string|max:255',
+                'person_in_charge_email' => 'required|email',
+                'category' => 'required|integer',
+                'account' => 'required|integer'
             ]);
-
+    
             $authUser = Auth::user();
-            //checking email 
+    
+            // Check if email is used by another school
             $checkingEmail = stp_school::where('id', '!=', $request->id)
                 ->where('school_email', $request->email)
                 ->exists();
-
             if ($checkingEmail) {
                 throw ValidationException::withMessages([
-                    'email' => ['email had been used']
+                    'email' => ['Email has been used'],
                 ]);
             }
-
-            //cheking contact 
+    
+            // Check if contact number is used by another school
             $checkingUserContact = stp_school::where('school_countryCode', $request->country_code)
                 ->where('school_contactNo', $request->contact_number)
                 ->where('id', '!=', $request->id)
                 ->exists();
-
             if ($checkingUserContact) {
                 throw ValidationException::withMessages([
-                    'contact_no' => ['Contact has been used'],
+                    'contact_no' => ['Contact number has been used'],
                 ]);
             }
-
-            //check logo if there is logo being upload will delete the old one 
+    
             $school = stp_school::find($request->id);
-
+    
+            // Handle logo update
             if ($request->hasFile('logo')) {
                 if (!empty($school->school_logo)) {
                     Storage::delete('public/' . $school->school_logo);
                 }
                 $image = $request->file('logo');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('schoolLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
+                $imagePath = $image->storeAs('schoolLogo', $imageName, 'public');
             }
-
-            $updateSchool = $school->update([
+    
+            // Handle cover photo update
+            if ($request->hasFile('cover')) {
+                $existingCover = stp_school_media::where('school_id', $school->id)->where('schoolMedia_type', 66)->first();
+                if ($existingCover) {
+                    Storage::delete('public/' . $existingCover->schoolMedia_location);
+                    $existingCover->delete();
+                }
+    
+                $cover = $request->file('cover');
+                $coverName = $school->school_name . '_cover.' . $cover->getClientOriginalExtension();
+                $coverPath = $cover->storeAs('schoolMedia', $coverName, 'public');
+                $coverFormat = $cover->getClientOriginalExtension();
+    
+                stp_school_media::create([
+                    'school_id' => $school->id,
+                    'schoolMedia_type' => 66,
+                    'schoolMedia_name' => $coverName,
+                    'schoolMedia_location' => $coverPath,
+                    'schoolMedia_format' => $coverFormat,
+                    'schoolMedia_status' => 1,
+                    'created_by' => $authUser->id,
+                    'created_at' => now()
+                ]);
+            }
+    
+            // Handle album photo update
+            if ($request->hasFile('album')) {
+                foreach ($request->file('album') as $albumPhoto) {
+                    $albumPhotoName = $albumPhoto->getClientOriginalName();
+                    $albumPhotoPath = $albumPhoto->storeAs('schoolMedia', $albumPhotoName, 'public');
+                    $albumPhotoFormat = $albumPhoto->getClientOriginalExtension();
+    
+                    stp_school_media::create([
+                        'school_id' => $school->id,
+                        'schoolMedia_type' => 67,
+                        'schoolMedia_name' => $albumPhotoName,
+                        'schoolMedia_location' => $albumPhotoPath,
+                        'schoolMedia_format' => $albumPhotoFormat,
+                        'schoolMedia_status' => 1,
+                        'created_by' => $authUser->id,
+                        'created_at' => now()
+                    ]);
+                }
+            }
+    
+            // Handle featured types update
+            if ($request->has('featured')) {
+                // First, remove existing featured records for the school
+                stp_featured::where('school_id', $school->id)->delete();
+    
+                // Insert new featured records
+                foreach ($request->featured as $featureId) {
+                    stp_featured::create([
+                        'school_id' => $school->id,
+                        'featured_type' => $featureId,
+                        'featured_status' => 1
+                    ]);
+                }
+            }
+    
+            // Update school details
+            $school->update([
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->country_code,
@@ -675,30 +748,30 @@ class AdminController extends Controller
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
                 'school_officalWebsite' => $request->school_website,
-                'school_logo' => $imagePath ?? null,
+                'school_logo' => $imagePath ?? $school->school_logo,
+                'account_type'=> $request->account,
                 'updated_by' => $authUser->id
             ]);
-
+    
             return response()->json([
-                "success" => true,
-                "data" => ['message' => 'Update Successfully']
+                'success' => true,
+                'data' => ['message' => 'School updated successfully']
             ]);
         } catch (ValidationException $e) {
             return response()->json([
-                "success" => false,
-                "message" => "Validation Error",
-                "errors" => $e->errors()
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
-                "success" => false,
-                "message" => "Internal Server Error",
-                "error" => $e->getMessage()
-            ]);
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
-
-    public function editSchoolStatus(Request $request)
+        public function editSchoolStatus(Request $request)
     {
         try {
             $authUser = Auth::user();
@@ -983,6 +1056,8 @@ class AdminController extends Controller
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
                 'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
+                'courseFeatured' => 'required|array',
+                'courseFeatured.*' => 'integer',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
@@ -1027,6 +1102,17 @@ class AdminController extends Controller
                     'created_at' => now()
                 ]);
             }
+
+            foreach ($request->courseFeatured as $courseFeatured) {
+                stp_featured::create ([
+                    'course_id'=>$course->id,
+                    'school_id'=>$request->schoolID,
+                    'featured_type'=>$courseFeatured,
+                    'featured_status'=>1,
+                    'created_at'=>now()
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => ['message' => 'Successfully Added the Courses']
@@ -1132,10 +1218,10 @@ class AdminController extends Controller
     {
         try {
             $request->validate([
-                'courseID' => 'required|integer'
+                'id' => 'required|integer'
             ]);
 
-            $courseList = stp_course::find($request->courseID);
+            $courseList = stp_course::find($request->id);
 
             if (empty($courseList->course_logo)) {
                 $logo = $courseList->school->school_logo;
@@ -1156,6 +1242,11 @@ class AdminController extends Controller
             foreach ($courseList->intake as $intake) {
                 $intakeList[] = $intake->month->core_metaName;
             }
+            $featuredList = [];
+            foreach ($courseList->featured as $courseFeatured) {
+                $featuredList[] = $courseFeatured->featured->id;
+            }
+            
             $courseListDetail = [
                 'id' => $courseList->id,
                 'course' => $courseList->course_name,
@@ -1164,9 +1255,12 @@ class AdminController extends Controller
                 'cost' => $courseList->course_cost,
                 'period' => $courseList->course_period,
                 'intake' => $intakeList, // Updated to include all intakes
+                'courseFeatured'=>$featuredList,
                 'category' => $courseList->category->id,
                 'school' => $courseList->school->school_name,
-                'qualification' => $courseList->qualification->qualifiation_name,
+                'schoolID'=> $courseList->school_id,
+                'qualification' => $courseList->qualification->id,
+                'qualification_name' => $courseList->qualification->qualification_name,
                 'mode' => $courseList->studyMode->id?? null,
                 'logo' => $logo,
                 'tag' => $tagList
