@@ -81,8 +81,7 @@ class SchoolController extends Controller
                 ->paginate(100)
                 ->through(function ($course) {
                     $status = ($course->course_status == 1) ? "Active" : "Inactive";
-                    $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
-
+                    $intakeMonths = $course->intake->where('intake_status', 1)->pluck('month.core_metaName')->toArray();
                     return [
                         'id' => $course->id,
                         'school_name' => $course->school->school_name,
@@ -337,10 +336,12 @@ class SchoolController extends Controller
 
             $months = [];
             foreach ($getCourseDetail->intake as $month) {
-                $months[] = [
-                    'id' => $month->month->id,
-                    'core_metaName' => $month->month->core_metaName
-                ];
+                if ($month->intake_status == 1) {
+                    $months[] = [
+                        'id' => $month->month->id,
+                        'core_metaName' => $month->month->core_metaName
+                    ];
+                }
             }
 
 
@@ -550,7 +551,7 @@ class SchoolController extends Controller
                 'email' => 'required|string|max:255',
                 'countryCode' => 'required|string|max:255',
                 'contact' => 'required|string|max:255',
-                'school_website' => 'required|string|max:255',
+                'school_website' => 'string|max:255',
                 // 'password' => 'required|string|min:8',
                 // 'confirm_password' => 'required|string|min:8|same:password',
                 'school_fullDesc' => 'required|string|max:255',
@@ -614,7 +615,7 @@ class SchoolController extends Controller
                 // 'person_inChargeNumber' => $request->PICNo,
                 // 'person_inChargeEmail' => $request->PICEmail,
                 'account_type' => $request->account,
-                'school_officalWebsite' => $request->school_website,
+                'school_officalWebsite' => $request->school_website ?? null,
                 // 'school_logo' => $imagePath ?? null,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),

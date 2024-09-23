@@ -60,25 +60,23 @@ class studentController extends Controller
                 ->when($request->filled('category'), function ($query) use ($request) {
                     $query->whereIn('institue_category', $request->category);
                 })
-                // Filter by country (array of country IDs)
+                // Filter by country (single country ID as integer)
                 ->when($request->filled('country'), function ($query) use ($request) {
-                    $query->whereIn('country_id', $request->country);
+                    $query->where('country_id', $request->country); // Change to where instead of whereIn
                 })
                 // Filter by location (array of state IDs)
                 ->when($request->filled('location'), function ($query) use ($request) {
                     $query->whereIn('state_id', $request->location);
                 })
-                // Handle search (multiple search terms)
+                // Handle search (single search term)
                 ->when($request->filled('search'), function ($query) use ($request) {
-                    $searchTerms = is_array($request->search) ? $request->search : [$request->search];
-                    foreach ($searchTerms as $searchTerm) {
-                        $query->where(function ($q) use ($searchTerm) {
-                            $q->where('school_name', 'like', '%' . $searchTerm . '%')
-                                ->orWhereHas('country', function ($q) use ($searchTerm) {
-                                    $q->where('country_name', 'like', '%' . $searchTerm . '%');
-                                });
-                        });
-                    }
+                    $searchTerm = $request->search; // Directly use the string
+                    $query->where(function ($q) use ($searchTerm) {
+                        $q->where('school_name', 'like', '%' . $searchTerm . '%')
+                            ->orWhereHas('country', function ($q) use ($searchTerm) {
+                                $q->where('country_name', 'like', '%' . $searchTerm . '%');
+                            });
+                    });
                 })
                 // Filter by course category (array of categories)
                 ->when($request->filled('courseCategory'), function ($query) use ($request) {
@@ -115,8 +113,6 @@ class studentController extends Controller
                     }
                     return true; // If courseCategory is not filled, return all courses
                 })->values();
-
-                // No need to check for 0 courses anymore, since we've already excluded such schools
 
                 $monthList = [];
                 foreach ($filteredCourses as $courses) {
@@ -163,7 +159,6 @@ class studentController extends Controller
             ]);
         }
     }
-
 
     public function schoolDetail(Request $request)
     {
@@ -343,7 +338,7 @@ class studentController extends Controller
             // Validate the request parameters
             $request->validate([
                 'search' => 'string',
-                'country' => 'integer',
+                'countryID' => 'integer',
                 'qualification' => 'integer',
                 'location' => 'array',
                 'category' => 'array',
@@ -369,9 +364,9 @@ class studentController extends Controller
                             $query->where('school_name', 'like', '%' . $request->search . '%');
                         });
                 })
-                ->when($request->filled('country'), function ($query) use ($request) {
+                ->when($request->filled('countryID'), function ($query) use ($request) {
                     $query->whereHas('school', function ($query) use ($request) {
-                        $query->where('country_id', $request->country);
+                        $query->where('country_id', $request->countryID);
                     });
                 })
                 ->when($request->filled('institute'), function ($query) use ($request) {
@@ -872,7 +867,7 @@ class studentController extends Controller
                 'success' => false,
                 'message' => 'Validation Error',
                 'error' => $e->errors()
-            ]);
+            ], 500);
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,

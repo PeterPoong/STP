@@ -281,7 +281,7 @@ class AuthController extends Controller
                 'school_fullDesc' => 'string|max:255',
                 'school_shortDesc' => 'string|max:255',
                 'school_address' => 'required|string|max:255',
-                'school_website' => 'required|string|max:255',
+                // 'school_website' => 'required|string|max:255',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validationt
                 'person_in_charge_email' => 'required|email',
                 'person_in_charge_name' => 'required|string|max:255',
@@ -344,7 +344,7 @@ class AuthController extends Controller
                 'institue_category' => $request->institue_category ?? null,
                 'school_shortDesc' => $request->school_shortDesc ?? null,
                 'school_address' => $request->school_address,
-                'school_officalWebsite' => $request->school_website,
+                // 'school_officalWebsite' => $request->school_website,
                 'person_inChargeName' => $request->person_in_charge_name,
                 'person_inChargeNumber' => $request->person_in_charge_contact,
                 'person_inChargeEmail' => $request->person_in_charge_email,
