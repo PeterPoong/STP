@@ -1218,10 +1218,10 @@ class AdminController extends Controller
     {
         try {
             $request->validate([
-                'courseID' => 'required|integer'
+                'id' => 'required|integer'
             ]);
 
-            $courseList = stp_course::find($request->courseID);
+            $courseList = stp_course::find($request->id);
 
             if (empty($courseList->course_logo)) {
                 $logo = $courseList->school->school_logo;
@@ -1242,6 +1242,11 @@ class AdminController extends Controller
             foreach ($courseList->intake as $intake) {
                 $intakeList[] = $intake->month->core_metaName;
             }
+            $featuredList = [];
+            foreach ($courseList->featured as $courseFeatured) {
+                $featuredList[] = $courseFeatured->featured->id;
+            }
+            
             $courseListDetail = [
                 'id' => $courseList->id,
                 'course' => $courseList->course_name,
@@ -1250,9 +1255,12 @@ class AdminController extends Controller
                 'cost' => $courseList->course_cost,
                 'period' => $courseList->course_period,
                 'intake' => $intakeList, // Updated to include all intakes
+                'courseFeatured'=>$featuredList,
                 'category' => $courseList->category->category_name,
                 'school' => $courseList->school->school_name,
-                'qualification' => $courseList->qualification->qualifiation_name,
+                'schoolID'=> $courseList->school_id,
+                'qualification' => $courseList->qualification->id,
+                'qualification_name' => $courseList->qualification->qualification_name,
                 'mode' => $courseList->studyMode->core_metaName ?? null,
                 'logo' => $logo,
                 'tag' => $tagList

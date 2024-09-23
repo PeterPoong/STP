@@ -31,4 +31,8 @@ class stp_featured extends Model
     {
         return $this->belongsTo(stp_school::class, 'school_id', 'id');
     }
+    public function featured(): BelongsTo
+    {
+        return $this->belongsTo(stp_core_meta::class, 'featured_type', 'id');
+    }
 }
