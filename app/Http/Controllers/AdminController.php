@@ -2152,6 +2152,39 @@ class AdminController extends Controller
             ]);
         }
     }
+    public function categoryDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $category = stp_courses_category::find($request->id);
+
+            if (!$category) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Category not found'
+                ]);
+            }
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id'=>$category->id,
+                    'name'=>$category->category_name,
+                    'icon'=>$category->category_icon,
+                    'description'=>$category->category_description
+                    ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ]);
+        }
+    }
+
+
 
     public function categoryListAdmin(Request $request)
 
