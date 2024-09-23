@@ -1056,6 +1056,8 @@ class AdminController extends Controller
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
                 'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
+                'courseFeatured' => 'required|array',
+                'courseFeatured.*' => 'integer',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
@@ -1100,6 +1102,17 @@ class AdminController extends Controller
                     'created_at' => now()
                 ]);
             }
+
+            foreach ($request->courseFeatured as $courseFeatured) {
+                stp_featured::create ([
+                    'course_id'=>$course->id,
+                    'school_id'=>$request->schoolID,
+                    'featured_type'=>$courseFeatured,
+                    'featured_status'=>1,
+                    'created_at'=>now()
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => ['message' => 'Successfully Added the Courses']
