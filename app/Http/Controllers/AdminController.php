@@ -1240,7 +1240,7 @@ class AdminController extends Controller
             // Fetch all intakes associated with the course
             $intakeList = [];
             foreach ($courseList->intake as $intake) {
-                $intakeList[] = $intake->month->core_metaName;
+                $intakeList[] = $intake->month->id;
             }
             $featuredList = [];
             foreach ($courseList->featured as $courseFeatured) {
