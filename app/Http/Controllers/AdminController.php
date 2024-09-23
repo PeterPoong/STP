@@ -143,6 +143,48 @@ class AdminController extends Controller
 
     public function updateStudent() {}
 
+    public function studentDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            $student = stp_student::with(['detail'])->find($request->id);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                'id' => $request->id,
+                'name' => $student->student_userName,
+                'first_name' => $student->detail->student_detailFirstName ?? null,
+                'last_name' => $student->detail->student_detailLastName ?? null,
+                'ic' => $student->student_icNumber,
+                'email' => $student->student_email,
+                'country_code' => $student->student_countryCode,
+                'contact_number' => $student->student_contactNo,
+                'gender' => $student->detail->studentGender->core_metaName ?? null,
+                'address' => $student->detail->student_detailAddress ?? null,
+                'country' => $student->detail->country_id ?? null,
+                'state' => $student->detail->state_id?? null,
+                'city' => $student->detail->city_id ?? null,
+                'postcode' => $student->detail->student_detailPostcode ?? '',
+                'password'=>$student->student_password
+                ]
+            ]);
+            return response()->json([
+                'success' => true,
+                'data' => $studentDetail
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
     public function studentList(Request $request)
     {
         $user = $request->user();
