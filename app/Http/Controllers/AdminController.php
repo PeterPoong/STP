@@ -1303,7 +1303,7 @@ class AdminController extends Controller
                 'schoolID'=> $courseList->school_id,
                 'qualification' => $courseList->qualification->id,
                 'qualification_name' => $courseList->qualification->qualification_name,
-                'mode' => $courseList->studyMode->id?? null,
+                'mode' => $courseList->studyMode->id,
                 'logo' => $logo,
                 'tag' => $tagList
             ];
