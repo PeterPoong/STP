@@ -551,7 +551,7 @@ class SchoolController extends Controller
                 'email' => 'required|string|max:255',
                 'countryCode' => 'required|string|max:255',
                 'contact' => 'required|string|max:255',
-                'school_website' => 'string|max:255',
+                'school_website' => 'nullable|string|max:255',
                 // 'password' => 'required|string|min:8',
                 // 'confirm_password' => 'required|string|min:8|same:password',
                 'school_fullDesc' => 'required|string|max:255',
