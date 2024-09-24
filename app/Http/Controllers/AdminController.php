@@ -1303,7 +1303,7 @@ class AdminController extends Controller
                 'schoolID'=> $courseList->school_id,
                 'qualification' => $courseList->qualification->id,
                 'qualification_name' => $courseList->qualification->qualification_name,
-                'mode' => $courseList->studyMode->id?? null,
+                'mode' => $courseList->studyMode->id,
                 'logo' => $logo,
                 'tag' => $tagList
             ];
@@ -1666,7 +1666,8 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validationt
+                'description'=>'string|max:5000'
             ]);
             $authUser = Auth::user();
 
@@ -1691,6 +1692,7 @@ class AdminController extends Controller
             $updateData = [
                 'category_name' => $request->name,
                 'category_icon' => $imagePath,
+                'category_description'=>$request->description,
                 'updated_by' => $authUser->id
             ];
 
@@ -2152,6 +2154,39 @@ class AdminController extends Controller
             ]);
         }
     }
+    public function categoryDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $category = stp_courses_category::find($request->id);
+
+            if (!$category) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Category not found'
+                ]);
+            }
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id'=>$category->id,
+                    'name'=>$category->category_name,
+                    'icon'=>$category->category_icon,
+                    'description'=>$category->category_description
+                    ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ]);
+        }
+    }
+
+
 
     public function categoryListAdmin(Request $request)
 
@@ -3550,6 +3585,31 @@ class AdminController extends Controller
                 });
 
             return $schoolList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function transcriptCategoryList(Request $request)
+    {
+        try {
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [32, 33, 34, 35, 36, 37])
+                ->paginate(20)
+                ->through(function ($category) {
+                    $status = ($category->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $category->core_metaName,
+                        "id" => $category->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $categoryList;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

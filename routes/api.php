@@ -146,6 +146,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editHotPick', [AdminController::class, 'editHotPick']);
     Route::post('/editCategoryStatus', [AdminController::class, 'editCategoryStatus']);
     Route::post('/categoryListAdmin', [AdminController::class, 'categoryListAdmin']);
+    Route::post('/categoryDetail', [AdminController::class, 'categoryDetail']);
 
     Route::post('/addSubject', [AdminController::class, 'addSubject']);
     Route::post('/editSubject', [AdminController::class, 'editSubject']);
