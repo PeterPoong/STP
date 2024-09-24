@@ -2380,7 +2380,42 @@ class AdminController extends Controller
         }
     }
 
-
+    public function applicantDetail(Request $request)
+    {
+    try {
+       $request->validate([
+           'id' => 'required|integer'
+       ]);
+       $applicant = stp_submited_form::find($request->id);
+       if (!$applicant) {
+           return response()->json([
+               'success' => false,
+               'message' => 'Applicant not found'
+           ]);
+       }
+       return response()->json([
+           'success' => true,
+           'data' => [
+               'id' => $applicant->id,
+               "course_name" => $applicant->course->course_name ?? 'N/A',
+               "institution" => $applicant->course->school->school_name,
+               'name' => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
+               "country_code" => $applicant->student->student_countryCode ?? 'N/A',
+               "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
+               'qualification' => $applicant->course->qualification->id,
+               'student_id' => $applicant->student->id,
+                'feedback'=> $applicant->feedback,
+                'applied'=> $applicant->created_at
+               ]
+           ]);
+       } catch (\Exception $e) {
+           return response()->json([
+               'success' => false,
+               'message' => 'Internal Server Error',
+               'errors' => $e->getMessage()
+           ]);
+       }
+   }
     public function editApplicantStatus(Request $request)
     {
         try {
