@@ -155,6 +155,8 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/subjectList', [AdminController::class, 'subjectList']);
     Route::post('/subjectListAdmin', [AdminController::class, 'subjectListAdmin']);
     Route::post('/transcriptCategoryList', [AdminController::class, 'transcriptCategoryList']);
+    Route::post('/subjectDetail', [AdminController::class, 'subjectDetail']);
+
 
     Route::post('/applicantDetailInfo', [AdminController::class, 'applicantDetailInfo']);
     Route::post('/editApplicantStatus', [AdminController::class, 'editApplicantStatus']);

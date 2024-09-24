@@ -2057,6 +2057,36 @@ class AdminController extends Controller
         }
     }
 
+ public function subjectDetail(Request $request)
+ {
+ try {
+    $request->validate([
+        'id' => 'required|integer'
+    ]);
+    $subject = stp_subject::find($request->id);
+    if (!$subject) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Subject not found'
+        ]);
+    }
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'id' => $subject->id,
+            'name' => $subject->subject_name,
+            'category' => $subject->subject_category,
+
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'errors' => $e->getMessage()
+        ]);
+    }
+}
     public function subjectListAdmin(Request $request)
 
     {
