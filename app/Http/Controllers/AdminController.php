@@ -3593,4 +3593,29 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function transcriptCategoryList(Request $request)
+    {
+        try {
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [32, 33, 34, 35, 36, 37])
+                ->paginate(20)
+                ->through(function ($category) {
+                    $status = ($category->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $category->core_metaName,
+                        "id" => $category->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $categoryList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
