@@ -2398,11 +2398,12 @@ class AdminController extends Controller
            'data' => [
                'id' => $applicant->id,
                "course_name" => $applicant->course->course_name ?? 'N/A',
+               'email'=> $applicant->student->student_email,
                "institution" => $applicant->course->school->school_name,
                'name' => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
                "country_code" => $applicant->student->student_countryCode ?? 'N/A',
                "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
-               'qualification' => $applicant->course->qualification->id,
+               'qualification' => $applicant->course->qualification->qualification_name,
                'student_id' => $applicant->student->id,
                 'feedback'=> $applicant->feedback,
                 'applied'=> $applicant->created_at
