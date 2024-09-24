@@ -1666,7 +1666,8 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validationt
+                'description'=>'string|max:5000'
             ]);
             $authUser = Auth::user();
 
@@ -1691,6 +1692,7 @@ class AdminController extends Controller
             $updateData = [
                 'category_name' => $request->name,
                 'category_icon' => $imagePath,
+                'category_description'=>$request->description,
                 'updated_by' => $authUser->id
             ];
 
