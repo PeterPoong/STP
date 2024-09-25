@@ -57,7 +57,7 @@ class ServiceFunction
                 'student_email' => $student->student_email,
                 'student_phone' =>  $student->student_countryCode . " " . $student->student_contactNo,
                 'application_date' => now()->format('Y-m-d H:i:s'),
-                'actionUrl' => "https://www.youtube.com/?feature=youtu.be"
+                'actionUrl' => "http://192.168.0.70:5173/schoolPortalLogin"
             ];
 
             Mail::to($institute_email)->send(new SendSchoolEmail($data));
@@ -101,7 +101,7 @@ class ServiceFunction
                 'courseName' => $courseName,
                 'studentName' => $studentName,
                 'schoolName' => $schoolName,
-                'reviewLink' => "https://www.youtube.com/"
+                'reviewLink' => "http://192.168.0.70:5173/schoolPortalLogin"
             ];
             Mail::to($schoolEmail)->send(new SendReminder($data));
         } catch (\Exception $e) {
