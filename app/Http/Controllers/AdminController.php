@@ -1615,7 +1615,41 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
+    public function courseDetailApplicant(Request $request)
+    {
+        try {
+            $request->validate([
+                'school_id' => 'integer|required'  // Ensure school_id is required and integer
+            ]);
+    
+            // Find the course based on the school_id
+            $course = stp_course::where('school_id', $request->school_id)->first();
+    
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course not found'
+                ]);
+            }
+    
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $course->id,
+                    'school_id' => $course->school_id,
+                    'name' => $course->course_name
+                ]
+            ]);
+    
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ]);
+        }
+    }
+    
     public function addCategory(Request $request)
     {
         try {
