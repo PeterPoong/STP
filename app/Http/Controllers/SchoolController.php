@@ -861,11 +861,11 @@ class SchoolController extends Controller
             ]);
 
             // Select unique student_ids from stp_submited_form
-            $uniqueStudents = stp_submited_form::with(['student.achievement', 'course'])
+            $uniqueStudents = stp_submited_form::with(['student.award', 'course'])
                 ->whereHas('course', function ($query) use ($schoolID) {
                     $query->where('school_id', $schoolID);
                 })
-                ->whereHas('student.achievement', function ($query) {
+                ->whereHas('student.award', function ($query) {
                     $query->where('achievements_status', 1);
                 })
                 ->when($request->filled('student_id'), function ($query) use ($request) {
@@ -878,18 +878,17 @@ class SchoolController extends Controller
                     $student = $form->student;
                     $course = $form->course;
 
-                    $achievements = $student->achievement->map(function ($achievement) {
+                    $achievements = $student->award->map(function ($achievement) {
                         return [
-                            'achievement_name' => $achievement->achivement_name,
+                            'achievement_name' => $achievement->achievement_name,
                             'location' => $achievement->awarded_by,
-                            'position' => $achievement->title->core_metaName ?? '',
-                            'date' => $achievement->date,
+                            'position' => $achievement->title-> core_metaName?? '',
+                            'date' => $achievement->date ??'',
                         ];
                     });
 
                     return [
-                        'cocurriculums' => $achievements,
-                        'school_id' => $course->school_id ?? '',
+                        'achievements' => $achievements,
                         'student_id' => $student->id ?? '',
                     ];
                 });
