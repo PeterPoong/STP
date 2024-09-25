@@ -1618,27 +1618,33 @@ class AdminController extends Controller
     public function courseDetailApplicant(Request $request)
     {
         try {
+            // Validate the request
             $request->validate([
                 'school_id' => 'integer|required'  // Ensure school_id is required and integer
             ]);
     
-            // Find the course based on the school_id
-            $course = stp_course::where('school_id', $request->school_id)->first();
+            // Find all courses based on the school_id
+            $courses = stp_course::where('school_id', $request->school_id)->get();
     
-            if (!$course) {
+            if ($courses->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Course not found'
+                    'message' => 'No courses found for this school'
                 ]);
             }
     
-            return response()->json([
-                'success' => true,
-                'data' => [
+            // Format the data to return
+            $courseData = $courses->map(function ($course) {
+                return [
                     'id' => $course->id,
                     'school_id' => $course->school_id,
                     'name' => $course->course_name
-                ]
+                ];
+            });
+    
+            return response()->json([
+                'success' => true,
+                'data' => $courseData
             ]);
     
         } catch (\Exception $e) {
