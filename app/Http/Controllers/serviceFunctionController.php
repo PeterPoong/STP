@@ -401,7 +401,6 @@ class serviceFunctionController extends Controller
         }
     }
 
-
     public function getState(Request $request)
     {
 

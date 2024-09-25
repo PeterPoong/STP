@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>New Applicant Received From StudyPal</title>
+    <style>
+        .button {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #4CAF50; /* Green background */
+    color: white !important; /* White text */
+    border: 1px solid #4CAF50; /* Match border color with background */
+    text-decoration: none;
+    border-radius: 5px;
+}
+        </style>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <table style="width: 100%; max-width: 600px; margin: 0 auto; border-collapse: collapse;">
@@ -43,9 +55,11 @@
 
                 <p>Please review the application at your earliest convenience. You can access the full application and any supporting documents through your StudyPal dashboard.</p>
                 <p>
-                    <a href="{{ $actionUrl }}" target="_blank" style="color: #4CAF50; text-decoration: none;">
+                    {{-- <a href="{{ $actionUrl }}" target="_blank" style="color: #4CAF50; text-decoration: none;">
                         View Application Details
-                    </a>
+                    </a> --}}
+                    <p><a href="{{ $actionUrl }}" class="button" target="_blank">View Application Details</a></p>
+
                 </p>
 
                 <p>If you have any questions or require further information, feel free to reach out to us.</p>

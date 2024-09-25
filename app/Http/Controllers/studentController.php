@@ -337,7 +337,7 @@ class studentController extends Controller
         try {
             // Validate the request parameters
             $request->validate([
-                'search' => 'string',
+                'search' => 'nullable|string',
                 'countryID' => 'integer',
                 'qualification' => 'integer',
                 'location' => 'array',
@@ -841,7 +841,7 @@ class studentController extends Controller
             $studentID = $authUser->id;
             $checkingCourse = stp_submited_form::where('courses_id', $request->courseID)
                 ->where('student_id', $studentID)
-                ->where('form_status', '!=', 3)
+                ->where('form_status', '!=', 0)
                 ->exists();
             if ($checkingCourse) {
                 throw ValidationException::withMessages([
