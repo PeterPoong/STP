@@ -973,7 +973,7 @@ class studentController extends Controller
             // Get the authenticated user
             $authUser = Auth::user();
             $studentID = $authUser->id;
-
+    
             // Query the stp_submited_form model
             $courseList = stp_submited_form::with([
                 'course',
@@ -985,39 +985,41 @@ class studentController extends Controller
                 'course.school.state',
                 'course.school.city'
             ])
-                ->where('form_status', 2)
-                ->where('student_id', $studentID)
-                ->when($request->filled('course_name'), function ($query) use ($request) {
-                    $query->whereHas('course', function ($query) use ($request) {
-                        $query->where('course_name', 'like', '%' . $request->course_name . '%');
-                    });
-                })
-                ->paginate(10)
-                ->through(function ($submittedForm) {
-                    $course = $submittedForm->course;
-                    $school = $course->school;
-                    $dateTime = new \DateTime($submittedForm->created_at);
-                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
-                    return [
-                        "id" => $submittedForm->id,
-                        "course_name" => $course->course_name,
-                        "school_name" => $course->school->school_name,
-                        "course_period" => $course->course_period,
-                        "course_intake" => $course->course_intake,
-                        "qualification" => $course->qualification->qualification_name,
-                        "course_logo" => $course->course_logo ?: $course->school->school_logo,
-                        "category_name" => $course->category->category_name,
-                        "study_mode" => $course->studyMode->core_metaName ?? 'Not Available',
-                        "country_name" => $school->country->country_name ?? null,
-                        "state_name" => $school->state->state_name ?? null,
-                        "city_name" => $school->city->city_name ?? null,
-                        "status" => "Pending",
-                        'student_id' => $submittedForm->student_id,
-                        'feedback' => $submittedForm->form_feedback,
-                        'date_applied' => $appliedDate,
-                    ];
+            // Add orderBy for descending order by 'created_at'
+            ->where('form_status', 2)
+            ->where('student_id', $studentID)
+            ->when($request->filled('course_name'), function ($query) use ($request) {
+                $query->whereHas('course', function ($query) use ($request) {
+                    $query->where('course_name', 'like', '%' . $request->course_name . '%');
                 });
-
+            })
+            ->orderBy('created_at', 'desc') // Order by 'created_at' in descending order
+            ->paginate(10)
+            ->through(function ($submittedForm) {
+                $course = $submittedForm->course;
+                $school = $course->school;
+                $dateTime = new \DateTime($submittedForm->created_at);
+                $appliedDate = $dateTime->format('Y-m-d H:i:s');
+                return [
+                    "id" => $submittedForm->id,
+                    "course_name" => $course->course_name,
+                    "school_name" => $course->school->school_name,
+                    "course_period" => $course->course_period,
+                    "course_intake" => $course->course_intake,
+                    "qualification" => $course->qualification->qualification_name,
+                    "course_logo" => $course->course_logo ?: $course->school->school_logo,
+                    "category_name" => $course->category->category_name,
+                    "study_mode" => $course->studyMode->core_metaName ?? 'Not Available',
+                    "country_name" => $school->country->country_name ?? null,
+                    "state_name" => $school->state->state_name ?? null,
+                    "city_name" => $school->city->city_name ?? null,
+                    "status" => "Pending",
+                    'student_id' => $submittedForm->student_id,
+                    'feedback' => $submittedForm->form_feedback,
+                    'date_applied' => $appliedDate, // Applied date in the correct format
+                ];
+            });
+    
             return response()->json([
                 'success' => true,
                 'data' => $courseList
@@ -1030,6 +1032,7 @@ class studentController extends Controller
             ], 500);
         }
     }
+    
 
     public function historyAppList(Request $request)
     {
@@ -1056,6 +1059,7 @@ class studentController extends Controller
                         $query->where('course_name', 'like', '%' . $request->course_name . '%');
                     });
                 })
+                ->orderBy('created_at', 'desc') // Order by 'created_at' in descending order
                 ->paginate(10)
                 ->through(function ($submittedForm) {
                     $course = $submittedForm->course;
