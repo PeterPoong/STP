@@ -243,123 +243,129 @@ class AdminController extends Controller
         }
     }
     public function editStudent(Request $request)
-    {
-        try {
-            $request->validate([
-                'id' => 'required|integer',
-                'name' => 'required|string|max:255',
-                'firt_name' => 'string|max:255',
-                'last_name' => 'string|max:255',
-                'address' => 'string|max:255',
-                'country' => 'integer',
-                'city' => 'integer',
-                'state' => 'integer',
-                'gender' => 'integer',
-                'postcode' => 'string',
-                'ic' => 'string|min:6|',
-                'password' => 'required|string|min:8',
-                'confirm_password' => 'required|string|min:8|same:password',
-                'country_code' => 'required',
-                'contact_number' => 'required|numeric|digits_between:1,15',
-                'email' => 'required|string|email|max:255',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+{
+    try {
+        $request->validate([
+            'id' => 'required|integer',
+            'name' => 'required|string|max:255',
+            'first_name' => 'string|max:255',
+            'last_name' => 'string|max:255',
+            'address' => 'string|max:255',
+            'country' => 'integer',
+            'city' => 'integer',
+            'state' => 'integer',
+            'gender' => 'integer',
+            'postcode' => 'string',
+            'ic' => 'string|min:6',
+            'password' => 'string|min:8|nullable', // Allow password to be nullable
+            'confirm_password' => 'string|min:8|nullable|same:password', // Allow confirm_password to be nullable
+            'country_code' => 'required',
+            'contact_number' => 'required|numeric|digits_between:1,15',
+            'email' => 'required|string|email|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validation
+        ]);
+
+        $authUser = Auth::user();
+
+        // Check IC number uniqueness
+        $checkingIc = stp_student::where('student_icNumber', $request->ic)
+            ->where('id', '!=', $request->id)
+            ->exists();
+
+        if ($checkingIc) {
+            throw ValidationException::withMessages([
+                'ic' => ['IC has been used'],
             ]);
-            $authUser = Auth::user();
-
-            //check ic
-            $checkingIc = stp_student::where('student_icNumber', $request->ic)
-                ->where('id', '!=', $request->id)
-                ->exists();
-
-            if ($checkingIc) {
-                throw ValidationException::withMessages([
-                    'ic' => ['ic has been used'],
-                ]);
-            }
-
-            //checking contact number
-            $checkingUserContact = stp_student::where('student_countryCode', $request->country_code)
-                ->where('student_contactNo', $request->contact_number)
-                ->where('id', '!=', $request->id)
-                ->exists();
-
-            if ($checkingUserContact) {
-                throw ValidationException::withMessages([
-                    'contact_no' => ['Contact has been used'],
-                ]);
-            }
-
-
-            $student = stp_student::find($request->id);
-            $studentDetail = $student->detail;
-
-
-            if ($request->hasFile('image')) {
-                if (!empty($student->student_profilePic)) {
-                    Storage::delete('public/' . $student->student_profilePic);
-                }
-
-                $image = $request->file('image');
-                $imageName = time() . '.' . $image->getClientOriginalExtension();
-                // $resizedImage = Image::make($image)->fit(300, 300);
-
-                $imagePath = $image->storeAs('studentProfilePic', $imageName, 'public'); // Store in 'storage/app/public/images'
-                $student->student_profilePic = $imagePath; // Save the path to the database
-            }
-
-            $checkingEmail = stp_student::where('student_email', $request->email)
-                ->where('id', '!=', $request->id)
-                ->exists();
-
-
-            if ($checkingEmail) {
-                throw ValidationException::withMessages([
-                    'email' => ['Contact has been taken'],
-                ]);
-            }
-
-            $updateingStudent = $student->update([
-                "student_userName" => $request->name,
-                "student_password" => Hash::make($request->password),
-                'student_icNumber' => $request->ic,
-                'student_email' => $request->email,
-                'student_countryCode' => $request->country_code,
-                'student_contactNo' => $request->contact_number,
-                'updated_by' => $authUser->id
-            ]);
-
-            $updatingDetail = $studentDetail->update([
-                "student_detailFirstName" => $request->first_name ?? "",
-                "student_detailLastName" => $request->last_name ?? "",
-                "student_detailAddress" => $request->address ?? "",
-                "country_id" => $request->country ?? null,
-                'gender' => $request->gender ?? null,
-                "city_id" => $request->city ?? null,
-                "state_id" => $request->state ?? null,
-                "student_detailPostcode" => $request->postcode ?? "",
-                'updated_by' => $authUser->id
-            ]);
-
-            if ($updateingStudent) {
-                return response()->json([
-                    'success' => true,
-                    "data" => ["message" => "update successful"]
-                ]);
-            }
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation Error',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Internal Sever Error',
-                'error' => $e->getMessage()
-            ], 500);
         }
+
+        // Check contact number uniqueness
+        $checkingUserContact = stp_student::where('student_countryCode', $request->country_code)
+            ->where('student_contactNo', $request->contact_number)
+            ->where('id', '!=', $request->id)
+            ->exists();
+
+        if ($checkingUserContact) {
+            throw ValidationException::withMessages([
+                'contact_number' => ['Contact number has been used'],
+            ]);
+        }
+
+        $student = stp_student::find($request->id);
+        $studentDetail = $student->detail;
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            if (!empty($student->student_profilePic)) {
+                Storage::delete('public/' . $student->student_profilePic);
+            }
+
+            $image = $request->file('image');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('studentProfilePic', $imageName, 'public');
+            $student->student_profilePic = $imagePath;
+        }
+
+        // Check email uniqueness
+        $checkingEmail = stp_student::where('student_email', $request->email)
+            ->where('id', '!=', $request->id)
+            ->exists();
+
+        if ($checkingEmail) {
+            throw ValidationException::withMessages([
+                'email' => ['Email has been taken'],
+            ]);
+        }
+
+        // Update student information
+        $updateData = [
+            "student_userName" => $request->name,
+            'student_icNumber' => $request->ic,
+            'student_email' => $request->email,
+            'student_countryCode' => $request->country_code,
+            'student_contactNo' => $request->contact_number,
+            'updated_by' => $authUser->id
+        ];
+
+        // Update password only if provided
+        if (!empty($request->password)) {
+            $updateData['student_password'] = Hash::make($request->password);
+        }
+
+        $updateingStudent = $student->update($updateData);
+
+        // Update student details
+        $updatingDetail = $studentDetail->update([
+            "student_detailFirstName" => $request->first_name ?? "",
+            "student_detailLastName" => $request->last_name ?? "",
+            "student_detailAddress" => $request->address ?? "",
+            "country_id" => $request->country ?? null,
+            'gender' => $request->gender ?? null,
+            "city_id" => $request->city ?? null,
+            "state_id" => $request->state ?? null,
+            "student_detailPostcode" => $request->postcode ?? "",
+            'updated_by' => $authUser->id
+        ]);
+
+        if ($updateingStudent) {
+            return response()->json([
+                'success' => true,
+                "data" => ["message" => "Update successful"]
+            ]);
+        }
+    } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation Error',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function editStudentStatus(Request $request)
     {
