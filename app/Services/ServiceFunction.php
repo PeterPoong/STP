@@ -46,7 +46,7 @@ class ServiceFunction
         Mail::to($email)->send(new OtpMail($otp));
     }
 
-    public function sendAppliedCourseEmail($school, $course, $student)
+    public function sendAppliedCourseEmail($school, $course, $student, $newApplicantId)
     {
         try {
             $institute_email = $school->school_email;
@@ -55,9 +55,9 @@ class ServiceFunction
                 'course_name' => $course->course_name,
                 'student_name' => $student->student_userName,
                 'student_email' => $student->student_email,
-                'student_phone' =>  $student->student_countryCode . " " . $student->student_contactNo,
+                'student_phone' => $student->student_countryCode . " " . $student->student_contactNo,
                 'application_date' => now()->format('Y-m-d H:i:s'),
-                'actionUrl' => "http://192.168.0.70:5173/schoolPortalLogin"
+                'actionUrl' => "http://192.168.0.70:5173/school/ApplicantDetail/" . $newApplicantId // Concatenate the student ID
             ];
 
             Mail::to($institute_email)->send(new SendSchoolEmail($data));

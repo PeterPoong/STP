@@ -244,6 +244,12 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     //qualification statistic
     Route::post('/qualificationStatisticPieChart', [SchoolController::class, 'qualificationStatisticPieChart']);
     Route::post('/qualificationStatisticBarChart', [SchoolController::class, 'qualificationStatisticBarChart']);
+
+    //applicant 
+
+    Route::post('/applicantDetail', [SchoolController::class, 'applicantDetail']);
+    Route::post('/studentDetail', [SchoolController::class, 'studentDetail']);
+    Route::post('/courseDetail', [SchoolController::class, 'courseDetail']);
 });
 
 
