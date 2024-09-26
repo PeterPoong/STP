@@ -2563,7 +2563,7 @@ class AdminController extends Controller
                 'courses_id' => $request->courses_id,
                 'school_id' => $course->school_id, // Use the school_id from the course
                 'created_at' => $request->created_at,
-                'feedback' => $request->feedback,
+                'form_feedback' => $request->feedback,
                 'form_status'=> $request->status,
                 'updated_by' => Auth::id(),
                 'updated_at' => now()
