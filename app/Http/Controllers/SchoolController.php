@@ -2409,4 +2409,42 @@ class SchoolController extends Controller
             ]);
         }
     }
+
+    public function studentDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'studentId' => 'required|integer'
+            ]);
+            $studentDetail = stp_student::find($request->studentId);
+            return response()->json([
+                'success' => true,
+                'data' => $studentDetail
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function applicantDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'applicantId' => 'required|integer'
+            ]);
+
+            $getApplicantDetail = stp_submited_form::find($request->applicantId);
+            return $getApplicantDetail;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }
