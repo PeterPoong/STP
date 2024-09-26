@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Carbon\Carbon; // Import the Carbon library at the top
 use App\Models\stp_advertisement_banner;
 use App\Models\stp_city;
 use App\Models\stp_core_meta;
@@ -3342,7 +3342,45 @@ class AdminController extends Controller
     }
 }
 
-    
+public function bannerDetail(Request $request)
+{
+    try {
+        $request->validate([
+            'id' => 'required|integer'
+        ]);
+
+        $authUser = Auth::user();
+        $banner = stp_advertisement_banner::find($request->id);
+
+        // Check if the banner exists
+        if (!$banner) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Banner not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $request->id,
+                'name' => $banner->banner_name,
+                'url' => $banner->banner_url,
+                'file' => $banner->banner_file,
+                'banner_start' => Carbon::parse($banner->banner_start)->format('Y-m-d\TH:i'),
+                'banner_end' => Carbon::parse($banner->banner_end)->format('Y-m-d\TH:i'),
+                'featured_id'=> $banner->featured_id 
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
     public function addBanner(Request $request)
     {
         try {

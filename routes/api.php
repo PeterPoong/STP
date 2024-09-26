@@ -184,6 +184,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/disableBanner', [AdminController::class, 'disableBanner']);
     Route::post('/bannerListAdmin', [AdminController::class, 'bannerListAdmin']);
     Route::post('/bannerFeaturedList', [AdminController::class, 'bannerFeaturedList']);
+    Route::post('/bannerDetail', [AdminController::class, 'bannerDetail']);
 
     Route::post('/resetAdminDummyPassword', [AdminController::class, 'resetAdminDummyPassword']);
     Route::post('/resetAdminPassword', [AdminController::class, 'resetAdminPassword']);
