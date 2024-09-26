@@ -2460,7 +2460,7 @@ class AdminController extends Controller
                "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
                'qualification' => $applicant->course->qualification->qualification_name,
                'student_id' => $applicant->student->id,
-                'feedback'=> $applicant->feedback,
+                'feedback'=> $applicant->form_feedback,
                 'applied'=> $applicant->created_at,
                 'status'=> $applicant->form_status
                ]
