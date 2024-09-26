@@ -882,8 +882,8 @@ class SchoolController extends Controller
                         return [
                             'achievement_name' => $achievement->achievement_name,
                             'location' => $achievement->awarded_by,
-                            'position' => $achievement->title-> core_metaName?? '',
-                            'date' => $achievement->date ??'',
+                            'position' => $achievement->title->core_metaName ?? '',
+                            'date' => $achievement->date ?? '',
                         ];
                     });
 
@@ -2417,6 +2417,10 @@ class SchoolController extends Controller
                 'studentId' => 'required|integer'
             ]);
             $studentDetail = stp_student::find($request->studentId);
+            $detail = stp_student_detail::where('student_id', $request->studentId)->first();
+            $studentDetail["first_name"] = $detail->student_detailFirstName;
+            $studentDetail["last_name"] = $detail->student_detailLastName;
+
             return response()->json([
                 'success' => true,
                 'data' => $studentDetail
