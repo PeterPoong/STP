@@ -2537,7 +2537,8 @@ class AdminController extends Controller
                 'courses_id' => 'required|integer',
                 'school_id' => 'required|integer',
                 'feedback' => 'string|max:255',
-                'created_at' => 'required|date_format:Y-m-d'
+                'created_at' => 'required|date_format:Y-m-d',
+                'status'=>'integer'
             ]);
 
             // Retrieve the course based on the provided courses_id
@@ -2563,6 +2564,7 @@ class AdminController extends Controller
                 'school_id' => $course->school_id, // Use the school_id from the course
                 'created_at' => $request->created_at,
                 'feedback' => $request->feedback,
+                'form_status'=> $request->status,
                 'updated_by' => Auth::id(),
                 'updated_at' => now()
             ]);
