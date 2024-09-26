@@ -1706,40 +1706,53 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validationt
-                'description'=>'string|max:5000'
+                'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Make icon optional
+                'description' => 'string|max:5000'
             ]);
+    
             $authUser = Auth::user();
-
+    
+            // Check for duplicate category name
             $checkName = stp_courses_category::where('category_name', $request->name)
                 ->where('id', '!=', $request->id)
                 ->exists();
             if ($checkName) {
-                throw ValidationException::withMessages(['category' => 'Category name had been used']);
+                throw ValidationException::withMessages(['category' => 'Category name has already been used']);
             }
-
+    
+            // Find the category by ID
             $category = stp_courses_category::find($request->id);
-
+    
+            // If a new icon is uploaded, store the image and delete the old one
             if ($request->hasFile('icon')) {
                 if (!empty($category->category_icon)) {
-                    Storage::delete('public/' . $category->category_icon);
+                    Storage::delete('public/' . $category->category_icon); // Delete the old icon
                 }
+    
+                // Store the new icon
                 $image = $request->file('icon');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('courseCategoryIcon', $imageName, 'public'); // Store in 'storage/app/public/images'
+                $imagePath = $image->storeAs('courseCategoryIcon', $imageName, 'public'); // Store in 'storage/app/public/courseCategoryIcon'
+            } else {
+                // If no new icon is uploaded, use the existing icon
+                $imagePath = $category->category_icon;
             }
-
+    
+            // Prepare the update data
             $updateData = [
+                'id' => $request->id,
                 'category_name' => $request->name,
-                'category_icon' => $imagePath,
-                'category_description'=>$request->description,
+                'category_icon' => $imagePath, // This could be the new or existing icon
+                'category_description' => $request->description,
                 'updated_by' => $authUser->id
             ];
-
+    
+            // Update the category with new data
             $category->update($updateData);
+    
             return response()->json([
                 'success' => true,
-                'data' => ['message' => "Update Successfully"]
+                'data' => ['message' => "Update Successful"]
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -1750,12 +1763,12 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Internal Server error',
+                'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
-
+    
     public function editHotPick(Request $request)
     {
         try {
