@@ -246,13 +246,13 @@ class serviceFunctionController extends Controller
         }
     }
 
-    public function sendSchoolEmail($courseID, $student)
+    public function sendSchoolEmail($courseID, $student, $newApplicantId)
     {
         $course = stp_course::find($courseID);
         $school = $course->school;
 
 
-        $sendEmailToSchool = $this->serviceFunction->sendAppliedCourseEmail($school, $course, $student);
+        $sendEmailToSchool = $this->serviceFunction->sendAppliedCourseEmail($school, $course, $student, $newApplicantId);
         return $sendEmailToSchool;
     }
 
