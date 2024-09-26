@@ -29,7 +29,9 @@ Route::prefix('student')->group(function () {
     Route::post('/schoolDetail', [studentController::class, 'schoolDetail']);
     Route::post('/categoryList', [studentController::class, 'categoryList']);
     Route::post('/courseList', [studentController::class, 'courseList']);
-    Route::post('/courseDetail', [AdminController::class, 'courseDetail']);
+
+    Route::post('/courseDetail', [studentController::class, 'courseDetail']);
+
     Route::get('/genderList', [studentController::class, 'genderList']);
 
     Route::post('/schoolDetail', [studentController::class, 'schoolDetail']);

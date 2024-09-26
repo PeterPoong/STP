@@ -160,6 +160,81 @@ class studentController extends Controller
         }
     }
 
+
+    public function courseDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'courseID' => 'required|integer'
+            ]);
+
+            $courseList = stp_course::find($request->courseID);
+
+            if (empty($courseList->course_logo)) {
+                $logo = $courseList->school->school_logo;
+            } else {
+                $logo = $courseList->course_logo;
+            }
+
+            $courseTag = $courseList->tag;
+            $tagList = [];
+            foreach ($courseTag as $tag) {
+                $tagList[] = [
+                    "id" => $tag->tag['id'],
+                    "tagName" => $tag->tag['tag_name']
+                ];
+            }
+            // Fetch all intakes associated with the course
+            $intakeList = [];
+            foreach ($courseList->intake as $intake) {
+                $intakeList[] = $intake->month->id;
+            }
+            $featuredList = [];
+            foreach ($courseList->featured as $courseFeatured) {
+                $featuredList[] = $courseFeatured->featured->id;
+            }
+
+            foreach ($courseList->school->media as $photo) {
+                if ($photo->schoolMedia_type == 66) {
+                    $coverPhoto = $photo->schoolMedia_name;
+                    break;
+                }
+            }
+
+            $courseListDetail = [
+                'id' => $courseList->id,
+                'course' => $courseList->course_name,
+                'description' => $courseList->course_description,
+                'requirement' => $courseList->course_requirement,
+                'cost' => $courseList->course_cost,
+                'period' => $courseList->course_period,
+                'intake' => $intakeList, // Updated to include all intakes
+                'courseFeatured' => $featuredList,
+                'category' => $courseList->category->id,
+                'school' => $courseList->school->school_name,
+                'schoolID' => $courseList->school_id,
+                'qualification' => $courseList->qualification->id,
+                'qualification_name' => $courseList->qualification->qualification_name,
+                'mode' => $courseList->studyMode->id,
+                'logo' => $logo,
+                'coverPhoto' => $coverPhoto,
+                'tag' => $tagList
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $courseListDetail
+            ]);
+            return $courseListDetail;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     public function schoolDetail(Request $request)
     {
         try {
