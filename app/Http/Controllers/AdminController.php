@@ -163,6 +163,7 @@ class AdminController extends Controller
                 'country_code' => $student->student_countryCode,
                 'contact_number' => $student->student_contactNo,
                 'gender' => $student->detail->studentGender->core_metaName ?? null,
+                'gender_id'=>$student->detail->studentGender->id ?? null,
                 'address' => $student->detail->student_detailAddress ?? null,
                 'country' => $student->detail->country_id ?? null,
                 'state' => $student->detail->state_id?? null,
