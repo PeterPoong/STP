@@ -2536,7 +2536,7 @@ class AdminController extends Controller
                 'id' => 'required|integer',
                 'courses_id' => 'required|integer',
                 'school_id' => 'required|integer',
-                'feedback' => 'string|max:255',
+                'feedback' => 'string|max:255|nullable',
                 'created_at' => 'required|date_format:Y-m-d',
                 'status'=>'integer'
             ]);
