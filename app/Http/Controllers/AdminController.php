@@ -2560,6 +2560,7 @@ class AdminController extends Controller
 
             // Update the applicant form
             $editApplication->update([
+                'id'=> $request->id,
                 'courses_id' => $request->courses_id,
                 'school_id' => $course->school_id, // Use the school_id from the course
                 'created_at' => $request->created_at,
