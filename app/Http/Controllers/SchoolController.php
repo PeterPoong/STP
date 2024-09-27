@@ -344,8 +344,6 @@ class SchoolController extends Controller
                 }
             }
 
-
-
             if (empty($getCourseDetail->course_logo)) {
                 $course_logo = $getCourseDetail->school->school_logo;
             } else {
@@ -2218,9 +2216,11 @@ class SchoolController extends Controller
                 'studentId' => 'required|integer'
             ]);
             $studentDetail = stp_student::find($request->studentId);
+
             $detail = stp_student_detail::where('student_id', $request->studentId)->first();
             $studentDetail["first_name"] = $detail->student_detailFirstName;
             $studentDetail["last_name"] = $detail->student_detailLastName;
+            $studentDetail["address"] = $detail->student_detailAddress;
 
             return response()->json([
                 'success' => true,

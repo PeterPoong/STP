@@ -187,7 +187,7 @@ class studentController extends Controller
             // Fetch all intakes associated with the course
             $intakeList = [];
             foreach ($courseList->intake as $intake) {
-                $intakeList[] = $intake->month->id;
+                $intakeList[] = $intake->month->core_metaName;
             }
             $featuredList = [];
             foreach ($courseList->featured as $courseFeatured) {
@@ -196,8 +196,17 @@ class studentController extends Controller
 
             foreach ($courseList->school->media as $photo) {
                 if ($photo->schoolMedia_type == 66) {
-                    $coverPhoto = $photo->schoolMedia_name;
+                    $coverPhoto = $photo->schoolMedia_location;
                     break;
+                }
+            }
+
+
+
+            foreach ($courseList->school->media as $photo) {
+
+                if ($photo->schoolMedia_type == 67) {
+                    $schoolPhoto[] = $photo->schoolMedia_location;
                 }
             }
 
@@ -210,14 +219,15 @@ class studentController extends Controller
                 'period' => $courseList->course_period,
                 'intake' => $intakeList, // Updated to include all intakes
                 'courseFeatured' => $featuredList,
-                'category' => $courseList->category->id,
+                'category' => $courseList->category->category_name,
                 'school' => $courseList->school->school_name,
                 'schoolID' => $courseList->school_id,
-                'qualification' => $courseList->qualification->id,
-                'qualification_name' => $courseList->qualification->qualification_name,
-                'mode' => $courseList->studyMode->id,
+                'qualification' => $courseList->qualification->qualification_name,
+                // 'qualification_name' => $courseList->qualification->qualification_name,
+                'mode' => $courseList->studyMode->core_metaName,
                 'logo' => $logo,
-                'coverPhoto' => $coverPhoto,
+                'coverPhoto' => $coverPhoto ?? null,
+                'schoolPhoto' => $schoolPhoto ?? null,
                 'tag' => $tagList
             ];
 
@@ -1142,7 +1152,7 @@ class studentController extends Controller
 
                     // Determine the status message based on form_status
                     $status = match ($submittedForm->form_status) {
-                        0 => "WithDrawl",
+                        0 => "Withdrawal",
                         3 => "Rejected",
                         4 => "Accepted",
                         default => "Unknown"
@@ -1562,6 +1572,7 @@ class studentController extends Controller
         try {
 
             $authUser = Auth::user();
+
             $studentlID = $authUser->id;
 
             $achievementList = stp_achievement::query()
