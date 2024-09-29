@@ -3278,70 +3278,74 @@ class AdminController extends Controller
     }
 
     public function bannerListAdmin(Request $request)
-{
-    try {
-        // Get the per_page value from the request, default to 10 if not provided or empty
-        $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_advertisement_banner::count() : (int)$request->per_page)
-            : 10;
-
-        // Build the query
-        $query = stp_advertisement_banner::query();
-
-        // Filter by search term if provided
-        if ($request->filled('search')) {
-            $query->where('banner_name', 'like', '%' . $request->search . '%');
+    {
+        try {
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_advertisement_banner::count() : (int)$request->per_page)
+                : 10;
+    
+            // Build the query
+            $query = stp_advertisement_banner::query();
+    
+            // Filter by search term if provided
+            if ($request->filled('search')) {
+                $query->where('banner_name', 'like', '%' . $request->search . '%');
+            }
+    
+            // Filter by ID if provided
+            if ($request->filled('id')) {
+                $query->where('id', $request->id);
+            }
+    
+            // Paginate the results
+            $bannerList = $query->paginate($perPage)
+                ->through(function ($banner) {
+                    // Map banner_status to status label
+                    switch ($banner->banner_status) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Active";
+                            break;
+                        default:
+                            $status = null;
+                    }
+    
+                    // Convert banner_start and banner_end to datetime-local format
+                    $bannerStart = Carbon::parse($banner->banner_start)->format('Y-m-d\TH:i');
+                    $bannerEnd = Carbon::parse($banner->banner_end)->format('Y-m-d\TH:i');
+    
+                    // Get the featured metadata
+                    $featured = $banner->banner ? [
+                        'featured_id' => $banner->banner->id ?? '',
+                        'core_metaName' => $banner->banner->core_metaName ??''
+                    ] : null;
+    
+                    return [
+                        'id' => $banner->id,
+                        'name' => $banner->banner_name ?? '',
+                        'url' => $banner->banner_url ?? '',
+                        'file' => $banner->banner_file ?? '',
+                        'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
+                        'banner_start' => $bannerStart ?? '', // Formatted start date
+                        'banner_end' => $bannerEnd ?? '',     // Formatted end date
+                        'featured' => $featured ?? '', // Single featured_id and core_metaName
+                        'status' => $status
+                    ];
+                });
+    
+            return response()->json($bannerList);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // Filter by ID if provided
-        if ($request->filled('id')) {
-            $query->where('id', $request->id);
-        }
-
-        // Paginate the results
-        $bannerList = $query->paginate($perPage)
-            ->through(function ($banner) {
-                // Map banner_status to status label
-                switch ($banner->banner_status) {
-                    case 0:
-                        $status = "Disable";
-                        break;
-                    case 1:
-                        $status = "Active";
-                        break;
-                    default:
-                        $status = null;
-                }
-
-                // Get the featured metadata
-                $featured = $banner->banner ? [
-                    'featured_id' => $banner->banner->id,
-                    'core_metaName' => $banner->banner->core_metaName
-                ] : [];
-
-                return [
-                    'id' => $banner->id,
-                    'name' => $banner->banner_name,
-                    'url' => $banner->banner_url,
-                    'file' => $banner->banner_file,
-                    'banner_duration' => $banner->banner_start . ' - ' . $banner->banner_end,
-                    'banner_start' => $banner->banner_start,
-                    'banner_end' => $banner->banner_end,
-                    'featured' => $featured, // Single featured_id and core_metaName
-                    'status' => $status
-                ];
-            });
-
-        return response()->json($bannerList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
-
+    
 public function bannerDetail(Request $request)
 {
     try {
