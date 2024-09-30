@@ -968,6 +968,7 @@ class AdminController extends Controller
                     'PIC_number'=>$school->person_inChargeNumber,
                     'PIC_email'=>$school->person_inChargeEmail,
                     'account'=>$school->account_type,
+                    'location'=>$school->school_location,
                     'media'=>$medias
                 ]
             ]);
