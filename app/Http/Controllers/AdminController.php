@@ -526,6 +526,7 @@ class AdminController extends Controller
                 'person_in_charge_email' => 'required|email',
                 'category' => 'required|integer',
                 'account' => 'required|integer'
+                
             ]);
 
             $authUser = Auth::user();
@@ -574,6 +575,7 @@ class AdminController extends Controller
                 'person_inChargeEmail' => $request->person_in_charge_email,
                 'school_logo' => $imagePath ?? null,
                 'account_type' => $request->account,
+                'school_location'=>$request->location,
                 'school_status' => 3,
                 'created_by' => $authUser->id
             ]);
@@ -798,6 +800,7 @@ class AdminController extends Controller
                 'school_address' => $request->school_address,
                 'school_officalWebsite' => $request->school_website,
                 'school_logo' => $imagePath ?? $school->school_logo,
+                'school_location'=>$request->location,
                 'account_type'=> $request->account,
                 'updated_by' => $authUser->id
             ]);
