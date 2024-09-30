@@ -1230,7 +1230,9 @@ class AdminController extends Controller
             $courseList = stp_course::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('course_name', 'like', '%' . $request->search . '%');
             })
-
+            ->whereHas('school', function ($query) {
+                $query->where('school_status', 1); // Only include courses from active schools
+            })
                 ->paginate($perPage)
                 ->through(function ($course) {
                     switch ($course->course_status) {
@@ -1248,6 +1250,7 @@ class AdminController extends Controller
                         'id' => $course->id,
                         'name' => $course->course_name,
                         'school' => $course->school->school_name,
+                        'school_status'=>$course->school->school_status,
                         "category" => $course->category->category_name,
                         "qualification" => $course->qualification->qualification_name,
                         "status" => $status
