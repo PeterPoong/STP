@@ -3385,121 +3385,168 @@ public function bannerDetail(Request $request)
         ], 500);
     }
 }
-    public function addBanner(Request $request)
-    {
-        try {
-            // Validate the incoming request data
-            $request->validate([
-                'banner_name' => 'required|string|max:255',
-                'banner_file' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-                'banner_url' => 'required|string|max:255',
-                'featured_id' => 'required|array',  // Validate as array
-                'featured_id.*' => 'integer',       // Each item in the array should be an integer
-                'banner_start' => 'required|date_format:Y-m-d H:i:s',
-                'banner_end' => 'required|date_format:Y-m-d H:i:s'
-            ]);
+public function addBanner(Request $request)
+{
+    try {
+        // Validate the incoming request data
+        $request->validate([
+            'banner_name' => 'required|string|max:255',
+            'banner_file' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'banner_url' => 'required|string|max:255',
+            'featured_id' => 'required|array',  // Validate as an array
+            'featured_id.*' => 'integer',       // Each item in the array should be an integer
+            'banner_start' => 'required|date_format:Y-m-d H:i:s',
+            'banner_end' => 'required|date_format:Y-m-d H:i:s'
+        ]);
 
-            $authUser = Auth::user();
-            $imagePath = null;
+        $authUser = Auth::user();
+        $imagePath = null;
 
-            // Handle the banner file upload
-            if ($request->hasFile('banner_file')) {
-                $image = $request->file('banner_file');
-                $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('bannerFile', $imageName, 'public');
-            }
-
-            // Loop through each featured_id and create a banner for each
-            foreach ($request->featured_id as $featuredId) {
-                stp_advertisement_banner::create([
-                    'banner_name' => $request->banner_name,
-                    'banner_file' => $imagePath,
-                    'banner_url' => $request->banner_url,
-                    'featured_id' => $featuredId,  // Insert each featured_id here
-                    'banner_start' => $request->banner_start,
-                    'banner_end' => $request->banner_end,
-                    'created_by' => $authUser->id,
-                    'banner_status' => 1,
-                    'created_at' => now()
-                ]);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => ['message' => 'Successfully Added the Banner(s)']
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation Error',
-                'error' => $e->errors()
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Internal Server Error',
-                'error' => $e->getMessage()
-            ]);
+        // Handle the banner file upload
+        if ($request->hasFile('banner_file')) {
+            $image = $request->file('banner_file');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('bannerFile', $imageName, 'public');
         }
-    }
 
-    public function editBanner(Request $request)
+        // Loop through each featured_id and create a banner for each
+        $bannersCreated = [];
+        foreach ($request->featured_id as $featuredId) {
+            $banner = stp_advertisement_banner::create([
+                'banner_name' => $request->banner_name,
+                'banner_file' => $imagePath,
+                'banner_url' => $request->banner_url,
+                'featured_id' => $featuredId,  // Insert each featured_id here
+                'banner_start' => $request->banner_start,
+                'banner_end' => $request->banner_end,
+                'created_by' => $authUser->id,
+                'banner_status' => 1,
+                'created_at' => now()
+            ]);
+            $bannersCreated[] = $banner; // Collect created banners for potential logging or response
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'message' => 'Successfully Added the Banner(s)',
+                'banners' => $bannersCreated // Optionally return the created banners
+            ]
+        ]);
+    } catch (ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation Error',
+            'errors' => $e->errors()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'errors' => $e->getMessage()
+        ]);
+    }
+}
+
+
+    public function editBanner(Request $request) 
     {
         try {
             $authUser = Auth::user();
-
-            // Adjust validation rules
+    
+            // Validation rules
             $request->validate([
                 'id' => 'required|integer',
                 'banner_name' => 'required|string|max:255',
-                'banner_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Make banner_file nullable
+                'banner_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'banner_url' => 'required|string|max:255',
-                'featured_id' => 'required|array',  // Validate as array
-                'featured_id.*' => 'integer',       // Each item in the array should be an integer
+                'old_featured_id' => 'required|integer', // New field to track old featured ID
+                'new_featured_id' => 'required|integer', // New field for the new featured ID
                 'banner_start' => 'required|date_format:Y-m-d H:i:s',
                 'banner_end' => 'required|date_format:Y-m-d H:i:s'
             ]);
-
+    
             // Find the existing banner by id
             $adBanner = stp_advertisement_banner::find($request->id);
-
+    
             if (!$adBanner) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Banner not found'
                 ]);
             }
-
+    
             // Handle file upload if a new file is provided
             if ($request->hasFile('banner_file')) {
-                // Delete the old file if it exists
                 if (!empty($adBanner->banner_file)) {
                     Storage::delete('public/' . $adBanner->banner_file);
                 }
-
-                // Upload the new file
+    
                 $image = $request->file('banner_file');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('bannerFile', $imageName, 'public'); // Store in 'storage/app/public/bannerFile'
+                $imagePath = $image->storeAs('bannerFile', $imageName, 'public');
             } else {
-                // Use the existing banner file if no new file is uploaded
                 $imagePath = $adBanner->banner_file;
             }
-
-            // Update the banner with the new or existing file path and other details
-            foreach ($request->featured_id as $featuredId) {
+    
+            // Update the existing banner with the new or existing file path and other details
             $adBanner->update([
                 'banner_name' => $request->banner_name,
-                'banner_file' => $imagePath, // Use the existing or new file path
+                'banner_file' => $imagePath,
                 'banner_url' => $request->banner_url,
-               'featured_id' => $featuredId,  // Insert each featured_id here
                 'banner_start' => $request->banner_start,
                 'banner_end' => $request->banner_end,
                 'updated_by' => $authUser->id,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
-        }
-
+    
+            // Update the old featured ID record
+            if ($request->old_featured_id) {
+                // Find the old featured record
+                $oldFeatured = stp_advertisement_banner::where('id', $request->old_featured_id)->first();
+                if ($oldFeatured) {
+                    $oldFeatured->update([
+                    'banner_name' => $request->banner_name,
+                    'banner_file' => $imagePath,
+                    'banner_url' => $request->banner_url,
+                    'banner_start' => $request->banner_start,
+                    'banner_end' => $request->banner_end,
+                    'updated_by' => $authUser->id,
+                    'updated_at' => now(),
+                    ]);
+                }
+            }
+    
+            // Insert or update the new featured ID record
+            if ($request->new_featured_id) {
+                $newFeatured = stp_advertisement_banner::find($request->new_featured_id);
+                if ($newFeatured) {
+                    // Update existing new featured ID record if needed
+                    $newFeatured->update([
+                    'banner_name' => $request->banner_name, // Ensure to provide necessary fields
+                    'banner_file' => $imagePath,
+                    'banner_url' => $request->banner_url,
+                    'banner_start' => $request->banner_start,
+                    'banner_end' => $request->banner_end,
+                    'updated_by' => $authUser->id,
+                    'updated_at' => now(),
+                    ]);
+                } else {
+                    // Create new featured record if it doesn't exist
+                    stp_advertisement_banner::create([
+                    'banner_name' => $request->banner_name, // Required fields
+                    'banner_file' => $imagePath,
+                    'banner_url' => $request->banner_url,
+                    'banner_start' => $request->banner_start,
+                    'banner_end' => $request->banner_end,
+                    'created_by' => $authUser->id,
+                    'updated_by' => $authUser->id,
+                    'featured_id' => $request->new_featured_id,
+                    'updated_at' => now(),
+                    ]);
+                }
+            }
+    
             return response()->json([
                 'success' => true,
                 'data' => ['message' => "Update Banner Successfully"]
@@ -3518,6 +3565,7 @@ public function bannerDetail(Request $request)
             ]);
         }
     }
+    
     public function disableBanner(Request $request)
     {
         try {
