@@ -222,6 +222,9 @@ class studentController extends Controller
                 'courseFeatured' => $featuredList,
                 'category' => $courseList->category->category_name,
                 'school' => $courseList->school->school_name,
+                'schoolShortDescription' => $courseList->school->school_shortDesc,
+                'schoolLongDescription' => $courseList->school->school_fullDesc,
+
                 'schoolID' => $courseList->school_id,
                 'qualification' => $courseList->qualification->qualification_name,
                 // 'qualification_name' => $courseList->qualification->qualification_name,
