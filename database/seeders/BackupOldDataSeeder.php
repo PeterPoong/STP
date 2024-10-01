@@ -22,16 +22,21 @@ class BackupOldDataSeeder extends Seeder
         // List of tables and their corresponding backup file names
         $tables = [
             'stp_core_metas' => 'old_coreMetaData.json',
-            'stp_schools' => 'old_schoolData.json',
             'stp_subjects' => 'old_subjectsData.json',
+            'stp_packages' => 'old_packages.json',
+            'stp_courses_categories' => 'old_courses_categories.json',
+            'stp_qualifications' => 'old_stp_qualifications.json',
+
+
+            // 'stp_schools' => 'old_schoolData.json',
             // 'stp_countries' => 'old_countriesData.json',
             // 'stp_states' => 'old_statesData.json',
             // 'stp_cities' => 'old_citiesData.json',
-            'stp_featureds' => 'old_featuredsData.json',
-            'stp_courses' => 'old_coursesData.json',
-            'stp_courses_categories' => 'old_courses_categories.json',
-            'stp_qualifications' => 'old_stp_qualifications.json',
-            'stp_tags' => 'old_tags.json'
+            // 'stp_featureds' => 'old_featuredsData.json',
+            // 'stp_courses' => 'old_coursesData.json',
+
+
+            // 'stp_tags' => 'old_tags.json'
         ];
 
         // Process each table one by one

@@ -27,6 +27,7 @@ return new class extends Migration
             $table->foreignId('institue_category')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->decimal('school_lg')->nullable();
             $table->decimal('school_lat')->nullable();
+            $table->string('school_location')->nullable();
             $table->string('person_inChargeName')->nullable();
             $table->string('person_inChargeNumber')->nullable();
             $table->string('person_inChargeEmail')->nullable();

@@ -52,7 +52,7 @@ class studentController extends Controller
     {
         try {
             // Start building the query
-            $getSchoolList = stp_school::where('school_status', 1)
+            $getSchoolList = stp_school::whereIn('school_status', [1, 3])
                 // Exclude schools with zero courses (ensure the school has courses)
                 ->whereHas('courses')
 
@@ -136,7 +136,8 @@ class studentController extends Controller
                     'city' => $school->city->city_name ?? null,
                     'description' => $school->school_shortDesc,
                     'courses' => count($filteredCourses),  // Updated to show filtered course count
-                    'intake' => $monthList
+                    'intake' => $monthList,
+                    'location' => $school->school_location
                 ];
             }
 
@@ -313,7 +314,8 @@ class studentController extends Controller
                 'courses' => $coursesList,
                 'month' => $intakeMonth,
                 'school_cover' => $schoolCover,
-                'school_photo' => $schoolPhoto
+                'school_photo' => $schoolPhoto,
+                'location' => $school->school_location
             ];
             return response()->json([
                 'success' => true,
@@ -505,7 +507,8 @@ class studentController extends Controller
                     'logo' => $course->course_logo ?? $course->school->school_logo,
                     'country' => $course->school->country->country_name ?? null,
                     'state' => $course->school->state->state_name ?? null,
-                    'institute_category' => $course->school->institueCategory->core_metaName ?? null
+                    'institute_category' => $course->school->institueCategory->core_metaName ?? null,
+                    'school_location' => $course->school->school_location
                 ];
             });
 

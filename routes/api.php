@@ -249,10 +249,19 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/qualificationStatisticBarChart', [SchoolController::class, 'qualificationStatisticBarChart']);
 
     //applicant 
-
     Route::post('/applicantDetail', [SchoolController::class, 'applicantDetail']);
     Route::post('/studentDetail', [SchoolController::class, 'studentDetail']);
     Route::post('/courseDetail', [SchoolController::class, 'courseDetail']);
+
+    Route::post('/schoolApplicantCocurriculum', [SchoolController::class, 'schoolApplicantCocurriculum']);
+    Route::post('/schoolAchievementsList', [SchoolController::class, 'schoolAchievementsList']);
+    Route::post('/schoolOtherFileCertList', [SchoolController::class, 'schoolOtherFileCertList']);
+    Route::post('/schoolTranscriptCategoryList', [SchoolController::class, 'schoolTranscriptCategoryList']);
+    Route::post('/schoolStudentTranscriptSubjectList', [SchoolController::class, 'schoolStudentTranscriptSubjectList']);
+    Route::post('/schoolHigherTranscriptSubjectList', [SchoolController::class, 'schoolHigherTranscriptSubjectList']);
+    Route::post('/schoolTranscriptDocumentList', [SchoolController::class, 'schoolTranscriptDocumentList']);
+    Route::post('/schoolTranscriptCgpa', [SchoolController::class, 'schoolTranscriptCgpa']);
+    Route::post('/getNumberOfDocument', [SchoolController::class, 'getNumberOfDocument']);
 });
 
 
