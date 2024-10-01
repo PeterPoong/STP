@@ -27,6 +27,7 @@ class stp_school extends Model
         'state_id',
         'city_id',
         'institue_category',
+        'school_location',
         'school_lg',
         'school_lat',
         'school_status',

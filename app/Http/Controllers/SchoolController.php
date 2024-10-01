@@ -29,7 +29,12 @@ use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\serviceFunctionController;
+use App\Models\stp_cgpa;
+use App\Models\stp_cocurriculum;
+use App\Models\stp_core_meta;
+use App\Models\stp_higher_transcript;
 use App\Models\stp_intake;
+use App\Models\stp_other_certificate;
 use App\Models\stp_school_media;
 use PHPUnit\TextUI\Help;
 use Carbon\Carbon;
@@ -819,6 +824,9 @@ class SchoolController extends Controller
                         ];
                     });
 
+                    // $test["cocurriculums"]=$cocurriculums;
+                    // $test["school_id"]= $course->school_id ?? '';
+                    // $test
                     return [
                         'cocurriculums' => $cocurriculums,
                         'school_id' => $course->school_id ?? '',
@@ -827,6 +835,8 @@ class SchoolController extends Controller
                 });
 
             // Paginate the results
+
+
             $paginatedResults = new \Illuminate\Pagination\LengthAwarePaginator(
                 $uniqueStudents->forPage($request->page ?? 1, 10),
                 $uniqueStudents->count(),
@@ -837,7 +847,7 @@ class SchoolController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $paginatedResults
+                'data' => $uniqueStudents
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -918,12 +928,12 @@ class SchoolController extends Controller
             // Get the authenticated user
             $authUser = Auth::user();
             $schoolID = $authUser->id;
-    
+
             $request->validate([
                 'student_id' => 'integer|nullable',
                 'category' => 'integer|nullable'
             ]);
-    
+
             // Select unique student_ids from stp_submited_form
             $uniqueStudents = stp_submited_form::with(['student.transcript.subject', 'course'])
                 ->whereHas('course', function ($query) use ($schoolID) {
@@ -941,7 +951,7 @@ class SchoolController extends Controller
                 ->map(function ($form) use ($request) {
                     $student = $form->student;
                     $course = $form->course;
-    
+
                     // Filter transcripts by category if the category is provided
                     $transcripts = $student->transcript->filter(function ($transcript) use ($request) {
                         return !$request->filled('category') || $transcript->transcript_category == $request->category;
@@ -953,19 +963,19 @@ class SchoolController extends Controller
                             'grade_id' => $transcript->transcript_grade, // Store grade id for sorting
                         ];
                     });
-    
+
                     // Sort transcripts by grade_id in ascending order
                     $sortedTranscripts = $transcripts->sortBy('grade_id')->values(); // Ensure it's indexed numerically
-    
+
                     // Count the grades and sort them by the grade's stp_core_meta id
                     $gradeCounts = $sortedTranscripts->groupBy('grade_id')->map(function ($group, $gradeId) {
                         $gradeName = $group->first()['grade'];
                         return count($group) . $gradeName;
                     });
-    
+
                     // Sort the grade counts by grade_id (which corresponds to stp_core_meta id)
                     $sortedGradeCounts = $gradeCounts->sortKeys()->all();
-    
+
                     return [
                         'transcripts' => $sortedTranscripts->toArray(), // Convert collection to array
                         'count_grade' => $sortedGradeCounts, // Sorted by grade_id (stp_core_meta id)
@@ -973,7 +983,7 @@ class SchoolController extends Controller
                         'student_id' => $student->id ?? '',
                     ];
                 });
-    
+
             // Paginate the results
             $paginatedResults = new \Illuminate\Pagination\LengthAwarePaginator(
                 $uniqueStudents->forPage($request->page ?? 1, 10),
@@ -982,7 +992,7 @@ class SchoolController extends Controller
                 $request->page ?? 1,
                 ['path' => url()->current()]
             );
-    
+
             return response()->json([
                 'success' => true,
                 'data' => $paginatedResults
@@ -995,7 +1005,7 @@ class SchoolController extends Controller
             ]);
         }
     }
-    
+
 
     public function editApplicantStatus(Request $request)
     {
@@ -1395,7 +1405,9 @@ class SchoolController extends Controller
                     }
                 })
                 ->with('student', 'course') // Eager load related student and course data
+                ->where('form_status', '!=', 0)
                 ->get();
+
 
 
             $total = count($Applicant);
@@ -2243,7 +2255,345 @@ class SchoolController extends Controller
             ]);
 
             $getApplicantDetail = stp_submited_form::find($request->applicantId);
+            $getApplicantDetail['course_name'] = $getApplicantDetail->course->course_name;
             return $getApplicantDetail;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
+    public function schoolApplicantCocurriculum(Request $request)
+    {
+        try {
+            $request->validate([
+                'studentId' => 'required|integer'
+            ]);
+            $getCocurriculum = stp_cocurriculum::where('student_id', $request->studentId)
+                ->where('cocurriculums_status', 1)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $getCocurriculum
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function schoolAchievementsList(Request $request)
+    {
+        try {
+            $request->validate([
+                'studentId' => 'required|integer',
+                'paginate' => 'required|string'
+            ]);
+
+            if ($request->paginate === "true") {
+                $achievementList = stp_achievement::query()
+                    ->where('achievements_status', 1)
+                    ->where('student_id', $request->studentId)
+                    ->when($request->filled('search'), function ($query) use ($request) {
+                        $query->where('achievement_name', 'like', '%' . $request->search . '%');
+                    })
+                    ->paginate(10)
+                    ->through(function ($achievementList) {
+                        $status = ($achievementList->achievements_status == 1) ? "Active" : "Inactive";
+                        return [
+                            "id" => $achievementList->id,
+                            "achievement_name" => $achievementList->achievement_name,
+                            "awarded_by" => $achievementList->awarded_by,
+                            "title_obtained" => $achievementList->title->core_metaName ?? '',
+                            "date" => $achievementList->date,
+                            "achievement_media" => $achievementList->achievement_media,
+                            "status" => "Active"
+                        ];
+                    });
+            } else {
+                $getAchievementList = stp_achievement::query()
+                    ->where('achievements_status', 1)
+                    ->where('student_id', $request->studentId)
+                    ->get();
+
+                foreach ($getAchievementList as $achievement) {
+                    $achievementList[] = [
+                        "id" => $achievement->id,
+                        "achievement_name" => $achievement->achievement_name,
+                        "awarded_by" => $achievement->awarded_by,
+                        "title_obtained" => $achievement->title->core_metaName ?? '',
+                        "date" => $achievement->date,
+                        "achievement_media" => $achievement->achievement_media,
+                        "status" => "Active"
+                    ];
+                };
+            }
+
+
+            return response()->json([
+                'success' => true,
+                'data' => $achievementList,
+
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function schoolOtherFileCertList(Request $request)
+    {
+        try {
+
+            $request->validate([
+                'studentId' => 'required|integer'
+            ]);
+
+            $otherCertList = stp_other_certificate::query()
+                ->where('certificate_status', 1)
+                ->where('student_id', $request->studentId)
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('certificate_name', 'like', '%' . $request->search . '%');
+                })
+                ->paginate(10) // Paginating the result
+                ->through(function ($cert) {
+                    $dateTime = new \DateTime($cert->created_at);
+                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
+                    $status = ($cert->certificate_status == 1) ? "Active" : "Inactive";
+                    return [
+                        "id" => $cert->id,
+                        "name" => $cert->certificate_name,
+                        "media" => $cert->certificate_media,
+                        'created_at' => $appliedDate,
+                        "status" => "Active"
+                    ];
+                });
+
+
+            return response()->json([
+                "success" => true,
+                "data" => $otherCertList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
+    public function schoolTranscriptCategoryList(Request $request)
+    {
+        try {
+            $request->validate([
+
+                'categoryId' => 'nullable|integer'
+            ]);
+
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1) // Only active categories
+                ->where('core_metaType', 'transcript_category') // Only transcript categories
+                ->when($request->filled('category_id'), function ($query) use ($request) {
+                    $query->where('id', $request->category_id);
+                })
+                ->paginate(10)
+                ->through(function ($categoryList) {
+                    return [
+                        "id" => $categoryList->id,
+                        "transcript_category" => $categoryList->core_metaName,
+                        "status" => $categoryList->core_metaStatus == 1 ? "Active" : "Inactive"
+                    ];
+                });
+
+            // Return the result
+            return response()->json([
+                'success' => true,
+                'data' => $categoryList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function schoolStudentTranscriptSubjectList(Request $request)
+    {
+        try {
+            $request->validate([
+                'studentId' => 'required|integer'
+            ]);
+            $getTranscriptSubject = stp_transcript::where('student_id', $request->studentId)
+                ->where('transcript_status', 1)
+                ->get()
+                ->map(function ($subject) {
+                    return [
+                        'subject_id' => $subject->subject->id,
+                        'subject_name' => $subject->subject->subject_name,
+                        'subject_grade_id' => $subject->grade->id,
+                        'subject_grade' => $subject->grade->core_metaName,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $getTranscriptSubject
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function schoolHigherTranscriptSubjectList(Request $request)
+    {
+        try {
+            $request->validate([
+                'studentId' => 'required|integer',
+                'categoryId' => 'required|integer'
+            ]);
+
+            $getHigherTranscriptSubject = stp_higher_transcript::where('category_id', $request->categoryId)
+                ->where('student_id', $request->studentId)
+                ->where('highTranscript_status', 1)
+                ->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getHigherTranscriptSubject
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function schoolTranscriptDocumentList(Request $request)
+    {
+        try {
+
+
+            $request->validate([
+                'studentId' => 'required|integer',
+                'categoryId' => 'integer|nullable'
+            ]);
+
+            $mediaList = stp_student_media::query()
+                ->where('studentMedia_status', 1)
+                ->where('student_id', $request->studentId)
+                ->when($request->filled('categoryId'), function ($query) use ($request) {
+                    // Filtering the subjects by the selected category
+                    $query->where('studentMedia_type', $request->categoryId);
+                })
+                ->paginate(10) // Paginating the result
+                ->through(function ($StudentMedia) {
+                    $dateTime = new \DateTime($StudentMedia->created_at);
+                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
+                    return [
+                        "id" => $StudentMedia->id,
+                        "studentMedia_name" => $StudentMedia->studentMedia_name,
+                        "studentMedia_location" => $StudentMedia->studentMedia_location,
+                        "category_id" => $StudentMedia->studentMedia_type,
+                        "created_at" => $appliedDate,
+                        "status" => $StudentMedia->studentMedia_status ? "Active" : "Inactive"
+                    ];
+                });
+
+            // Return the filtered subject list in JSON format
+            return response()->json([
+                "success" => true,
+                "data" => $mediaList
+            ]);
+        } catch (\Exception  $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function schoolTranscriptCgpa(Request $request)
+    {
+        try {
+
+            $request->validate([
+                'studentId' => 'required|integer',
+                'transcriptCategory' => 'required|integer'
+            ]);
+            $list = stp_cgpa::where('student_id', $request->studentId)
+                ->where('transcript_category', $request->transcriptCategory)
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'data' => $list
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getNumberOfDocument(Request $request)
+    {
+        try {
+            $request->validate([
+                'studentId' => 'required|integer'
+            ]);
+
+            $getAcademicNumber = stp_student_media::where('student_id', $request->studentId)
+                ->where('studentMedia_status', '!=', 0)
+                ->get();
+
+            $getOtherCertNumber = stp_other_certificate::where('student_id', $request->studentId)
+                ->where('certificate_status', '!=', 0)
+                ->get();
+
+            $getAchievementNumber = stp_achievement::where('student_id', $request->studentId)
+                ->where('achievements_status', '!=', 0)
+                ->get();
+
+            $result[] = [
+                'academicCount' => count($getAcademicNumber),
+                'OtherCertCount' => count($getOtherCertNumber),
+                'achievementCount' => count($getAchievementNumber),
+                'totalDocument' => (count($getAcademicNumber)) + (count($getOtherCertNumber)) + (count($getAchievementNumber))
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+            ]);
+
+
+
+            return $getOtherCertNumber;
+
+            return count($getAcademicNumber);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
