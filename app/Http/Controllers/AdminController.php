@@ -714,16 +714,18 @@ class AdminController extends Controller
     
             $school = stp_school::find($request->id);
     
-            // Handle logo update
+           // Handle logo update
+            $imagePath = $school->school_logo; // Default to existing logo path
             if ($request->hasFile('logo')) {
+                // Delete the existing logo if it exists
                 if (!empty($school->school_logo)) {
                     Storage::delete('public/' . $school->school_logo);
                 }
                 $image = $request->file('logo');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('schoolLogo', $imageName, 'public');
+                $imagePath = $image->storeAs('schoolLogo', $imageName, 'public'); // Update the image path
             }
-    
+        
             // Handle cover photo update
             if ($request->hasFile('cover')) {
                 $existingCover = stp_school_media::where('school_id', $school->id)->where('schoolMedia_type', 66)->first();
@@ -901,33 +903,35 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer'
             ]);
-
+    
             // Fetch the school along with its courses, course featured data, and school featured data
             $school = stp_school::with(['courses.featured', 'featured', 'media'])->find($request->id);
-
+    
             if (!$school) {
                 return response()->json([
                     'success' => false,
                     'message' => 'School not found'
                 ]);
             }
-
-            $medias = $school->media->filter(function($media){
-                return $media->schoolMedia_status===1;
-            })->map(function($media){
+    
+            // Filter school media by schoolMedia_status = 1
+            $medias = $school->media->filter(function($media) {
+                return $media->schoolMedia_status === 1;
+            })->map(function($media) {
                 return [
                     'schoolMedia_name' => $media->schoolMedia_name,
                     'schoolMedia_location' => $media->schoolMedia_location,
-                    'schoolMedia_type'=> $media->schoolMedia_type,
-                    
+                    'schoolMedia_type' => $media->schoolMedia_type,
                 ];
             });
-
-            // Prepare the courses data
+    
+            // Prepare the courses data, filter featured by featured_status = 1
             $courses = $school->courses->map(function ($course) {
                 return [
                     'course_name' => $course->course_name,
-                    'course_featured' => $course->featured->map(function ($featured) {
+                    'course_featured' => $course->featured->filter(function ($featured) {
+                        return $featured->featured_status === 1;  // Filter by featured_status = 1
+                    })->map(function ($featured) {
                         return [
                             'featured_type' => $featured->featured_type,
                             'featured_startTime' => $featured->featured_startTime,
@@ -936,16 +940,19 @@ class AdminController extends Controller
                     }),
                 ];
             });
-
-            // Prepare the school featured data
-            $schoolFeatured = $school->featured->map(function ($featured) {
+    
+            // Prepare the school featured data, filter by featured_status = 1
+            $schoolFeatured = $school->featured->filter(function ($featured) {
+                return $featured->featured_status === 1;  // Filter by featured_status = 1
+            })->map(function ($featured) {
                 return [
                     'featured_type' => $featured->featured_type,
                     'featured_startTime' => $featured->featured_startTime,
                     'featured_endTime' => $featured->featured_endTime,
                 ];
             });
-
+    
+            // Return the final response
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -953,30 +960,31 @@ class AdminController extends Controller
                     'name' => $school->school_name,
                     'email' => $school->school_email,
                     'country_code' => $school->school_countryCode,
-                    'contact_number'=>$school->school_contactNo,
-                    'fullDescripton' => $school->school_fullDesc,
+                    'contact_number' => $school->school_contactNo,
+                    'fullDescription' => $school->school_fullDesc,
                     'shortDescription' => $school->school_shortDesc,
                     'school_address' => $school->school_address,
                     'country' => $school->country->country_name ?? '',
-                    'country_id'=>$school->country_id,
+                    'country_id' => $school->country_id,
                     'state' => $school->state->state_name ?? '',
-                    'state_id'=> $school->state_id,
+                    'state_id' => $school->state_id,
                     'city' => $school->city->city_name ?? '',
-                    'city_id'=>$school->city_id,
+                    'city_id' => $school->city_id,
                     'logo' => $school->school_logo ?? '',
                     'school_website' => $school->school_officalWebsite ?? '',
-                    'courses' => $courses, // List of courses with featured data
-                    'schoolFeatured' => $schoolFeatured, // List of school's featured data
-                    'category'=>$school->institue_category,
-                    'PIC_name'=>$school->person_inChargeName,
-                    'PIC_number'=>$school->person_inChargeNumber,
-                    'PIC_email'=>$school->person_inChargeEmail,
-                    'account'=>$school->account_type,
-                    'location'=>$school->school_location,
-                    'media'=>$medias
+                    'courses' => $courses, // List of courses with filtered featured data
+                    'schoolFeatured' => $schoolFeatured, // List of filtered school's featured data
+                    'category' => $school->institue_category,
+                    'PIC_name' => $school->person_inChargeName,
+                    'PIC_number' => $school->person_inChargeNumber,
+                    'PIC_email' => $school->person_inChargeEmail,
+                    'account' => $school->account_type,
+                    'location' => $school->school_location,
+                    'media' => $medias // Filtered media data
                 ]
             ]);
         } catch (\Exception $e) {
+            // Handle any errors
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
@@ -984,6 +992,7 @@ class AdminController extends Controller
             ]);
         }
     }
+    
 
 
     public function editSchoolFeatured(Request $request)
