@@ -670,8 +670,8 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'password' => 'required|string|min:8',
-                'confirm_password' => 'required|string|min:8|same:password',
+                'password' => 'string|min:8|nullable', // Allow password to be nullable
+                'confirm_password' => 'string|min:8|nullable|same:password', // Allow confirm_password to be nullable
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255|email',
@@ -783,14 +783,13 @@ class AdminController extends Controller
                     ]);
                 }
             }
-    
+   
             // Update school details
             $school->update([
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->country_code,
                 'school_contactNo' => $request->contact_number,
-                'school_password' => Hash::make($request->password),
                 'school_fullDesc' => $request->school_fullDesc,
                 'country_id' => $request->country,
                 'state_id' => $request->state,
@@ -799,12 +798,17 @@ class AdminController extends Controller
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
                 'school_officalWebsite' => $request->school_website,
-                'school_logo' => $imagePath ?? $school->school_logo,
+                'school_logo' => $imagePath ?? $school->logo,
                 'school_location'=>$request->location,
                 'account_type'=> $request->account,
                 'updated_by' => $authUser->id
             ]);
-    
+
+                // Update password only if provided
+       if (!empty($request->password)) {
+            $school['school_password'] = Hash::make($request->password);
+        }
+        
             return response()->json([
                 'success' => true,
                 'data' => ['message' => 'School updated successfully']
