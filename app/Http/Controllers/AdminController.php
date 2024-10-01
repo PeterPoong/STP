@@ -1356,7 +1356,7 @@ class AdminController extends Controller
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
                 'intake.*' => 'integer|between:41,52',
-                'courseFeatured' => 'required|array',
+                'courseFeatured' => 'nullable|array',
                 'courseFeatured.*' => 'integer',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
@@ -1432,29 +1432,53 @@ class AdminController extends Controller
                     'updated_at' => now()
                 ]);
     
-            // Handle featured courses
-            $existingFeatured = stp_featured::where('course_id', $request->id)
+                            // Handle featured courses
+                $existingFeatured = stp_featured::where('course_id', $request->id)
                 ->pluck('featured_type')
                 ->toArray();
-    
-            $newFeatured = array_diff($request->courseFeatured, $existingFeatured);
-            $removeFeatured = array_diff($existingFeatured, $request->courseFeatured);
-    
-            // Insert new featured courses
-            foreach ($newFeatured as $featured) {
-                stp_featured::updateOrCreate(
-                    ['course_id' => $request->id, 'featured_type' => $featured],
-                    ['school_id' => $request->schoolID, 'featured_status' => 1, 'created_at' => now()]
-                );
-            }
-    
-            // Deactivate removed featured courses
-            stp_featured::where('course_id', $request->id)
-                ->whereIn('featured_type', $removeFeatured)
-                ->update([
-                    'featured_status' => 0,
-                    'updated_at' => now()
-                ]);
+
+                // Check if any featured courses are provided
+                if (!empty($request->courseFeatured)) {
+                $newFeatured = array_diff($request->courseFeatured, $existingFeatured);
+                $existingToKeep = array_intersect($request->courseFeatured, $existingFeatured);
+
+                // Set the featured status to 1 for the existing featured types provided in the request
+                stp_featured::where('course_id', $request->id)
+                    ->whereIn('featured_type', $existingToKeep)
+                    ->update([
+                        'featured_status' => 1,
+                        'updated_at' => now()
+                    ]);
+
+                // Create new featured entries for those not in the database
+                foreach ($newFeatured as $featured) {
+                    stp_featured::create([
+                        'course_id' => $request->id,
+                        'featured_type' => $featured,
+                        'school_id' => $request->schoolID,
+                        'featured_status' => 1,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // Set the featured status to 0 for all features not included in the request
+                $removeFeatured = array_diff($existingFeatured, $request->courseFeatured);
+                stp_featured::where('course_id', $request->id)
+                    ->whereIn('featured_type', $removeFeatured)
+                    ->update([
+                        'featured_status' => 0,
+                        'updated_at' => now()
+                    ]);
+                } else {
+                // If no featured courses are provided, deactivate all existing ones for the course
+                stp_featured::where('course_id', $request->id)
+                    ->update([
+                        'featured_status' => 0,
+                        'updated_at' => now()
+                    ]);
+                }
+
     
             return response()->json([
                 'success' => true,
