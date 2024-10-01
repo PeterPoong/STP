@@ -1275,70 +1275,82 @@ class AdminController extends Controller
     }
 
     public function courseDetail(Request $request)
-    {
-        try {
-            $request->validate([
-                'id' => 'required|integer'
-            ]);
+{
+    try {
+        $request->validate([
+            'id' => 'required|integer'
+        ]);
 
-            $courseList = stp_course::find($request->id);
+        $courseList = stp_course::find($request->id);
 
-            if (empty($courseList->course_logo)) {
-                $logo = $courseList->school->school_logo;
-            } else {
-                $logo = $courseList->course_logo;
-            }
+        // Determine the logo to use (course logo or fallback to school logo)
+        if (empty($courseList->course_logo)) {
+            $logo = $courseList->school->school_logo;
+        } else {
+            $logo = $courseList->course_logo;
+        }
 
-            $courseTag = $courseList->tag;
-            $tagList = [];
-            foreach ($courseTag as $tag) {
-                $tagList[] = [
-                    "id" => $tag->tag['id'],
-                    "tagName" => $tag->tag['tag_name']
-                ];
-            }
-            // Fetch all intakes associated with the course
-            $intakeList = [];
-            foreach ($courseList->intake as $intake) {
+        // Prepare the tag list
+        $courseTag = $courseList->tag;
+        $tagList = [];
+        foreach ($courseTag as $tag) {
+            $tagList[] = [
+                "id" => $tag->tag['id'],
+                "tagName" => $tag->tag['tag_name']
+            ];
+        }
+
+        // Fetch all intakes associated with the course, filtering by intake_status = 1
+        $intakeList = [];
+        foreach ($courseList->intake as $intake) {
+            if ($intake->intake_status == 1) {
                 $intakeList[] = $intake->month->id;
             }
-            $featuredList = [];
-            foreach ($courseList->featured as $courseFeatured) {
+        }
+
+        // Fetch all featured items associated with the course, filtering by featured_status = 1
+        $featuredList = [];
+        foreach ($courseList->featured as $courseFeatured) {
+            if ($courseFeatured->featured_status == 1) {
                 $featuredList[] = $courseFeatured->featured->id;
             }
-            
-            $courseListDetail = [
-                'id' => $courseList->id,
-                'course' => $courseList->course_name,
-                'description' => $courseList->course_description,
-                'requirement' => $courseList->course_requirement,
-                'cost' => $courseList->course_cost,
-                'period' => $courseList->course_period,
-                'intake' => $intakeList, // Updated to include all intakes
-                'courseFeatured'=>$featuredList,
-                'category' => $courseList->category->id,
-                'school' => $courseList->school->school_name,
-                'schoolID'=> $courseList->school_id,
-                'qualification' => $courseList->qualification->id,
-                'qualification_name' => $courseList->qualification->qualification_name,
-                'mode' => $courseList->studyMode->id,
-                'logo' => $logo,
-                'tag' => $tagList
-            ];
-
-            return response()->json([
-                'success' => true,
-                'data' => $courseListDetail
-            ]);
-            return $courseListDetail;
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Internal Server Error',
-                'error' => $e->getMessage()
-            ]);
         }
+
+        // Prepare the course details
+        $courseListDetail = [
+            'id' => $courseList->id,
+            'course' => $courseList->course_name,
+            'description' => $courseList->course_description,
+            'requirement' => $courseList->course_requirement,
+            'cost' => $courseList->course_cost,
+            'period' => $courseList->course_period,
+            'intake' => $intakeList, // Updated to include filtered intakes
+            'courseFeatured' => $featuredList, // Updated to include filtered featured items
+            'category' => $courseList->category->id,
+            'school' => $courseList->school->school_name,
+            'schoolID'=> $courseList->school_id,
+            'qualification' => $courseList->qualification->id,
+            'qualification_name' => $courseList->qualification->qualification_name,
+            'mode' => $courseList->studyMode->id,
+            'logo' => $logo,
+            'tag' => $tagList
+        ];
+
+        // Return the final response
+        return response()->json([
+            'success' => true,
+            'data' => $courseListDetail
+        ]);
+    } catch (\Exception $e) {
+        // Handle any errors
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage()
+        ]);
     }
+}
+
 
     public function editCourse(Request $request)
     {
