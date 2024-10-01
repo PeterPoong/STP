@@ -349,8 +349,9 @@ class AuthController extends Controller
                 'person_inChargeNumber' => $request->person_in_charge_contact,
                 'person_inChargeEmail' => $request->person_in_charge_email,
                 'account_type' => 64,
-                'school_logo' => $imagePath ?? null,
-                'school_status' => 2
+                'school_logo' => " schoolLogo/profileDefaultIcon.png",
+                'school_status' => 2,
+
             ];
 
             stp_school::create($data);
