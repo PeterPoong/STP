@@ -700,7 +700,7 @@ class SchoolController extends Controller
                         $subQuery->where('qualification_id', $request->qualification_id);
                     });
                 })
-                
+
                 // Add search filter for student name (first or last name)
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $search = $request->search;
@@ -2332,12 +2332,12 @@ class SchoolController extends Controller
                         ];
                     });
             } else {
-                $getAchievementList = stp_achievement::query()
+                $achievementList = stp_achievement::query()
                     ->where('achievements_status', 1)
                     ->where('student_id', $request->studentId)
                     ->get();
 
-                foreach ($getAchievementList as $achievement) {
+                foreach ($achievementList as $achievement) {
                     $achievementList[] = [
                         "id" => $achievement->id,
                         "achievement_name" => $achievement->achievement_name,
@@ -2349,7 +2349,6 @@ class SchoolController extends Controller
                     ];
                 };
             }
-
 
             return response()->json([
                 'success' => true,
