@@ -724,21 +724,25 @@ class AdminController extends Controller
                 $image = $request->file('logo');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('schoolLogo', $imageName, 'public'); // Update the image path
+            }  else {
+                // If no new icon is uploaded, use the existing icon
+                $imagePath = $school->school_logo;
             }
         
-            // Handle cover photo update
+          // Handle cover photo update (similar to logo)
+            $existingCover = stp_school_media::where('school_id', $school->id)->where('schoolMedia_type', 66)->first();
             if ($request->hasFile('cover')) {
-                $existingCover = stp_school_media::where('school_id', $school->id)->where('schoolMedia_type', 66)->first();
                 if ($existingCover) {
+                    // Delete the existing cover if it exists
                     Storage::delete('public/' . $existingCover->schoolMedia_location);
                     $existingCover->delete();
                 }
-    
+                
                 $cover = $request->file('cover');
                 $coverName = $school->school_name . '_cover.' . $cover->getClientOriginalExtension();
                 $coverPath = $cover->storeAs('schoolMedia', $coverName, 'public');
                 $coverFormat = $cover->getClientOriginalExtension();
-    
+                
                 stp_school_media::create([
                     'school_id' => $school->id,
                     'schoolMedia_type' => 66,
@@ -749,27 +753,46 @@ class AdminController extends Controller
                     'created_by' => $authUser->id,
                     'created_at' => now()
                 ]);
-            }
-    
-            // Handle album photo update
-            if ($request->hasFile('album')) {
-                foreach ($request->file('album') as $albumPhoto) {
-                    $albumPhotoName = $albumPhoto->getClientOriginalName();
-                    $albumPhotoPath = $albumPhoto->storeAs('schoolMedia', $albumPhotoName, 'public');
-                    $albumPhotoFormat = $albumPhoto->getClientOriginalExtension();
-    
-                    stp_school_media::create([
-                        'school_id' => $school->id,
-                        'schoolMedia_type' => 67,
-                        'schoolMedia_name' => $albumPhotoName,
-                        'schoolMedia_location' => $albumPhotoPath,
-                        'schoolMedia_format' => $albumPhotoFormat,
-                        'schoolMedia_status' => 1,
-                        'created_by' => $authUser->id,
-                        'created_at' => now()
-                    ]);
+            } else {
+                // If no new cover is uploaded, retain the existing one
+                if ($existingCover) {
+                    $coverPath = $existingCover->schoolMedia_location;
                 }
             }
+    
+        // Handle album photo update (similar to logo)
+        $existingAlbumPhotos = stp_school_media::where('school_id', $school->id)->where('schoolMedia_type', 67)->get();
+        if ($request->hasFile('album')) {
+            // Delete existing album photos if new ones are uploaded
+            foreach ($existingAlbumPhotos as $existingPhoto) {
+                Storage::delete('public/' . $existingPhoto->schoolMedia_location);
+                $existingPhoto->delete();
+            }
+            
+            // Store new album photos
+            foreach ($request->file('album') as $albumPhoto) {
+                $albumPhotoName = $albumPhoto->getClientOriginalName();
+                $albumPhotoPath = $albumPhoto->storeAs('schoolMedia', $albumPhotoName, 'public');
+                $albumPhotoFormat = $albumPhoto->getClientOriginalExtension();
+                
+                stp_school_media::create([
+                    'school_id' => $school->id,
+                    'schoolMedia_type' => 67,
+                    'schoolMedia_name' => $albumPhotoName,
+                    'schoolMedia_location' => $albumPhotoPath,
+                    'schoolMedia_format' => $albumPhotoFormat,
+                    'schoolMedia_status' => 1,
+                    'created_by' => $authUser->id,
+                    'created_at' => now()
+                ]);
+            }
+        } else {
+            // If no new album photos are uploaded, retain the existing ones
+            foreach ($existingAlbumPhotos as $existingPhoto) {
+                // Retain existing album photo paths (you can adjust this as needed)
+                $albumPhotoPaths[] = $existingPhoto->schoolMedia_location;
+            }
+        }
     
             // Handle featured types update
             if ($request->has('featured')) {
@@ -800,7 +823,7 @@ class AdminController extends Controller
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
                 'school_officalWebsite' => $request->school_website,
-                'school_logo' => $imagePath ?? $school->logo,
+                'school_logo' => $imagePath,
                 'school_location'=>$request->location,
                 'account_type'=> $request->account,
                 'updated_by' => $authUser->id
@@ -2424,6 +2447,7 @@ class AdminController extends Controller
                 'form_status' => 'integer|nullable',
                 'student_id' => 'integer|nullable',
                 'courses_id' => 'integer|nullable',
+                'qualification_id'=>'integer|nullable',
                  'search' => 'string|nullable'
             ]);
 
