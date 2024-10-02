@@ -18,7 +18,7 @@
             font-size: 0.9em;
             color: #777777;
         }
-        .button {
+        /* .button {
             display: inline-block;
             padding: 10px 20px;
             font-size: 16px;
@@ -26,7 +26,17 @@
             background-color: #007BFF;
             text-decoration: none;
             border-radius: 5px;
-        }
+        } */
+        .button {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: blue; /* Green background */
+    color: white !important; /* White text */
+    border: 1px solid blue; /* Match border color with background */
+    text-decoration: none;
+    border-radius: 5px;
+}
     </style>
 </head>
 <body>

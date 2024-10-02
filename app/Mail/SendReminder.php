@@ -31,7 +31,7 @@ class SendReminder extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Reminder: Student still waiting for your response',
+            subject: '[IMPORTANT] Reminder: Student still waiting for your response',
         );
     }
 
