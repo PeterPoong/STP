@@ -224,7 +224,6 @@ class studentController extends Controller
                 'school' => $courseList->school->school_name,
                 'schoolShortDescription' => $courseList->school->school_shortDesc,
                 'schoolLongDescription' => $courseList->school->school_fullDesc,
-
                 'schoolID' => $courseList->school_id,
                 'qualification' => $courseList->qualification->qualification_name,
                 // 'qualification_name' => $courseList->qualification->qualification_name,
@@ -440,11 +439,16 @@ class studentController extends Controller
             ]);
 
             // Apply filters and paginate directly
-            $query = stp_course::query();
-
-            $query->when($request->filled('qualification'), function ($query) use ($request) {
-                $query->where('qualification_id', $request->qualification);
-            })
+            $query = stp_course::query()
+                ->leftJoin('stp_featureds', function ($join) {
+                    $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
+                        ->where('stp_featureds.featured_type', 30)
+                        ->where('stp_featureds.featured_status', 1);
+                })
+                ->select('stp_courses.*', 'stp_featureds.featured_type')
+                ->when($request->filled('qualification'), function ($query) use ($request) {
+                    $query->where('qualification_id', $request->qualification);
+                })
                 ->when($request->filled('category'), function ($query) use ($request) {
                     $query->whereIn('category_id', $request->category);
                 })
@@ -481,6 +485,9 @@ class studentController extends Controller
                     });
                 });
 
+            // Sort so courses with featured_type 30 appear first
+            $query->orderByRaw('stp_featureds.featured_type = 30 DESC');
+
             // Paginate the results
             $courses = $query->paginate(40);
 
@@ -514,8 +521,7 @@ class studentController extends Controller
                     'school_location' => $course->school->school_location
                 ];
             });
-
-            return $transformedCourses;
+            return  $transformedCourses;
 
             return response()->json([
                 'success' => true,
@@ -2241,7 +2247,8 @@ class studentController extends Controller
     {
         try {
             $request->validate([
-                'type' => 'required|string'
+                'type' => 'required|string',
+                'schoolId' => "required|integer"
             ]);
 
             switch ($request->type) {
@@ -2255,6 +2262,7 @@ class studentController extends Controller
             $featuredInstituteList = stp_featured::where('school_id', '!=', null)
                 ->where('featured_type', $featuredType)
                 ->where('featured_status', 1)
+                ->where('id', '!=', $request->schoolId)
                 ->get()
                 ->map(function ($institute) {
                     return [
@@ -2284,7 +2292,8 @@ class studentController extends Controller
     {
         try {
             $request->validate([
-                'type' => 'required|string'
+                'type' => 'required|string',
+                'courseId' => 'required|integer'
             ]);
 
             switch ($request->type) {
@@ -2299,6 +2308,7 @@ class studentController extends Controller
             $featuredCoursesList = stp_featured::where('course_id', '!=', null)
                 ->where('featured_type', $featuredType)
                 ->where('featured_status', 1)
+                ->where('course_id', '!=', $request->courseId)
                 ->get()
                 ->map(function ($featured) {
                     return [

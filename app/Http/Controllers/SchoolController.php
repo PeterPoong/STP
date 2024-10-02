@@ -420,7 +420,7 @@ class SchoolController extends Controller
             }
 
             $courses = stp_course::find($request->id);
-
+            $imagePath = "";
             if ($request->hasFile('logo')) {
                 if (!empty($courses->course_logo)) {
                     Storage::delete('public/' . $courses->course_logo);
@@ -430,7 +430,7 @@ class SchoolController extends Controller
                 $imagePath = $image->storeAs('courseLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
 
-            $courses->update([
+            $data = [
                 'school_id' => $request->schoolID,
                 'course_name' => $request->name,
                 'course_description' => $request->description ?? null,
@@ -440,10 +440,17 @@ class SchoolController extends Controller
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
                 'study_mode' => $request->mode,
-                'course_logo' => $imagePath ?? null,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
-            ]);
+            ];
+
+            if ($imagePath != null) {
+                $data['course_logo'] = $imagePath;
+            }
+
+
+
+            $courses->update($data);
 
             $getIntake = stp_intake::where("course_id", $request->id)->where('intake_status', 1)->get();
             $existingMonth = $getIntake->pluck('intake_month')->toArray();
