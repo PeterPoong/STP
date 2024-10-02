@@ -94,14 +94,16 @@ class ServiceFunction
     }
 
 
-    public function sendReminder($schoolEmail, $studentName, $courseName, $schoolName)
+    public function sendReminder($schoolEmail, $studentName, $courseName, $schoolName, $newApplicantId)
     {
         try {
             $data = [
                 'courseName' => $courseName,
                 'studentName' => $studentName,
                 'schoolName' => $schoolName,
-                'reviewLink' => "http://192.168.0.70:5173/schoolPortalLogin"
+                // 'reviewLink' => "http://192.168.0.70:5173/schoolPortalLogin"
+                'reviewLink' => "http://192.168.0.70:5173/school/ApplicantDetail/" . $newApplicantId // Concatenate the student ID
+
             ];
             Mail::to($schoolEmail)->send(new SendReminder($data));
         } catch (\Exception $e) {

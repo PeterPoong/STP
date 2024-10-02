@@ -1633,7 +1633,7 @@ class studentController extends Controller
             $form = stp_submited_form::find($request->formID);
 
             $authUser = Auth::user();
-            $this->serviceFunctionController->sendReminder($form, $authUser);
+            $this->serviceFunctionController->sendReminder($form, $authUser, $request->formID);
             return response()->json([
                 'success' => true,
                 'data' => 'Send Reminder successfully'

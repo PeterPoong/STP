@@ -274,7 +274,7 @@ class serviceFunctionController extends Controller
         }
     }
 
-    public function sendReminder($form, $authUser)
+    public function sendReminder($form, $authUser, $newApplicantId)
     {
         try {
             $schoolEmail = $form->course->school->school_email;
@@ -285,7 +285,8 @@ class serviceFunctionController extends Controller
                 $schoolEmail,
                 $studentName,
                 $courseName,
-                $schoolName
+                $schoolName,
+                $newApplicantId
             );
         } catch (\Exception $e) {
             return response()->json([
