@@ -1097,6 +1097,8 @@ class studentController extends Controller
                     $school = $course->school;
                     $dateTime = new \DateTime($submittedForm->created_at);
                     $appliedDate = $dateTime->format('Y-m-d H:i:s');
+                    $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
+
                     return [
                         "id" => $submittedForm->id,
                         "course_name" => $course->course_name,
@@ -1114,6 +1116,8 @@ class studentController extends Controller
                         'student_id' => $submittedForm->student_id,
                         'feedback' => $submittedForm->form_feedback,
                         'date_applied' => $appliedDate, // Applied date in the correct format
+                        'intake' => $intakeMonths
+
                     ];
                 });
 
@@ -1171,6 +1175,8 @@ class studentController extends Controller
                     };
                     $dateTime = new \DateTime($submittedForm->created_at);
                     $appliedDate = $dateTime->format('Y-m-d H:i:s');
+                    $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
+
                     return [
                         "id" => $submittedForm->id,
                         "course_name" => $course->course_name,
@@ -1188,6 +1194,7 @@ class studentController extends Controller
                         'student_id' => $submittedForm->student_id,
                         'feedback' => $submittedForm->form_feedback,
                         'date_applied' => $appliedDate,
+                        'intake' => $intakeMonths
                     ];
                 });
 
