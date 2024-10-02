@@ -689,8 +689,11 @@ class SchoolController extends Controller
                     $query->where('form_status', $request->form_status);
                 })
                 ->when($request->filled('qualification_id'), function ($query) use ($request) {
-                    $query->where('course.qualification', $request->qualification_id);
+                    $query->whereHas('course', function ($subQuery) use ($request) {
+                        $subQuery->where('qualification_id', $request->qualification_id);
+                    });
                 })
+                
                 // Add search filter for student name (first or last name)
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $search = $request->search;
