@@ -3510,8 +3510,8 @@ public function addBanner(Request $request)
                 'banner_name' => 'required|string|max:255',
                 'banner_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'banner_url' => 'required|string|max:255',
-                'old_featured_id' => 'required|integer', // New field to track old featured ID
-                'new_featured_id' => 'required|integer', // New field for the new featured ID
+                'old_featured_id' => 'nullable|integer', // New field to track old featured ID
+                'new_featured_id' => 'nullable|integer', // New field for the new featured ID
                 'banner_start' => 'required|date_format:Y-m-d H:i:s',
                 'banner_end' => 'required|date_format:Y-m-d H:i:s'
             ]);
