@@ -663,7 +663,8 @@ class SchoolController extends Controller
                 'form_status' => 'integer|nullable',
                 'student_id' => 'integer|nullable',
                 'courses_id' => 'integer|nullable',
-                'search' => 'string|nullable'
+                'search' => 'string|nullable',
+                'qualification_id'=>'integer|nullable'
             ]);
 
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -676,8 +677,7 @@ class SchoolController extends Controller
                 2 => 'Pending',
                 4 => 'Accepted',
                 1 => 'Active',
-                3 => 'Rejected',
-                0 => 'Disable'
+                3 => 'Rejected'
             ];
 
             // Fetch applicant info with student, course, award, and cocurriculum details
@@ -689,6 +689,7 @@ class SchoolController extends Controller
                 ->whereHas('course', function ($query) use ($schoolID) {
                     $query->where('school_id', $schoolID);
                 })
+                ->where('form_status', '!=', 0)
                 ->when($request->filled('student_id'), function ($query) use ($request) {
                     $query->where('student_id', $request->student_id);
                 })
@@ -710,7 +711,7 @@ class SchoolController extends Controller
                     });
                 })
                 // Apply custom order sorting by form_status
-                ->orderByRaw("FIELD(form_status, 2, 4, 1, 3, 0)")
+                ->orderByRaw("FIELD(form_status, 2, 4, 1, 3)")
                 ->paginate($perPage)
                 ->through(function ($applicant) use ($statusOrder) {
                     $status = $statusOrder[$applicant->form_status] ?? null;
