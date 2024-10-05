@@ -2594,6 +2594,8 @@ class studentController extends Controller
                 $resetTranscript = stp_transcript::where('student_id', $authUser->id);
             } else {
                 $resetTranscript = stp_higher_transcript::where('student_id', $authUser->id)->where('category_id', $request->transcriptType);
+                //remove cgpa
+                stp_cgpa::where('student_id', $authUser->id)->where('transcript_category', $request->transcriptType)->delete();
             }
 
             //delete media
