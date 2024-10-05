@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('school_countryCode');
             $table->string('school_contactNo');
             $table->string('school_password');
-            $table->string('school_fullDesc')->nullable();
+            $table->longText('school_fullDesc')->nullable();
             $table->string('school_shortDesc')->nullable();
             $table->string('school_address')->nullable();
             $table->foreignId('country_id')->nullable()->constrained('stp_countries')->onDelete('set null');

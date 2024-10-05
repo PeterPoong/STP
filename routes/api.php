@@ -106,6 +106,8 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/disableCocurriculum', [studentController::class, 'disableCocurriculum']);
 
     Route::middleware('auth:sanctum')->get('/co-curriculumList', [studentController::class, 'cocurriculumList']);
+
+    Route::middleware('auth:sanctum')->post('/resetTranscript', [studentController::class, 'resetTranscript']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -213,6 +215,8 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/applicantResultSlip', [SchoolController::class, 'applicantResultSlip']);
     Route::post('/editApplicantStatus', [SchoolController::class, 'editApplicantStatus']);
     Route::post('/applicantDetailRelatedDocument', [SchoolController::class, 'applicantDetailRelatedDocument']);
+
+
 
     Route::get('/instituteType', [studentController::class, 'instituteType']);
     Route::get('/countryList', [studentController::class, 'countryList']);
