@@ -582,15 +582,6 @@ class AdminController extends Controller
 
             // Handle cover photo
             if ($request->hasFile('cover')) {
-                // Check if a cover already exists for the school
-                $existingCover = stp_school_media::where('school_id', $school->id)->where('schoolMedia_type', 66)->first();
-                if ($existingCover) {
-                    // Delete the old cover image from storage
-                    Storage::delete('public/' . $existingCover->schoolMedia_location);
-                    // Delete the old record from the database
-                    $existingCover->delete();
-                }
-
                 // Upload the new cover
                 $cover = $request->file('cover');
                 $coverName = $school->school_name . '_cover.' . $cover->getClientOriginalExtension();
@@ -670,8 +661,6 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'password' => 'required|string|min:8',
-                'confirm_password' => 'required|string|min:8|same:password',
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255|email',
@@ -749,40 +738,35 @@ class AdminController extends Controller
                 ]);
             }
     
-            // Handle album photo update
-            if ($request->hasFile('album')) {
-                foreach ($request->file('album') as $albumPhoto) {
-                    $albumPhotoName = $albumPhoto->getClientOriginalName();
-                    $albumPhotoPath = $albumPhoto->storeAs('schoolMedia', $albumPhotoName, 'public');
-                    $albumPhotoFormat = $albumPhoto->getClientOriginalExtension();
-    
-                    stp_school_media::create([
-                        'school_id' => $school->id,
-                        'schoolMedia_type' => 67,
-                        'schoolMedia_name' => $albumPhotoName,
-                        'schoolMedia_location' => $albumPhotoPath,
-                        'schoolMedia_format' => $albumPhotoFormat,
-                        'schoolMedia_status' => 1,
-                        'created_by' => $authUser->id,
-                        'created_at' => now()
-                    ]);
+                        // Handle album photo update
+                if ($request->hasFile('album')) {
+                    foreach ($request->file('album') as $albumPhoto) {
+                        // Check if this specific album photo already exists for the school
+                        $albumPhotoName = $albumPhoto->getClientOriginalName();
+                        $existingAlbumPhoto = stp_school_media::where('school_id', $school->id)
+                            ->where('schoolMedia_name', $albumPhotoName)
+                            ->where('schoolMedia_type', 67) // Ensure it's an album photo
+                            ->first();
+
+                        // If the album photo doesn't exist, store and create a new record
+                        if (!$existingAlbumPhoto) {
+                            $albumPhotoPath = $albumPhoto->storeAs('schoolMedia', $albumPhotoName, 'public');
+                            $albumPhotoFormat = $albumPhoto->getClientOriginalExtension();
+
+                            stp_school_media::create([
+                                'school_id' => $school->id,
+                                'schoolMedia_type' => 67,
+                                'schoolMedia_name' => $albumPhotoName,
+                                'schoolMedia_location' => $albumPhotoPath,
+                                'schoolMedia_format' => $albumPhotoFormat,
+                                'schoolMedia_status' => 1,
+                                'created_by' => $authUser->id,
+                                'created_at' => now()
+                            ]);
+                        }
+                    }
                 }
-            }
-    
-            // Handle featured types update
-            if ($request->has('featured')) {
-                // First, remove existing featured records for the school
-                stp_featured::where('school_id', $school->id)->delete();
-    
-                // Insert new featured records
-                foreach ($request->featured as $featureId) {
-                    stp_featured::create([
-                        'school_id' => $school->id,
-                        'featured_type' => $featureId,
-                        'featured_status' => 1
-                    ]);
-                }
-            }
+
     
             // Update school details
             $school->update([
