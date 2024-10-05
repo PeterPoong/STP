@@ -44,13 +44,13 @@
 
     <p>Dear Admissions Team,</p>
 
-    <p>This is a reminder regarding the application form for the {{ $courseName }} program submitted by {{ $studentName }} through StudyPal. We kindly request that you review the application at your earliest convenience.</p>
+    <p>This is a reminder regarding the application form for the <b>{{ $courseName }}</b> program submitted by<b> {{ $studentName }}</b> through StudyPal. We kindly request that you review the application at your earliest convenience.</p>
 
     <p>Details of the application:</p>
     <ul>
-        <li>Student Name: {{ $studentName }}</li>
-        <li>Course: {{ $courseName }}</li>
-        <li>School: {{ $schoolName }}</li>
+        <li>Student Name:<b> {{ $studentName }}</b></li>
+        <li>Course: <b>{{ $courseName }}</b></li>
+        <li>School: <b>{{ $schoolName }}</b></li>
     </ul>
 
     <p>To review the application, please click the button below:</p>

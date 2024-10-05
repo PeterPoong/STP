@@ -1114,7 +1114,7 @@ class SchoolController extends Controller
     {
         try {
             $request->validate([
-                'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+                'logo' => 'required|image|mimes:jpeg,png,jpg|max:2048'
             ]);
             $authUser = Auth::user();
             if (!empty($authUser->school_logo)) {
@@ -1354,7 +1354,7 @@ class SchoolController extends Controller
                 'success' => false,
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 
@@ -2338,7 +2338,7 @@ class SchoolController extends Controller
                     ->get();
 
                 foreach ($achievementList as $achievement) {
-                    $achievementList[] = [
+                    $finalAchievementList[] = [
                         "id" => $achievement->id,
                         "achievement_name" => $achievement->achievement_name,
                         "awarded_by" => $achievement->awarded_by,

@@ -149,7 +149,7 @@ class serviceFunctionController extends Controller
                         'success' => false,
                         'message' => 'Your OTP either incorrect or expired'
                     ],
-                    404
+                    500
                 );
             }
 
@@ -158,7 +158,7 @@ class serviceFunctionController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => "OTP had been used"
-                ], 404);
+                ], 500);
             }
             $getOtp->update([
                 'otp_status' => 0
@@ -174,13 +174,13 @@ class serviceFunctionController extends Controller
                 'success' => false,
                 'message' => "Validation Error",
                 'error' => $e->errors()
-            ]);
+            ], 500);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 

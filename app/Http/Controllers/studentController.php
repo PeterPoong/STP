@@ -292,7 +292,7 @@ class studentController extends Controller
                     'course_intake' => $monthList,
                     'category' => $course->category->category_name,
                     'qualification' => $course->qualification->qualification_name,
-                    'study_mode' => $course->studyMode->core_metaName,
+                    'study_mode' => $course->studyMode->core_metaName ?? null,
                     'course_logo' => $course->course_logo
                 ];
             });
@@ -851,20 +851,22 @@ class studentController extends Controller
     public function locationFilterList(Request $request)
     {
         try {
-
+            // Validate the request
             $request->validate([
                 'countryID' => 'required|integer'
             ]);
 
+            // Find the country by ID and get the associated states
             $country = stp_country::find($request->countryID);
             $states = $country->state;
-            $stateList = [];
-            foreach ($states as $state) {
-                $stateList[] = [
+
+            // Create the state list and sort it by state_name in ascending order
+            $stateList = collect($states)->map(function ($state) {
+                return [
                     'id' => $state->id,
                     'state_name' => $state->state_name
                 ];
-            }
+            })->sortBy('state_name')->values(); // Sort and reindex the array
 
             return response()->json([
                 'success' => true,
@@ -888,7 +890,9 @@ class studentController extends Controller
     public function categoryFilterList(Request $request)
     {
         try {
-            $categoryList = stp_courses_category::get()
+            $categoryList = stp_courses_category::where('category_status', 1)
+                ->orderBy('category_name', 'asc')
+                ->get()
                 ->map(function ($categories) {
                     return [
                         'id' => $categories->id,
@@ -1554,23 +1558,13 @@ class studentController extends Controller
             ]);
 
             $authUser = Auth::user();
-
-            if ($request->type == 'delete') {
-                $status = 0;
-                $message = "Successfully Deleted the Achievement";
-            }
-
             $achievement = stp_achievement::find($request->id);
+            Storage::delete('public/' . $achievement->achievement_media);
+            $achievement->delete();
 
-            $achievement->update([
-                'student_id' => $authUser->id,
-                'achievements_status' => $status,
-                'updated_by' => $authUser->id,
-                'updated_at' => now(),
-            ]);
             return response()->json([
                 'success' => true,
-                'data' => ['message' => $message]
+                'data' => ['message' => 'success delete achievement']
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -1787,7 +1781,7 @@ class studentController extends Controller
             $authUser = Auth::user();
 
             $request->validate([
-                'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048', // File validation
+                'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:50000', // File validation
                 'studentMedia_name' => 'required|string|max:255',
                 'studentMedia_type' => 'required|integer',
                 'studentMedia_format' => 'nullable|string|max:255'
@@ -1914,22 +1908,24 @@ class studentController extends Controller
 
             $authUser = Auth::user();
 
-            if ($request->type == 'delete') {
-                $status = 0;
-                $message = "Successfully Deleted the Transcript File";
-            }
+            // if ($request->type == 'delete') {
+            //     $status = 0;
+            //     $message = "Successfully Deleted the Transcript File";
+            // }
 
             $transcriptFile = stp_student_media::find($request->id);
+            Storage::delete('public/' . $transcriptFile->studentMedia_location);
+            $transcriptFile->delete();
 
-            $transcriptFile->update([
-                'student_id' => $authUser->id,
-                'studentMedia_status' => $status,
-                'updated_by' => $authUser->id,
-                'updated_at' => now(),
-            ]);
+            // $transcriptFile->update([
+            //     'student_id' => $authUser->id,
+            //     'studentMedia_status' => $status,
+            //     'updated_by' => $authUser->id,
+            //     'updated_at' => now(),
+            // ]);
             return response()->json([
                 'success' => true,
-                'data' => ['message' => $message]
+                'data' => ['message' => "Successfully Deleted the Transcript File"]
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -2070,22 +2066,25 @@ class studentController extends Controller
 
             $authUser = Auth::user();
 
-            if ($request->type == 'delete') {
-                $status = 0;
-                $message = "Successfully Deleted the Certificate File";
-            }
+            // if ($request->type == 'delete') {
+            //     $status = 0;
+            //     $message = "Successfully Deleted the Certificate File";
+            // }
 
             $certificateFile = stp_other_certificate::find($request->id);
+            Storage::delete('public/' . $certificateFile->certificate_media);
+            $certificateFile->delete();
 
-            $certificateFile->update([
-                'student_id' => $authUser->id,
-                'certificate_status' => $status,
-                'updated_by' => $authUser->id,
-                'updated_at' => now(),
-            ]);
+
+            // $certificateFile->update([
+            //     'student_id' => $authUser->id,
+            //     'certificate_status' => $status,
+            //     'updated_by' => $authUser->id,
+            //     'updated_at' => now(),
+            // ]);
             return response()->json([
                 'success' => true,
-                'data' => ['message' => $message]
+                'data' => ['message' => "Successfully Deleted the Certificate File"]
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -2184,12 +2183,32 @@ class studentController extends Controller
     public function intakeFilterList()
     {
         try {
+            $monthsOrder = [
+                'January' => 1,
+                'February' => 2,
+                'March' => 3,
+                'April' => 4,
+                'May' => 5,
+                'June' => 6,
+                'July' => 7,
+                'August' => 8,
+                'September' => 9,
+                'October' => 10,
+                'November' => 11,
+                'December' => 12
+            ];
+
             $intakeList = stp_intake::get()
                 ->map(function ($intake) {
                     return ['month' => $intake->month->core_metaName];
                 })
                 ->unique('month')
+                ->sortBy(function ($intake) use ($monthsOrder) {
+                    // Sort by the corresponding month number
+                    return $monthsOrder[$intake['month']] ?? 13; // Default to 13 if month is not found
+                })
                 ->values(); // Reindex the array
+
             return response()->json([
                 'success' => true,
                 'data' => $intakeList
@@ -2559,6 +2578,48 @@ class studentController extends Controller
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    public function resetTranscript(Request $request)
+    {
+
+        try {
+            $request->validate([
+                'transcriptType' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            //spm
+            if ($request->transcriptType == 32) {
+                $resetTranscript = stp_transcript::where('student_id', $authUser->id);
+            } else {
+                $resetTranscript = stp_higher_transcript::where('student_id', $authUser->id)->where('category_id', $request->transcriptType);
+            }
+
+            //delete media
+            $deleteTranscript = stp_student_media::where('student_id', $authUser->id)->where('studentMedia_type', $request->transcriptType)->get();
+            foreach ($deleteTranscript as $deleteTranscriptFile) {
+                Storage::delete('public/' . $deleteTranscriptFile->studentMedia_location);
+            };
+
+            //delete data media
+            stp_student_media::where('student_id', $authUser->id)
+                ->where('studentMedia_type', $request->transcriptType)
+                ->delete();
+
+
+            //delete transcript subject 
+            $resetTranscript->delete();
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully Delete",
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }
