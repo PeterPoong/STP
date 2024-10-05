@@ -693,6 +693,9 @@ class SchoolController extends Controller
                 ->when($request->filled('student_id'), function ($query) use ($request) {
                     $query->where('student_id', $request->student_id);
                 })
+                ->when($request->filled('courses_id'), function ($query) use ($request) {
+                    $query->where('courses_id', $request->courses_id);
+                })
                 ->when($request->filled('form_status'), function ($query) use ($request) {
                     $query->where('form_status', $request->form_status);
                 })
