@@ -3486,20 +3486,18 @@ public function addBanner(Request $request)
 public function editBanner(Request $request) 
 {
     try {
-        $authUser = Auth::user();
-
         // Validation rules
         $request->validate([
             'id' => 'required|integer',
             'banner_name' => 'required|string|max:255',
             'banner_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'banner_url' => 'required|string|max:255',
-            'featured_id'=>'required|integer',
+            'featured_id' => 'required|integer',
             'banner_start' => 'required|date_format:Y-m-d H:i:s',
             'banner_end' => 'required|date_format:Y-m-d H:i:s'
         ]);
 
-        // Find the existing banner by id
+        $authUser = Auth::user();
         $adBanner = stp_advertisement_banner::find($request->id);
 
         if (!$adBanner) {
@@ -3509,35 +3507,37 @@ public function editBanner(Request $request)
             ]);
         }
 
-        // Handle file upload if a new file is provided
+        // Check if the banner_file is present
         if ($request->hasFile('banner_file')) {
+            // If there is an existing file, delete it
             if (!empty($adBanner->banner_file)) {
                 Storage::delete('public/' . $adBanner->banner_file);
             }
 
+            // Handle file upload
             $image = $request->file('banner_file');
             $imageName = time() . '.' . $image->getClientOriginalExtension();
             $imagePath = $image->storeAs('bannerFile', $imageName, 'public');
 
-        // Update the existing banner with the new or existing file path and other details
-        $adBanner->update([
-            'id'=>$request->id,
-            'banner_name' => $request->banner_name,
-            'banner_file' => $imagePath,
-            'banner_url' => $request->banner_url,
-            'banner_start' => $request->banner_start,
-            'banner_end' => $request->banner_end,
-            'featured_id'=>$request->featured_id,
-            'updated_by' => $authUser->id,
-            'updated_at' => now(),
-                    ]);
-                }
-            
-        
+            // Update the banner file path
+            $adBanner->banner_file = $imagePath;
+        }
+
+        // Update the other fields, but don't change the banner_file if no new file is uploaded
+        $adBanner->banner_name = $request->banner_name;
+        $adBanner->banner_url = $request->banner_url;
+        $adBanner->banner_start = $request->banner_start;
+        $adBanner->banner_end = $request->banner_end;
+        $adBanner->featured_id = $request->featured_id;
+        $adBanner->updated_by = $authUser->id;
+        $adBanner->updated_at = now();
+
+        // Save the changes to the database
+        $adBanner->save();
 
         return response()->json([
             'success' => true,
-            'data' => ['message' => "Update Banner Successfully"]
+            'data' => ['message' => "Banner updated successfully"]
         ]);
     } catch (ValidationException $e) {
         return response()->json([
