@@ -90,6 +90,11 @@ class studentController extends Controller
                         $q->whereIn('qualification_id', $request->studyLevel);
                     });
                 })
+                ->when($request->filled('studyMode'), function ($query) use ($request) {
+                    $query->whereHas('courses', function ($q) use ($request) {
+                        $q->whereIn('study_mode', $request->studyMode);
+                    });
+                })
                 ->with(['courses.intake.month', 'featured', 'institueCategory', 'country', 'state', 'city'])
                 ->paginate(10);
 
