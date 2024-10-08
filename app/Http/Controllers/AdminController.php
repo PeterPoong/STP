@@ -896,6 +896,7 @@ class AdminController extends Controller
                 return $media->schoolMedia_status === 1;
             })->map(function($media) {
                 return [
+                    'id'=>$media->id,
                     'schoolMedia_name' => $media->schoolMedia_name,
                     'schoolMedia_location' => $media->schoolMedia_location,
                     'schoolMedia_type' => $media->schoolMedia_type,
