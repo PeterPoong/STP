@@ -51,7 +51,7 @@ class studentController extends Controller
     public function schoolList(Request $request)
     {
         try {
-            return 'test';
+
             // Start building the query
             $getSchoolList = stp_school::whereIn('school_status', [1, 3])
                 // Exclude schools with zero courses (ensure the school has courses)
