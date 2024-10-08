@@ -3830,4 +3830,34 @@ public function editBanner(Request $request)
             ], 500);
         }
     }
+    public function removeSchoolPhoto(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            $findPhoto = stp_school_media::find($request->id);
+            if ($findPhoto && $findPhoto->schoolMedia_type == 67) {
+                // Delete the photo
+                $findPhoto->delete();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Photo deleted successfully',
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Photo not found',
+                ], 404);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
