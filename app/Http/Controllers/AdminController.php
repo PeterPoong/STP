@@ -1100,7 +1100,7 @@ class AdminController extends Controller
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
                 'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
-                'courseFeatured' => 'required|array',
+                'courseFeatured' => 'nullable|array',
                 'courseFeatured.*' => 'integer',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
@@ -1116,7 +1116,7 @@ class AdminController extends Controller
                     "courses" => ['Courses already exist in the school']
                 ]);
             }
-            if ($request->hasFile('course_logo')) {
+            if ($request->hasFile('logo')) {
                 $image = $request->file('logo');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('courseLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
@@ -1131,7 +1131,7 @@ class AdminController extends Controller
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
                 'study_mode'=> $request->mode,
-                'logo' => $imagePath ?? '',
+                'course_logo' => $imagePath ?? '',
                 'created_by' => $authUser->id,
                 'course_status' => 1,
                 'created_at' => now()
@@ -1400,7 +1400,7 @@ class AdminController extends Controller
                 'course_period' => $request->period,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
-                'logo' => $imagePath ?? $course->course_logo,
+                'course_logo' => $imagePath ?? $course->course_logo,
                 'updated_by' => $authUser->id,
                 'updated_at' => now()
             ]);
