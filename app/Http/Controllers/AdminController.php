@@ -263,7 +263,7 @@ class AdminController extends Controller
             'country_code' => 'required',
             'contact_number' => 'required|numeric|digits_between:1,15',
             'email' => 'required|string|email|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validation
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000' // Image validation
         ]);
 
         $authUser = Auth::user();
@@ -516,9 +516,9 @@ class AdminController extends Controller
                 'email' => 'required|string|email|max:255',
                 'school_fullDesc' => 'required|string|max:5000',
                 'school_shortDesc' => 'required|string|max:255',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-                'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add cover photo validation
-                'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add album photo validation
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+                'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Add cover photo validation
+                'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Add album photo validation
                 'featured' => 'nullable|array', // Validate as an array
                 'featured.*' => 'integer', // Validate each element as an integer and existing in the features table
                 'person_in_charge_name' => 'required|string|max:255',
@@ -666,9 +666,9 @@ class AdminController extends Controller
                 'email' => 'required|string|email|max:255|email',
                 'school_fullDesc' => 'required|string|max:5000',
                 'school_shortDesc' => 'required|string|max:255',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-                'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-                'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+                'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+                'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'featured' => 'nullable|array',
                 'featured.*' => 'integer',
                 'person_in_charge_name' => 'required|string|max:255',
@@ -785,6 +785,7 @@ class AdminController extends Controller
                 'school_officalWebsite' => $request->school_website,
                 'school_logo' => $imagePath ?? $school->school_logo,
                 'account_type'=> $request->account,
+                'school_location'=>$request->location,
                 'updated_by' => $authUser->id
             ]);
     
@@ -1104,7 +1105,7 @@ class AdminController extends Controller
                 'courseFeatured.*' => 'integer',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
             ]);
 
             $authUser = Auth::user();
@@ -1359,7 +1360,7 @@ class AdminController extends Controller
                 'courseFeatured.*' => 'integer',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
             ]);
     
             // Check if the course already exists with a different ID
@@ -1702,7 +1703,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'name' => 'required|string|unique:stp_courses_categories,category_name',
-                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validationt
+                'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validationt
                 'description'=>'string|max:5000'
             ]);
             $authUser = Auth::user();
@@ -1747,7 +1748,7 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Make icon optional
+                'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Make icon optional
                 'description' => 'string|max:5000'
             ]);
     
@@ -3035,7 +3036,7 @@ class AdminController extends Controller
                 'user_detailCountry' => 'required|string|max:255',
                 'user_detailCity' => 'required|string|max:255',
                 'user_detailState' => 'required|string|max:255',
-                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
+                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validation
             ]);
 
             $authUser = Auth::user();
@@ -3241,7 +3242,7 @@ class AdminController extends Controller
                 'user_detailCountry' => 'required|string|max:255',
                 'user_detailCity' => 'required|string|max:255',
                 'user_detailState' => 'required|string|max:255',
-                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
+                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validation
             ]);
 
             // Check if the name already exists for another user
@@ -3426,7 +3427,7 @@ public function addBanner(Request $request)
         // Validate the incoming request data
         $request->validate([
             'banner_name' => 'required|string|max:255',
-            'banner_file' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'banner_file' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
             'banner_url' => 'required|string|max:255',
             'featured_id' => 'required|array',  // Validate as an array
             'featured_id.*' => 'integer',       // Each item in the array should be an integer
@@ -3491,7 +3492,7 @@ public function editBanner(Request $request)
         $request->validate([
             'id' => 'required|integer',
             'banner_name' => 'required|string|max:255',
-            'banner_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'banner_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
             'banner_url' => 'required|string|max:255',
             'featured_id' => 'required|integer',
             'banner_start' => 'required|date_format:Y-m-d H:i:s',

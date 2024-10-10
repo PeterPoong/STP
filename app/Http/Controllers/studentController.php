@@ -1350,7 +1350,7 @@ class studentController extends Controller
     {
         try {
             $request->validate([
-                'porfilePic' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048' // Image validationt
+                'porfilePic' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000' // Image validationt
             ]);
             $authUser = Auth::user();
 
@@ -1437,7 +1437,7 @@ class studentController extends Controller
                 'date' => 'required|string|max:255',
                 'title' => 'required|integer',
                 'awarded_by' => 'required|string|max:255',
-                'achievement_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048'
+                'achievement_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000'
             ]);
 
             $authUser = Auth::user();
@@ -1497,7 +1497,7 @@ class studentController extends Controller
                 'date' => 'required|string|max:255',
                 'title' => 'required|integer',
                 'awarded_by' => 'required|string|max:255',
-                'achievement_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048' // Image validation
+                'achievement_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000' // Image validation
             ]);
             $checkingAchievement = stp_achievement::where('student_id',  $authUser->id)
                 ->where('achievement_name', $request->achievement_name)
@@ -1786,7 +1786,7 @@ class studentController extends Controller
             $authUser = Auth::user();
 
             $request->validate([
-                'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:50000', // File validation
+                'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000', // File validation
                 'studentMedia_name' => 'required|string|max:255',
                 'studentMedia_type' => 'required|integer',
                 'studentMedia_format' => 'nullable|string|max:255'
@@ -1845,7 +1845,7 @@ class studentController extends Controller
                 'id' => 'required|integer',
                 'studentMedia_type' => 'required|integer',
                 'studentMedia_name' => 'required|string|max:255',
-                'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048' // Image validation
+                'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000' // Image validation
             ]);
             $checkingstudentMedia = stp_student_media::where('student_id',  $authUser->id)
                 ->where('studentMedia_name', $request->studentMedia_name)
@@ -1953,7 +1953,7 @@ class studentController extends Controller
             $authUser = Auth::user();
 
             $request->validate([
-                'certificate_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048', // File validation
+                'certificate_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000', // File validation
                 'certificate_name' => 'required|string|max:255'
             ]);
 
@@ -2007,7 +2007,7 @@ class studentController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'certificate_name' => 'required|string|max:255',
-                'certificate_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:2048' // Image validation
+                'certificate_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000' // Image validation
             ]);
             $checkingCertificateMedia = stp_other_certificate::where('student_id',  $authUser->id)
                 ->where('certificate_name', $request->certificate_name)
