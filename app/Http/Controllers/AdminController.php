@@ -766,6 +766,20 @@ class AdminController extends Controller
                         }
                     }
                 }
+                 // Handle featured types update
+            if ($request->has('featured')) {
+                // First, remove existing featured records for the school
+                stp_featured::where('school_id', $school->id)->delete();
+    
+                // Insert new featured records
+                foreach ($request->featured as $featureId) {
+                    stp_featured::create([
+                        'school_id' => $school->id,
+                        'featured_type' => $featureId,
+                        'featured_status' => 1
+                    ]);
+                }
+            }
 
     
             // Update school details
