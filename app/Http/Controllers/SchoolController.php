@@ -128,7 +128,7 @@ class SchoolController extends Controller
                 'intake' => 'required|array',
                 'category' => 'required|integer',
                 'mode' => 'required|integer',
-                // 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
+                // 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validation
             ]);
             // $validator = Validator::make($request->all(), [
             //     'schoolID' => 'required|integer',
@@ -251,7 +251,7 @@ class SchoolController extends Controller
     //         // Validate the logo separately if it exists
     //         if ($request->hasFile('logo')) {
     //             $logoValidator = Validator::make($request->all(), [
-    //                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+    //                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
     //             ]);
 
     //             // Merge logo errors if any
@@ -405,7 +405,7 @@ class SchoolController extends Controller
                 'cost' => 'required|regex:/^\d+(\.\d{1,2})?$/',
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validation
             ]);
 
             $checkingCourse = stp_course::where('school_id', $request->schoolID)
@@ -571,7 +571,7 @@ class SchoolController extends Controller
                 'state' => 'required|integer',
                 'city' => 'required|integer',
                 'category' => 'required|integer',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'account_type' => 'required|integer'
             ]);
             $authUser = Auth::user();
@@ -1118,7 +1118,7 @@ class SchoolController extends Controller
     {
         try {
             $request->validate([
-                'logo' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+                'logo' => 'required|image|mimes:jpeg,png,jpg|max:10000'
             ]);
             $authUser = Auth::user();
             if (!empty($authUser->school_logo)) {
@@ -1152,7 +1152,7 @@ class SchoolController extends Controller
         try {
             $request->validate([
                 'coverName' => 'required|string|max:255',
-                'cover' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+                'cover' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000'
             ]);
             $authUser = Auth::user();
             $getBanner = stp_school_media::where('school_id', $authUser->id)
@@ -1254,7 +1254,7 @@ class SchoolController extends Controller
         try {
             $request->validate([
                 'photo_Name' => 'required|string|max:255',
-                'photo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+                'photo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000'
             ]);
             $authUser = Auth::user();
             $image = $request->file('photo');
