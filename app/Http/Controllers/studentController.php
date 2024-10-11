@@ -51,7 +51,6 @@ class studentController extends Controller
     public function schoolList(Request $request)
     {
         try {
-
             // Start building the query
             $getSchoolList = stp_school::whereIn('school_status', [1, 3])
                 // Exclude schools with zero courses (ensure the school has courses)
@@ -1787,7 +1786,7 @@ class studentController extends Controller
             $authUser = Auth::user();
 
             $request->validate([
-                'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:50000', // File validation
+                'studentMedia_location' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000', // File validation
                 'studentMedia_name' => 'required|string|max:255',
                 'studentMedia_type' => 'required|integer',
                 'studentMedia_format' => 'nullable|string|max:255'
