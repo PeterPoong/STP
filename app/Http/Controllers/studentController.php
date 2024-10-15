@@ -2629,4 +2629,216 @@ class studentController extends Controller
             ], 500);
         }
     }
+
+    public function listingFilterList(Request $request)
+    {
+        try {
+            $request->validate([
+                'countryID' => 'required|integer'
+            ]);
+
+            $categoryList = stp_courses_category::where('category_status', 1)->get();
+            $qualificationList = stp_qualification::where('qualification_status', 1)
+                ->get()
+                ->map(function ($qualiList) {
+                    return [
+                        'id' => $qualiList->id,
+                        'qualification_name' => $qualiList->qualification_name
+                    ];
+                });
+            $studyModeListing = stp_core_meta::where('core_metaType', 'study_mode')
+                ->where('core_metaStatus', 1)
+                ->get()
+                ->map(function ($studyMode) {
+                    return [
+                        'id' => $studyMode->id,
+                        'studyMode_name' => $studyMode->core_metaName
+                    ];
+                });
+            $categoryList = stp_courses_category::where('category_status', 1)
+                ->orderBy('category_name', 'asc')
+                ->get()
+                ->map(function ($categories) {
+                    return [
+                        'id' => $categories->id,
+                        'category_name' => $categories->category_name
+                    ];
+                });
+            $maxCost = stp_course::where('course_status', 1)
+                ->max('course_cost');
+
+            $monthsOrder = [
+                'January' => 1,
+                'February' => 2,
+                'March' => 3,
+                'April' => 4,
+                'May' => 5,
+                'June' => 6,
+                'July' => 7,
+                'August' => 8,
+                'September' => 9,
+                'October' => 10,
+                'November' => 11,
+                'December' => 12
+            ];
+            $intakeList = stp_intake::get()
+                ->map(function ($intake) {
+                    return ['month' => $intake->month->core_metaName];
+                })
+                ->unique('month')
+                ->sortBy(function ($intake) use ($monthsOrder) {
+                    // Sort by the corresponding month number
+                    return $monthsOrder[$intake['month']] ?? 13; // Default to 13 if month is not found
+                })
+                ->values(); // Reindex the array'
+
+            $institueList = stp_core_meta::where('core_metaType', 'institute')->get();
+            $country = stp_country::find($request->countryID);
+            $states = $country->state;
+
+            // Create the state list and sort it by state_name in ascending order
+            $stateList = collect($states)->map(function ($state) {
+                return [
+                    'id' => $state->id,
+                    'state_name' => $state->state_name
+                ];
+            })->sortBy('state_name')->values();
+
+            $filterList = [
+                'categoryList' => $categoryList,
+                'qualificationList' => $qualificationList,
+                'studyModeListing' => $studyModeListing,
+                'categoryList' => $categoryList,
+                'maxAmount' => $maxCost,
+                'intakeList' => $intakeList,
+                'institueList' => $institueList,
+                'state' => $stateList
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $filterList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function applyCourseTranscript(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $categoryList = stp_core_meta::query()
+                ->where('core_metaStatus', 1) // Only active categories
+                ->where('core_metaType', 'transcript_category') // Only transcript categories
+                ->get()
+                ->map(function ($category) {
+                    return [
+                        'id' => $category->id,
+                        'transcript_category' => $category->core_metaName
+                    ];
+                });
+            $getTranscriptSubject = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_status', 1)
+                ->get()
+                ->map(function ($subject) {
+                    return [
+                        'subject_id' => $subject->subject->id,
+                        'subject_name' => $subject->subject->subject_name,
+                        'subject_grade_id' => $subject->grade->id,
+                        'subject_grade' => $subject->grade->core_metaName,
+                    ];
+                });
+
+            $spmMediaList = stp_student_media::query()
+                ->where('studentMedia_status', 1)
+                ->where('student_id', $authUser->id)
+                ->where('studentMedia_type', 32)
+                ->get() // Get all records instead of paginating
+                ->map(function ($spmMediaList) {
+                    $dateTime = new \DateTime($spmMediaList->created_at);
+                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
+                    return [
+                        "id" => $spmMediaList->id,
+                        "studentMedia_name" => $spmMediaList->studentMedia_name,
+                        "studentMedia_location" => $spmMediaList->studentMedia_location,
+                        "category_id" => $spmMediaList->studentMedia_type,
+                        "created_at" => $appliedDate,
+                        "status" => $spmMediaList->studentMedia_status ? "Active" : "Inactive"
+                    ];
+                });
+            $getTranscriptSubject = [
+                'subjects' => $getTranscriptSubject, // Use 'subjects' as key
+                'document' => $spmMediaList
+            ];
+
+            $getAllHigherTranscriptId = stp_core_meta::where('core_metaType', 'transcript_category')
+                ->where('id', '!=', 32)
+                ->get();
+
+
+
+
+            $higherTranscriptSubject = stp_higher_transcript::where('student_id', $authUser->id)
+                ->where('highTranscript_status', 1)
+                ->get();
+
+            // return  $higherTranscriptSubject;
+
+            $higherTranscriptList = [];
+            // return $higherTranscript;
+
+            foreach ($getAllHigherTranscriptId as $higherTranscript) {
+                $result = [];
+                $result['id'] = $higherTranscript->id;
+                $result['name'] = $higherTranscript->core_metaName;
+                $subject = [];
+                $document = [];
+                foreach ($higherTranscriptSubject as $higherSubject) {
+                    $getHigherTranscriptMedia = stp_student_media::where('studentMedia_type', $higherTranscript->id)->get();
+                    $getCGPA = stp_cgpa::where('transcript_category', $higherTranscript->id)
+                        ->where('student_id', $authUser->id)
+                        ->first();
+                    // return $getCGPA->program_name;
+
+                    if ($higherSubject->category_id == $higherTranscript->id) {
+                        $subject['subject_id'] = $higherTranscript->id;
+                        $subject['subject_name'] = $higherSubject->highTranscript_name;
+                        $subject['subject_grade'] = $higherSubject->higherTranscript_grade;
+                        $document[] = $getHigherTranscriptMedia;
+                        $programName = $getCGPA->program_name ?? null;
+                        $cgpa = $getCGPA->cgpa ?? null;
+                    }
+                }
+                $result['subject'] = $subject;
+                $result['program_name'] = $programName ?? null;
+                $result['cgpa'] = $cgpa ?? null;
+                $result['document'] = $document;
+
+                $higherTranscriptList[] = $result;
+            }
+
+            $result = [
+                'categories' => $categoryList,
+                'transcripts' => $getTranscriptSubject,
+                'higherTranscripts' => $higherTranscriptList
+
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

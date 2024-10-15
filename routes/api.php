@@ -46,6 +46,9 @@ Route::prefix('student')->group(function () {
     Route::post('/featuredInstituteList', [studentController::class, 'featuredInstituteList']);
     Route::post('/featuredCourseList', [studentController::class, 'featuredCourseList']);
 
+    Route::post('/listingFilterList', [studentController::class, 'listingFilterList']);
+
+
     Route::get('/hotPickCategoryList', [studentController::class, 'hotPickCategoryList']);
 
 
@@ -108,6 +111,7 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->get('/co-curriculumList', [studentController::class, 'cocurriculumList']);
 
     Route::middleware('auth:sanctum')->post('/resetTranscript', [studentController::class, 'resetTranscript']);
+    Route::middleware('auth:sanctum')->post('/applyCourseTranscript', [studentController::class, 'applyCourseTranscript']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -290,9 +294,6 @@ Route::middleware('auth:sanctum')->get('validateToken', function () {
         'message' => 'Token is valid'
     ]);
 });
-
-
-
 
 Route::middleware('auth:sanctum')->get('/test', [AuthController::class, 'test']);
 Route::middleware('auth:sanctum')->get('/test5', [AuthController::class, 'test']);
