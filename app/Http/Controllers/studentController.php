@@ -2694,8 +2694,8 @@ class studentController extends Controller
 
             $institueList = stp_core_meta::where('core_metaType', 'institute')->get();
             $country = stp_country::find($request->countryID);
-            $states = $country->state;
 
+            $states = $country->state;
             // Create the state list and sort it by state_name in ascending order
             $stateList = collect($states)->map(function ($state) {
                 return [
@@ -2792,35 +2792,89 @@ class studentController extends Controller
             $higherTranscriptList = [];
             // return $higherTranscript;
 
+            // foreach ($getAllHigherTranscriptId as $higherTranscript) {
+            //     $result = [];
+            //     $result['id'] = $higherTranscript->id;
+            //     $result['name'] = $higherTranscript->core_metaName;
+            //     $subject = [];
+            //     $document = [];
+            //     foreach ($higherTranscriptSubject as $higherSubject) {
+            //         $getHigherTranscriptMedia = stp_student_media::where('studentMedia_type', $higherTranscript->id)->get();
+            //         $getCGPA = stp_cgpa::where('transcript_category', $higherTranscript->id)
+            //             ->where('student_id', $authUser->id)
+            //             ->first();
+            //         // return $getCGPA->program_name;
+            //         $programName = null;
+            //         $cgpa = null;
+
+            //         if ($higherSubject->category_id == $higherTranscript->id) {
+            //             $subject['subject_id'] = $higherTranscript->id;
+            //             $subject['subject_name'] = $higherSubject->highTranscript_name;
+            //             $subject['subject_grade'] = $higherSubject->higherTranscript_grade;
+            //             $document[] = $getHigherTranscriptMedia;
+            //             $programName = $getCGPA->program_name ?? null;
+            //             $cgpa = $getCGPA->cgpa ?? null;
+            //         }
+            //     }
+            //     $subjects[] = $subject;
+            //     $result['subject'] = $subjects;
+            //     $result['program_name'] = $programName ?? null;
+            //     $result['cgpa'] = $cgpa ?? null;
+            //     $result['document'] = $document;
+
+            //     $higherTranscriptList[] = $result;
+            // }
+
             foreach ($getAllHigherTranscriptId as $higherTranscript) {
                 $result = [];
                 $result['id'] = $higherTranscript->id;
                 $result['name'] = $higherTranscript->core_metaName;
-                $subject = [];
-                $document = [];
-                foreach ($higherTranscriptSubject as $higherSubject) {
-                    $getHigherTranscriptMedia = stp_student_media::where('studentMedia_type', $higherTranscript->id)->get();
-                    $getCGPA = stp_cgpa::where('transcript_category', $higherTranscript->id)
-                        ->where('student_id', $authUser->id)
-                        ->first();
-                    // return $getCGPA->program_name;
+                $subjects = [];
+                $documents = [];
+                $higherTranscriptSubject = stp_higher_transcript::where('student_id', $authUser->id)
+                    ->where('category_id', $higherTranscript->id)
+                    ->where('highTranscript_status', 1)
+                    ->get();
+                $getHigherTranscriptMedia = stp_student_media::where('studentMedia_type', $higherTranscript->id)
+                    ->where('student_id', $authUser->id)
+                    ->get();
+                $getCGPA = stp_cgpa::where('transcript_category', $higherTranscript->id)
+                    ->where('student_id', $authUser->id)
+                    ->first();
 
-                    if ($higherSubject->category_id == $higherTranscript->id) {
-                        $subject['subject_id'] = $higherTranscript->id;
-                        $subject['subject_name'] = $higherSubject->highTranscript_name;
-                        $subject['subject_grade'] = $higherSubject->higherTranscript_grade;
-                        $document[] = $getHigherTranscriptMedia;
-                        $programName = $getCGPA->program_name ?? null;
-                        $cgpa = $getCGPA->cgpa ?? null;
-                    }
-                }
-                $result['subject'] = $subject;
-                $result['program_name'] = $programName ?? null;
-                $result['cgpa'] = $cgpa ?? null;
-                $result['document'] = $document;
+
+
+                // foreach ($higherTranscriptSubject as $higherSubject) {
+                //     $getHigherTranscriptMedia = stp_student_media::where('studentMedia_type', $higherTranscript->id)->get();
+                //     $getCGPA = stp_cgpa::where('transcript_category', $higherTranscript->id)
+                //         ->where('student_id', $authUser->id)
+                //         ->first();
+                //     // return $getCGPA->program_name;
+                //     $programName = null;
+                //     $cgpa = null;
+
+                //     if ($higherSubject->category_id == $higherTranscript->id) {
+                //         $subject['subject_id'] = $higherTranscript->id;
+                //         $subject['subject_name'] = $higherSubject->highTranscript_name;
+                //         $subject['subject_grade'] = $higherSubject->higherTranscript_grade;
+                //         $document[] = $getHigherTranscriptMedia;
+                //         $programName = $getCGPA->program_name ?? null;
+                //         $cgpa = $getCGPA->cgpa ?? null;
+                //     }
+                // }
+                $subjects[] = $higherTranscriptSubject;
+                $documents[] = $getHigherTranscriptMedia;
+                $result['program_name'] = $getCGPA->program_name ?? null;
+                $result['cgpa'] = $getCGPA->cgpa ?? null;
+                $result['subject'] = $subjects;
+
+                $result['document'] = $documents;
 
                 $higherTranscriptList[] = $result;
             }
+
+
+
 
             $result = [
                 'categories' => $categoryList,
