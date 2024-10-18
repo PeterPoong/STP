@@ -451,6 +451,10 @@ class studentController extends Controller
                         ->where('stp_featureds.featured_status', 1);
                 })
                 ->select('stp_courses.*', 'stp_featureds.featured_type')
+                ->where('course_status', '!=', 0)
+                ->whereHas('school', function ($query) {
+                    $query->whereIn('school_status', [1, 3]);
+                })
                 ->when($request->filled('qualification'), function ($query) use ($request) {
                     $query->where('qualification_id', $request->qualification);
                 })
@@ -471,6 +475,7 @@ class studentController extends Controller
                 ->when($request->filled('institute'), function ($query) use ($request) {
                     $query->whereHas('school', function ($query) use ($request) {
                         $query->where('institue_category', $request->institute);
+                        $query->whereIn('school_status', [1, 3]);
                     });
                 })
                 ->when($request->filled('studyMode'), function ($query) use ($request) {
