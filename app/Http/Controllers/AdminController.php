@@ -1241,7 +1241,7 @@ class AdminController extends Controller
                 $query->where('course_name', 'like', '%' . $request->search . '%');
             })
             ->whereHas('school', function ($query) {
-                $query->where('school_status', 1); // Only include courses from active schools
+                $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
             })
                 ->paginate($perPage)
                 ->through(function ($course) {
