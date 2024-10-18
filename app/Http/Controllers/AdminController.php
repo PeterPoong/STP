@@ -3800,7 +3800,7 @@ public function editBanner(Request $request)
     {
         try {
             $schoolList = stp_school::query()
-                ->where('school_status', 1)
+             ->whereIn('school_status', [1, 2, 3])
                 ->get()
                 ->map(function ($school) {
                     $status = ($school->status == 1) ? "Active" : "Inactive";
