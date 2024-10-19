@@ -378,23 +378,34 @@ class studentController extends Controller
             $hpFeaturedCoursesList = stp_featured::whereNotNull('course_id')
                 ->where('featured_type', 29)
                 ->where('featured_status', 1)
-                ->get()->map(function ($courses) {
-                    if (empty($courses->courses->course_logo)) {
-                        $logo = $courses->courses->school->school_logo;
-                    } else {
-                        $logo = $courses->courses->course_logo;
-                    }
-                    return [
-                        "id" => $courses->courses->id,
-                        "course_name" => $courses->courses->course_name,
-                        "course_logo" => $logo,
-                        "course_qualification" => $courses->courses->qualification->qualification_name,
-                        "course_qualification_color" => $courses->courses->qualification->qualification_color_code,
+                ->get()
+                ->map(function ($courses) {
+                    // Check the school status (school must exist and have a status of 1 or 3)
+                    $schoolStatus = $courses->courses->school->school_status ?? null;
 
-                        'course_school' => $courses->courses->school->school_name,
-                        'location' => $courses->courses->school->city->city_name ?? null,
-                    ];
-                });
+                    // Only process the course if the school's status is 1 or 3
+                    if ($schoolStatus === 1 || $schoolStatus === 3) {
+                        // Determine course logo (use school logo if course logo is empty)
+                        $logo = empty($courses->courses->course_logo)
+                            ? $courses->courses->school->school_logo
+                            : $courses->courses->course_logo;
+
+                        // Return the desired data
+                        return [
+                            "id" => $courses->courses->id,
+                            "course_name" => $courses->courses->course_name,
+                            "course_logo" => $logo,
+                            "course_qualification" => $courses->courses->qualification->qualification_name,
+                            "course_qualification_color" => $courses->courses->qualification->qualification_color_code,
+                            'course_school' => $courses->courses->school->school_name,
+                            'location' => $courses->courses->school->city->city_name ?? null,
+                        ];
+                    }
+
+                    // If school status is not 1 or 3, return null to exclude the course
+                    return null;
+                })
+                ->filter(); // Remove any null entries from the collection
 
             return response()->json([
                 'success' => true,
@@ -452,9 +463,6 @@ class studentController extends Controller
                 })
                 ->select('stp_courses.*', 'stp_featureds.featured_type')
                 ->where('course_status', '!=', 0)
-                ->whereHas('school', function ($query) {
-                    $query->whereIn('school_status', [1, 3]);
-                })
                 ->when($request->filled('qualification'), function ($query) use ($request) {
                     $query->where('qualification_id', $request->qualification);
                 })
