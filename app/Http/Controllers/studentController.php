@@ -378,6 +378,9 @@ class studentController extends Controller
             $hpFeaturedCoursesList = stp_featured::whereNotNull('course_id')
                 ->where('featured_type', 29)
                 ->where('featured_status', 1)
+                ->whereHas('courses', function ($query) {
+                    $query->where('course_status', '!=', 0);
+                })
                 ->get()->map(function ($courses) {
                     if (empty($courses->courses->course_logo)) {
                         $logo = $courses->courses->school->school_logo;
