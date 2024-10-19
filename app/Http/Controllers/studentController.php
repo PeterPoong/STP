@@ -390,7 +390,6 @@ class studentController extends Controller
                         "course_logo" => $logo,
                         "course_qualification" => $courses->courses->qualification->qualification_name,
                         "course_qualification_color" => $courses->courses->qualification->qualification_color_code,
-
                         'course_school' => $courses->courses->school->school_name,
                         'location' => $courses->courses->school->city->city_name ?? null,
                     ];
