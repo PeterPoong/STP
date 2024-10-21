@@ -57,7 +57,7 @@ class ServiceFunction
                 'student_email' => $student->student_email,
                 'student_phone' => $student->student_countryCode . " " . $student->student_contactNo,
                 'application_date' => now()->format('Y-m-d H:i:s'),
-                'actionUrl' => "http://192.168.0.70:5173/school/ApplicantDetail/" . $newApplicantId // Concatenate the student ID
+                'actionUrl' => "https://studypal.my/school/ApplicantDetail/" . $newApplicantId // Concatenate the student ID
             ];
 
             Mail::to($institute_email)->send(new SendSchoolEmail($data));
@@ -102,7 +102,7 @@ class ServiceFunction
                 'studentName' => $studentName,
                 'schoolName' => $schoolName,
                 // 'reviewLink' => "http://192.168.0.70:5173/schoolPortalLogin"
-                'reviewLink' => "http://192.168.0.70:5173/school/ApplicantDetail/" . $newApplicantId // Concatenate the student ID
+                'reviewLink' => "https://studypal.my/school/ApplicantDetail/" . $newApplicantId // Concatenate the student ID
 
             ];
             Mail::to($schoolEmail)->send(new SendReminder($data));
