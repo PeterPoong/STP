@@ -25,6 +25,7 @@ class stp_student extends Model
         'user_role',
         'student_profilePic',
         'student_status',
+        'facebook_id',
         'created_by',
         'updated_by'
     ];

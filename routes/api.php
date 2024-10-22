@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\countryController;
 use App\Http\Controllers\serviceFunctionController;
 use App\Http\Controllers\studentController;
+use App\Http\Controllers\SocialLoginController;
 
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 Route::post('/admin/register', [AuthController::class, 'adminRegister']);
@@ -272,6 +273,16 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/schoolTranscriptCgpa', [SchoolController::class, 'schoolTranscriptCgpa']);
     Route::post('/getNumberOfDocument', [SchoolController::class, 'getNumberOfDocument']);
 });
+
+// Route::get('auth/facebook', [LoginController::class, 'redirectToFacebook'])->name('login.facebook');
+
+Route::group(['middleware' => ['web']], function () {
+    Route::get('auth/facebook', [SocialLoginController::class, 'redirectToFacebook'])->name('login.facebook');
+    Route::get('auth/facebook/callback', [SocialLoginController::class, 'handleFacebookCallback']);
+});
+
+Route::post('/decrypt-data', [SocialLoginController::class, 'decryptData']);
+
 
 
 Route::post('/importCountry', [serviceFunctionController::class, 'importCountry']);
