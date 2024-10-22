@@ -2688,7 +2688,10 @@ class studentController extends Controller
             ];
             $intakeList = stp_intake::get()
                 ->map(function ($intake) {
-                    return ['month' => $intake->month->core_metaName];
+                    return [
+                        'id' => $intake->month->id,
+                        'month' => $intake->month->core_metaName
+                    ];
                 })
                 ->unique('month')
                 ->sortBy(function ($intake) use ($monthsOrder) {
