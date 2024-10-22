@@ -93,7 +93,6 @@ class ServiceFunction
         }
     }
 
-
     public function sendReminder($schoolEmail, $studentName, $courseName, $schoolName, $newApplicantId)
     {
         try {
