@@ -61,10 +61,60 @@ class SocialLoginController extends Controller
     //     }
     // }
 
+    //correct 
+    // public function redirectToFacebook()
+    // {
+    //     // Store the redirect URL in session
+    //     session(['facebook_redirect' => 'http://localhost:5173/']);
+
+    //     return Socialite::driver('facebook')->redirect();
+    // }
+
+    // public function handleFacebookCallback()
+    // {
+    //     try {
+    //         $facebookUser = Socialite::driver('facebook')->stateless()->user();
+    //         $existingUser = stp_student::where('facebook_id', $facebookUser->getId())->first();
+    //         if ($existingUser) {
+    //             $token = $existingUser->createToken('authToken')->plainTextToken;
+    //         } else {
+    //             $data = [
+    //                 'student_userName' => $facebookUser->getName(),
+    //                 'student_email' => $facebookUser->getEmail(),
+    //                 'facebook_id' => $facebookUser->getId(),
+    //                 'student_countryCode' => '+60',
+    //                 'student_contactNo' => '123',
+    //                 'user_role' => 4
+    //             ];
+    //             $newUser = stp_student::create($data);
+    //             $userdetail = stp_student_detail::create([
+    //                 'student_id' => $newUser->id
+    //             ]);
+    //             $token = $newUser->createToken('authToken')->plainTextToken;
+    //         }
+
+    //         $data = [
+    //             'token' => $token,
+    //             'user_name' => $facebookUser->getName()
+    //         ];
+    //         $jsonData = json_encode($data);
+
+    //         // Encrypt the JSON string
+    //         $encryptedData = Crypt::encryptString($jsonData);
+
+    //         return redirect()->intended('http://localhost:5173/FacebookSocialPageRedirectPage?data=' . $encryptedData);
+    //     } catch (\Exception $e) {
+    //         // On error (including cancellation), check session for the redirect URL
+    //         $redirectUrl = session('facebook_redirect', '/login'); // Default to /login if not set
+    //         session()->forget('facebook_redirect'); // Clear the session after use
+    //         return redirect($redirectUrl)->withErrors('Unable to login using Facebook.');
+    //     }
+    // }
+
     public function redirectToFacebook()
     {
-        // Store the redirect URL in session
-        session(['facebook_redirect' => 'http://localhost:5173/']);
+        // Store the redirect URL in session (use env variable or hardcoded URL)
+        session(['facebook_redirect' => env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/')]);
 
         return Socialite::driver('facebook')->redirect();
     }
@@ -72,12 +122,15 @@ class SocialLoginController extends Controller
     public function handleFacebookCallback()
     {
         try {
+            // Get the user from Facebook
             $facebookUser = Socialite::driver('facebook')->stateless()->user();
 
+            // Check if the user already exists in your database
             $existingUser = stp_student::where('facebook_id', $facebookUser->getId())->first();
             if ($existingUser) {
                 $token = $existingUser->createToken('authToken')->plainTextToken;
             } else {
+                // Create a new user if not found
                 $data = [
                     'student_userName' => $facebookUser->getName(),
                     'student_email' => $facebookUser->getEmail(),
@@ -87,12 +140,11 @@ class SocialLoginController extends Controller
                     'user_role' => 4
                 ];
                 $newUser = stp_student::create($data);
-                $userdetail = stp_student_detail::create([
-                    'student_id' => $newUser->id
-                ]);
+                stp_student_detail::create(['student_id' => $newUser->id]);
                 $token = $newUser->createToken('authToken')->plainTextToken;
             }
 
+            // Prepare data for the frontend
             $data = [
                 'token' => $token,
                 'user_name' => $facebookUser->getName()
@@ -102,11 +154,16 @@ class SocialLoginController extends Controller
             // Encrypt the JSON string
             $encryptedData = Crypt::encryptString($jsonData);
 
-            return redirect()->intended('http://localhost:5173/FacebookSocialPageRedirectPage?data=' . $encryptedData);
-        } catch (\Exception $e) {
-            // On error (including cancellation), check session for the redirect URL
-            $redirectUrl = session('facebook_redirect', '/login'); // Default to /login if not set
+            // Redirect to your frontend page with encrypted data
+            $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/'));
             session()->forget('facebook_redirect'); // Clear the session after use
+            return redirect()->intended($redirectUrl . 'FacebookSocialPageRedirectPage?data=' . $encryptedData);
+        } catch (\Exception $e) {
+            // Handle cases like cancellation or errors during login
+            $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/'));
+            session()->forget('facebook_redirect'); // Clear the session after use
+
+            // Redirect to your desired frontend page with an error message
             return redirect($redirectUrl)->withErrors('Unable to login using Facebook.');
         }
     }
