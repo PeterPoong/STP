@@ -341,13 +341,18 @@ class studentController extends Controller
         // $test = stp_featured::find(1);
         // return $test->school;
         try {
-            $hpFeaturedSchoolList = stp_featured::where('featured_type', 28)->get()->map(function ($school) {
-                return ([
-                    'schoolID' => $school->school->id,
-                    'schoolName' => $school->school->school_name,
-                    'schoolLogo' => $school->school->school_logo
-                ]);
-            });
+            $hpFeaturedSchoolList = stp_featured::where('featured_type', 28)
+                ->whereHas('school', function ($query) {
+                    $query->whereIn('school_status', [1, 3]);
+                })
+                ->get()
+                ->map(function ($school) {
+                    return ([
+                        'schoolID' => $school->school->id,
+                        'schoolName' => $school->school->school_name,
+                        'schoolLogo' => $school->school->school_logo
+                    ]);
+                });
             return response()->json([
                 'success' => true,
                 'data' => $hpFeaturedSchoolList
