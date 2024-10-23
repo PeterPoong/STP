@@ -308,6 +308,7 @@ class studentController extends Controller
             $schoolDetail = [
                 'id' => $school->id,
                 'name' => $school->school_name,
+                'school_email' => $school->school_email,
                 'category' => $school->institueCategory->core_metaName ?? null,
                 'logo' => $school->school_logo,
                 'country' => $school->country->country_name ?? null,
@@ -391,6 +392,7 @@ class studentController extends Controller
                     }
                     return [
                         "id" => $courses->courses->id,
+                        "school_id" => $courses->school->id,
                         "course_name" => $courses->courses->course_name,
                         "course_logo" => $logo,
                         "course_qualification" => $courses->courses->qualification->qualification_name,
