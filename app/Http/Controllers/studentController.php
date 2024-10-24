@@ -434,6 +434,7 @@ class studentController extends Controller
 
     public function courseList(Request $request)
     {
+
         try {
             // Validate the request parameters
             $request->validate([
@@ -507,6 +508,7 @@ class studentController extends Controller
             // Paginate the results
             $courses = $query->paginate(40);
 
+
             // Transform the results
             $transformedCourses = $courses->through(function ($course) {
                 $featured = false;
@@ -517,25 +519,28 @@ class studentController extends Controller
                     }
                 }
                 $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
-                return [
-                    'id' => $course->id,
-                    'school_name' => $course->school->school_name,
-                    'name' => $course->course_name,
-                    'description' => $course->course_description,
-                    'requirement' => $course->course_requirement,
-                    'cost' => $course->course_cost,
-                    'featured' => $featured,
-                    'period' => $course->course_period,
-                    'intake' => $intakeMonths,
-                    'category' => $course->category->category_name,
-                    'qualification' => $course->qualification->qualification_name,
-                    'mode' => $course->studyMode->core_metaName ?? null,
-                    'logo' => $course->course_logo ?? $course->school->school_logo,
-                    'country' => $course->school->country->country_name ?? null,
-                    'state' => $course->school->state->state_name ?? null,
-                    'institute_category' => $course->school->institueCategory->core_metaName ?? null,
-                    'school_location' => $course->school->school_location
-                ];
+
+                if ($course->course_status != 0) {
+                    return [
+                        'id' => $course->id,
+                        'school_name' => $course->school->school_name,
+                        'name' => $course->course_name,
+                        'description' => $course->course_description,
+                        'requirement' => $course->course_requirement,
+                        'cost' => $course->course_cost,
+                        'featured' => $featured,
+                        'period' => $course->course_period,
+                        'intake' => $intakeMonths,
+                        'category' => $course->category->category_name,
+                        'qualification' => $course->qualification->qualification_name,
+                        'mode' => $course->studyMode->core_metaName ?? null,
+                        'logo' => $course->course_logo ?? $course->school->school_logo,
+                        'country' => $course->school->country->country_name ?? null,
+                        'state' => $course->school->state->state_name ?? null,
+                        'institute_category' => $course->school->institueCategory->core_metaName ?? null,
+                        'school_location' => $course->school->school_location,
+                    ];
+                }
             });
             return  $transformedCourses;
 
