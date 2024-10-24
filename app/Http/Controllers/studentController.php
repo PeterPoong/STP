@@ -434,7 +434,6 @@ class studentController extends Controller
 
     public function courseList(Request $request)
     {
-
         try {
             // Validate the request parameters
             $request->validate([
@@ -458,7 +457,7 @@ class studentController extends Controller
                         ->where('stp_featureds.featured_status', 1);
                 })
                 ->select('stp_courses.*', 'stp_featureds.featured_type')
-                ->where('course_status', '!=', 0)
+
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 3]);
                 })
@@ -500,7 +499,8 @@ class studentController extends Controller
                     $query->whereHas('intake', function ($query) use ($request) {
                         $query->whereIn('intake_month', $request->intake);
                     });
-                });
+                })
+                ->where('course_status', '!=', 0);
 
             // Sort so courses with featured_type 30 appear first
             $query->orderByRaw('stp_featureds.featured_type = 30 DESC');
@@ -508,9 +508,9 @@ class studentController extends Controller
             // Paginate the results
             $courses = $query->paginate(40);
 
-
             // Transform the results
             $transformedCourses = $courses->through(function ($course) {
+
                 $featured = false;
                 foreach ($course->featured as $c) {
                     if ($c['featured_type'] == 30 && $c['featured_status'] == 1) {
@@ -520,27 +520,26 @@ class studentController extends Controller
                 }
                 $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
 
-                if ($course->course_status != 0) {
-                    return [
-                        'id' => $course->id,
-                        'school_name' => $course->school->school_name,
-                        'name' => $course->course_name,
-                        'description' => $course->course_description,
-                        'requirement' => $course->course_requirement,
-                        'cost' => $course->course_cost,
-                        'featured' => $featured,
-                        'period' => $course->course_period,
-                        'intake' => $intakeMonths,
-                        'category' => $course->category->category_name,
-                        'qualification' => $course->qualification->qualification_name,
-                        'mode' => $course->studyMode->core_metaName ?? null,
-                        'logo' => $course->course_logo ?? $course->school->school_logo,
-                        'country' => $course->school->country->country_name ?? null,
-                        'state' => $course->school->state->state_name ?? null,
-                        'institute_category' => $course->school->institueCategory->core_metaName ?? null,
-                        'school_location' => $course->school->school_location,
-                    ];
-                }
+                return [
+                    'id' => $course->id,
+                    'school_name' => $course->school->school_name,
+                    'name' => $course->course_name,
+                    'description' => $course->course_description,
+                    'requirement' => $course->course_requirement,
+                    'cost' => $course->course_cost,
+                    'featured' => $featured,
+                    'period' => $course->course_period,
+                    'intake' => $intakeMonths,
+                    'category' => $course->category->category_name,
+                    'qualification' => $course->qualification->qualification_name,
+                    'mode' => $course->studyMode->core_metaName ?? null,
+                    'logo' => $course->course_logo ?? $course->school->school_logo,
+                    'country' => $course->school->country->country_name ?? null,
+                    'state' => $course->school->state->state_name ?? null,
+                    'institute_category' => $course->school->institueCategory->core_metaName ?? null,
+                    'school_location' => $course->school->school_location,
+                    'school_status' => $course->course_status
+                ];
             });
             return  $transformedCourses;
 
