@@ -129,6 +129,7 @@ class SocialLoginController extends Controller
             $existingUser = stp_student::where('facebook_id', $facebookUser->getId())->first();
             if ($existingUser) {
                 $token = $existingUser->createToken('authToken')->plainTextToken;
+                $user_id = $existingUser->id;
             } else {
                 // Create a new user if not found
                 $data = [
@@ -142,11 +143,13 @@ class SocialLoginController extends Controller
                 $newUser = stp_student::create($data);
                 stp_student_detail::create(['student_id' => $newUser->id]);
                 $token = $newUser->createToken('authToken')->plainTextToken;
+                $user_id = $newUser->id;
             }
 
             // Prepare data for the frontend
             $data = [
                 'token' => $token,
+                'id' => $user_id,
                 'user_name' => $facebookUser->getName()
             ];
             $jsonData = json_encode($data);
