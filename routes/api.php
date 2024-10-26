@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\countryController;
+use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\serviceFunctionController;
 use App\Http\Controllers\studentController;
 use App\Http\Controllers\SocialLoginController;
@@ -275,13 +276,18 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 });
 
 // Route::get('auth/facebook', [LoginController::class, 'redirectToFacebook'])->name('login.facebook');
-
+//social login
 Route::group(['middleware' => ['web']], function () {
     Route::get('auth/facebook', [SocialLoginController::class, 'redirectToFacebook'])->name('login.facebook');
     Route::get('auth/facebook/callback', [SocialLoginController::class, 'handleFacebookCallback']);
 });
-
 Route::post('/decrypt-data', [SocialLoginController::class, 'decryptData']);
+
+//marketing 
+Route::prefix('marketing')->group(function () {
+    Route::get('/packageList', [MarketingController::class, 'packageList']);
+});
+
 
 
 
