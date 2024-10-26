@@ -164,8 +164,8 @@ class SocialLoginController extends Controller
     public function redirectToFacebook()
     {
         // Store the redirect URL in session (use env variable or hardcoded URL)
-        session(['facebook_redirect' => env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/')]);
-
+        // session(['facebook_redirect' => env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/')]);
+        session(['facebook_redirect' => env('FRONTEND_REDIRECT_URL', 'URL')]);
         return Socialite::driver('facebook')->redirect();
     }
 
@@ -179,6 +179,7 @@ class SocialLoginController extends Controller
             $existingUser = stp_student::where('facebook_id', $facebookUser->getId())->first();
             if ($existingUser) {
                 $token = $existingUser->createToken('authToken')->plainTextToken;
+                $user_id = $existingUser->id;
             } else {
                 // Create a new user if not found
                 $data = [
@@ -192,11 +193,13 @@ class SocialLoginController extends Controller
                 $newUser = stp_student::create($data);
                 stp_student_detail::create(['student_id' => $newUser->id]);
                 $token = $newUser->createToken('authToken')->plainTextToken;
+                $user_id = $newUser->id;
             }
 
             // Prepare data for the frontend
             $data = [
                 'token' => $token,
+                'id' => $user_id,
                 'user_name' => $facebookUser->getName()
             ];
             $jsonData = json_encode($data);
@@ -205,12 +208,16 @@ class SocialLoginController extends Controller
             $encryptedData = Crypt::encryptString($jsonData);
 
             // Redirect to your frontend page with encrypted data
-            $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/'));
+            // $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/'));
+            $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'URL'));
+
             session()->forget('facebook_redirect'); // Clear the session after use
             return redirect()->intended($redirectUrl . 'FacebookSocialPageRedirectPage?data=' . $encryptedData);
         } catch (\Exception $e) {
             // Handle cases like cancellation or errors during login
-            $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/'));
+            // $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/'));
+            $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'URL'));
+
             session()->forget('facebook_redirect'); // Clear the session after use
 
             // Redirect to your desired frontend page with an error message
