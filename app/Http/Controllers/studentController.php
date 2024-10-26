@@ -53,24 +53,20 @@ class studentController extends Controller
         try {
             // Start building the query
             $getSchoolList = stp_school::whereIn('school_status', [1, 3])
-                // Exclude schools with zero courses (ensure the school has courses)
-                ->whereHas('courses')
+                ->whereHas('courses') // Ensure the school has courses
 
-                // Filter by institute category (array of categories)
+                // Apply filters as needed
                 ->when($request->filled('category'), function ($query) use ($request) {
                     $query->whereIn('institue_category', $request->category);
                 })
-                // Filter by country (single country ID as integer)
                 ->when($request->filled('country'), function ($query) use ($request) {
-                    $query->where('country_id', $request->country); // Change to where instead of whereIn
+                    $query->where('country_id', $request->country);
                 })
-                // Filter by location (array of state IDs)
                 ->when($request->filled('location'), function ($query) use ($request) {
                     $query->whereIn('state_id', $request->location);
                 })
-                // Handle search (single search term)
                 ->when($request->filled('search'), function ($query) use ($request) {
-                    $searchTerm = $request->search; // Directly use the string
+                    $searchTerm = $request->search;
                     $query->where(function ($q) use ($searchTerm) {
                         $q->where('school_name', 'like', '%' . $searchTerm . '%')
                             ->orWhereHas('country', function ($q) use ($searchTerm) {
@@ -78,13 +74,11 @@ class studentController extends Controller
                             });
                     });
                 })
-                // Filter by course category (array of categories)
                 ->when($request->filled('courseCategory'), function ($query) use ($request) {
                     $query->whereHas('courses', function ($q) use ($request) {
                         $q->whereIn('category_id', $request->courseCategory);
                     });
                 })
-                // Filter by study level (array of qualification IDs)
                 ->when($request->filled('studyLevel'), function ($query) use ($request) {
                     $query->whereHas('courses', function ($q) use ($request) {
                         $q->whereIn('qualification_id', $request->studyLevel);
@@ -96,27 +90,22 @@ class studentController extends Controller
                     });
                 })
                 ->with(['courses.intake.month', 'featured', 'institueCategory', 'country', 'state', 'city'])
-                ->paginate(10);
+                ->paginate(10); // Retain pagination
 
+            // Collect school data in $schoolList
             $schoolList = [];
 
             foreach ($getSchoolList as $school) {
-                // Handle featured status
-                $featured = false;
-                foreach ($school->featured as $s) {
-                    if ($s['featured_type'] == 30 && $s['featured_status'] == 1) {
-                        $featured = true;
-                        break;
-                    }
-                }
+                $featured = $school->featured->contains(function ($item) {
+                    return $item['featured_type'] == 30 && $item['featured_status'] == 1;
+                });
 
-                // Filter courses by category if needed
                 $filteredCourses = $school->courses->filter(function ($course) use ($request) {
                     if ($request->filled('courseCategory')) {
                         $courseCategories = is_array($request->courseCategory) ? $request->courseCategory : [$request->courseCategory];
                         return in_array($course->category_id, $courseCategories);
                     }
-                    return true; // If courseCategory is not filled, return all courses
+                    return true;
                 })->values();
 
                 $monthList = [];
@@ -129,7 +118,6 @@ class studentController extends Controller
                     }
                 }
 
-                // Collect school data, with courses reflecting the filtered results
                 $schoolList[] = [
                     'id' => $school->id,
                     'name' => $school->school_name,
@@ -140,7 +128,7 @@ class studentController extends Controller
                     'state' => $school->state->state_name ?? null,
                     'city' => $school->city->city_name ?? null,
                     'description' => $school->school_shortDesc,
-                    'courses' => count($filteredCourses),  // Updated to show filtered course count
+                    'courses' => count($filteredCourses),
                     'intake' => $monthList,
                     'location' => $school->school_location
                 ];
@@ -151,13 +139,24 @@ class studentController extends Controller
                 return $b['featured'] <=> $a['featured'];
             });
 
-            // Return the response
+            // Return paginated response with modified `data` section
             return response()->json([
                 'success' => true,
-                'data' => $schoolList
+                'current_page' => $getSchoolList->currentPage(),
+                'data' => $schoolList, // Replace the data with $schoolList
+                'first_page_url' => $getSchoolList->url(1),
+                'from' => $getSchoolList->firstItem(),
+                'last_page' => $getSchoolList->lastPage(),
+                'last_page_url' => $getSchoolList->url($getSchoolList->lastPage()),
+                'links' => $getSchoolList->links(), // Keeps pagination links structure
+                'next_page_url' => $getSchoolList->nextPageUrl(),
+                'path' => $getSchoolList->path(),
+                'per_page' => $getSchoolList->perPage(),
+                'prev_page_url' => $getSchoolList->previousPageUrl(),
+                'to' => $getSchoolList->lastItem(),
+                'total' => $getSchoolList->total()
             ]);
         } catch (Exception $e) {
-            // Handle errors
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
@@ -308,6 +307,7 @@ class studentController extends Controller
             $schoolDetail = [
                 'id' => $school->id,
                 'name' => $school->school_name,
+                'school_email' => $school->school_email,
                 'category' => $school->institueCategory->core_metaName ?? null,
                 'logo' => $school->school_logo,
                 'country' => $school->country->country_name ?? null,
@@ -341,13 +341,18 @@ class studentController extends Controller
         // $test = stp_featured::find(1);
         // return $test->school;
         try {
-            $hpFeaturedSchoolList = stp_featured::where('featured_type', 28)->get()->map(function ($school) {
-                return ([
-                    'schoolID' => $school->school->id,
-                    'schoolName' => $school->school->school_name,
-                    'schoolLogo' => $school->school->school_logo
-                ]);
-            });
+            $hpFeaturedSchoolList = stp_featured::where('featured_type', 28)
+                ->whereHas('school', function ($query) {
+                    $query->whereIn('school_status', [1, 3]);
+                })
+                ->get()
+                ->map(function ($school) {
+                    return ([
+                        'schoolID' => $school->school->id,
+                        'schoolName' => $school->school->school_name,
+                        'schoolLogo' => $school->school->school_logo
+                    ]);
+                });
             return response()->json([
                 'success' => true,
                 'data' => $hpFeaturedSchoolList
@@ -378,6 +383,9 @@ class studentController extends Controller
             $hpFeaturedCoursesList = stp_featured::whereNotNull('course_id')
                 ->where('featured_type', 29)
                 ->where('featured_status', 1)
+                ->whereHas('courses', function ($query) {
+                    $query->where('course_status', '!=', 0);
+                })
                 ->get()->map(function ($courses) {
                     if (empty($courses->courses->course_logo)) {
                         $logo = $courses->courses->school->school_logo;
@@ -386,11 +394,11 @@ class studentController extends Controller
                     }
                     return [
                         "id" => $courses->courses->id,
+                        "school_id" => $courses->courses->school->id,
                         "course_name" => $courses->courses->course_name,
                         "course_logo" => $logo,
                         "course_qualification" => $courses->courses->qualification->qualification_name,
                         "course_qualification_color" => $courses->courses->qualification->qualification_color_code,
-
                         'course_school' => $courses->courses->school->school_name,
                         'location' => $courses->courses->school->city->city_name ?? null,
                     ];
@@ -451,6 +459,10 @@ class studentController extends Controller
                         ->where('stp_featureds.featured_status', 1);
                 })
                 ->select('stp_courses.*', 'stp_featureds.featured_type')
+
+                ->whereHas('school', function ($query) {
+                    $query->whereIn('school_status', [1, 3]);
+                })
                 ->when($request->filled('qualification'), function ($query) use ($request) {
                     $query->where('qualification_id', $request->qualification);
                 })
@@ -471,6 +483,7 @@ class studentController extends Controller
                 ->when($request->filled('institute'), function ($query) use ($request) {
                     $query->whereHas('school', function ($query) use ($request) {
                         $query->where('institue_category', $request->institute);
+                        $query->whereIn('school_status', [1, 3]);
                     });
                 })
                 ->when($request->filled('studyMode'), function ($query) use ($request) {
@@ -488,7 +501,8 @@ class studentController extends Controller
                     $query->whereHas('intake', function ($query) use ($request) {
                         $query->whereIn('intake_month', $request->intake);
                     });
-                });
+                })
+                ->where('course_status', '!=', 0);
 
             // Sort so courses with featured_type 30 appear first
             $query->orderByRaw('stp_featureds.featured_type = 30 DESC');
@@ -498,6 +512,7 @@ class studentController extends Controller
 
             // Transform the results
             $transformedCourses = $courses->through(function ($course) {
+
                 $featured = false;
                 foreach ($course->featured as $c) {
                     if ($c['featured_type'] == 30 && $c['featured_status'] == 1) {
@@ -506,6 +521,7 @@ class studentController extends Controller
                     }
                 }
                 $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
+
                 return [
                     'id' => $course->id,
                     'school_name' => $course->school->school_name,
@@ -523,7 +539,8 @@ class studentController extends Controller
                     'country' => $course->school->country->country_name ?? null,
                     'state' => $course->school->state->state_name ?? null,
                     'institute_category' => $course->school->institueCategory->core_metaName ?? null,
-                    'school_location' => $course->school->school_location
+                    'school_location' => $course->school->school_location,
+                    'school_status' => $course->course_status
                 ];
             });
             return  $transformedCourses;
@@ -2683,7 +2700,10 @@ class studentController extends Controller
             ];
             $intakeList = stp_intake::get()
                 ->map(function ($intake) {
-                    return ['month' => $intake->month->core_metaName];
+                    return [
+                        'id' => $intake->month->id,
+                        'month' => $intake->month->core_metaName
+                    ];
                 })
                 ->unique('month')
                 ->sortBy(function ($intake) use ($monthsOrder) {
