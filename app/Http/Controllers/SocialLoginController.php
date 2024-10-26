@@ -14,52 +14,52 @@ use Illuminate\Http\Request;
 class SocialLoginController extends Controller
 {
     // Redirect to Facebook for authentication
-    public function redirectToFacebook()
-    {
-        return Socialite::driver('facebook')->redirect();
-    }
+    // public function redirectToFacebook()
+    // {
+    //     return Socialite::driver('facebook')->redirect();
+    // }
 
-    // Handle Facebook callback and log the user in
-    public function handleFacebookCallback()
-    {
-        try {
-            $facebookUser = Socialite::driver('facebook')->stateless()->user();
+    // // Handle Facebook callback and log the user in
+    // public function handleFacebookCallback()
+    // {
+    //     try {
+    //         $facebookUser = Socialite::driver('facebook')->stateless()->user();
 
-            $existingUser = stp_student::where('facebook_id', $facebookUser->getId())->first();
-            if ($existingUser) {
-                $token = $existingUser->createToken('authToken')->plainTextToken;
-            } else {
-                $data = [
-                    'student_userName' => $facebookUser->getName(),
-                    'student_email' => $facebookUser->getEmail(),
-                    'facebook_id' => $facebookUser->getId(),
-                    'student_countryCode' => '+60',
-                    'student_contactNo' => '123',
-                    'user_role' => 4
-                ];
-                $newUser = stp_student::create($data);
-                $userdetail = stp_student_detail::create([
-                    'student_id' => $newUser->id
-                ]);
-                $token = $newUser->createToken('authToken')->plainTextToken;
-            }
+    //         $existingUser = stp_student::where('facebook_id', $facebookUser->getId())->first();
+    //         if ($existingUser) {
+    //             $token = $existingUser->createToken('authToken')->plainTextToken;
+    //         } else {
+    //             $data = [
+    //                 'student_userName' => $facebookUser->getName(),
+    //                 'student_email' => $facebookUser->getEmail(),
+    //                 'facebook_id' => $facebookUser->getId(),
+    //                 'student_countryCode' => '+60',
+    //                 'student_contactNo' => '123',
+    //                 'user_role' => 4
+    //             ];
+    //             $newUser = stp_student::create($data);
+    //             $userdetail = stp_student_detail::create([
+    //                 'student_id' => $newUser->id
+    //             ]);
+    //             $token = $newUser->createToken('authToken')->plainTextToken;
+    //         }
 
-            $data = [
-                'token' => $token,
-                'user_name' => $facebookUser->getName()
-            ];
-            $jsonData = json_encode($data);
+    //         $data = [
+    //             'token' => $token,
+    //             'user_name' => $facebookUser->getName()
+    //         ];
+    //         $jsonData = json_encode($data);
 
-            // Encrypt the JSON string
-            $encryptedData = Crypt::encryptString($jsonData);
-            // session(['token' => $token]);
-            // dd(session('token'));
-            // return redirect()->intended('http://localhost:5173/FacebookSocialPageRedirectPage?data=' . $encryptedData);\
-            return redirect()->intended('https://backendstudypal.studypal.my/FacebookSocialPageRedirectPage?data=' . $encryptedData);
-        } catch (\Exception $e) {
-            return redirect('/login')->withErrors('Unable to login using Facebook.');
-        }
-    }
+    //         // Encrypt the JSON string
+    //         $encryptedData = Crypt::encryptString($jsonData);
+    //         // session(['token' => $token]);
+    //         // dd(session('token'));
+    //         // return redirect()->intended('http://localhost:5173/FacebookSocialPageRedirectPage?data=' . $encryptedData);\
+    //         return redirect()->intended('https://backendstudypal.studypal.my/FacebookSocialPageRedirectPage?data=' . $encryptedData);
+    //     } catch (\Exception $e) {
+    //         return redirect('/login')->withErrors('Unable to login using Facebook.');
+    //     }
+    // }
 
     // public function redirectToFacebook()
     // {
