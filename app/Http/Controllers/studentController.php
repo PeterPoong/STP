@@ -283,23 +283,30 @@ class studentController extends Controller
 
 
             $intakeMonth = array_values(array_unique($intake));
-            $coursesList = $school->courses->makeHidden('intake')->map(function ($course) {
-                $monthList = [];
-                foreach ($course->intake as $m) {
-                    $monthList[] = $m->month->core_metaName;
-                }
-                return [
-                    'id' => $course->id,
-                    'course_name' => $course->course_name,
-                    'course_cost' => $course->course_cost,
-                    'course_period' => $course->course_period,
-                    'course_intake' => $monthList,
-                    'category' => $course->category->category_name,
-                    'qualification' => $course->qualification->qualification_name,
-                    'study_mode' => $course->studyMode->core_metaName ?? null,
-                    'course_logo' => $course->course_logo
-                ];
-            });
+            $coursesList = $school->courses
+                ->makeHidden('intake')
+                ->map(function ($course) {
+                    if ($course->course_status != 0) {
+                        $monthList = [];
+                        foreach ($course->intake as $m) {
+                            $monthList[] = $m->month->core_metaName;
+                        }
+                        return [
+                            'id' => $course->id,
+                            'course_name' => $course->course_name,
+                            'course_cost' => $course->course_cost,
+                            'course_period' => $course->course_period,
+                            'course_intake' => $monthList,
+                            'category' => $course->category->category_name,
+                            'qualification' => $course->qualification->qualification_name,
+                            'study_mode' => $course->studyMode->core_metaName ?? null,
+                            'course_logo' => $course->course_logo
+                        ];
+                    }
+                    return null;
+                })
+                ->filter() // Removes null values
+                ->values();
 
 
 
