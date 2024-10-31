@@ -174,7 +174,7 @@ class studentController extends Controller
             ]);
 
             $courseList = stp_course::find($request->courseID);
-            return $courseList;
+
 
             if (empty($courseList->course_logo)) {
                 $logo = $courseList->school->school_logo;
