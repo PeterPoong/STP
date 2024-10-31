@@ -174,6 +174,7 @@ class studentController extends Controller
             ]);
 
             $courseList = stp_course::find($request->courseID);
+            return $courseList;
 
             if (empty($courseList->course_logo)) {
                 $logo = $courseList->school->school_logo;
@@ -216,6 +217,7 @@ class studentController extends Controller
             }
 
             $courseListDetail = [
+
                 'id' => $courseList->id,
                 'course' => $courseList->course_name,
                 'description' => $courseList->course_description,
@@ -527,6 +529,8 @@ class studentController extends Controller
                 $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
 
                 return [
+                    'school_id' => $course->school->id,
+                    'email' => $course->school->school_email,
                     'id' => $course->id,
                     'school_name' => $course->school->school_name,
                     'name' => $course->course_name,
