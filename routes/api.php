@@ -280,16 +280,19 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 Route::group(['middleware' => ['web']], function () {
     Route::get('auth/facebook', [SocialLoginController::class, 'redirectToFacebook'])->name('login.facebook');
     Route::get('auth/facebook/callback', [SocialLoginController::class, 'handleFacebookCallback']);
+    Route::get('auth/google', [SocialLoginController::class, 'googlePage']);
+    Route::get('auth/google/callback', [SocialLoginController::class, 'googleCallback']);
 });
 Route::post('/decrypt-data', [SocialLoginController::class, 'decryptData']);
+Route::post('/facebook/deleteFacebookData', [SocialLoginController::class, 'deleteFacebookData']);
+
+
+
 
 //marketing 
 Route::prefix('marketing')->group(function () {
     Route::get('/packageList', [MarketingController::class, 'packageList']);
 });
-
-
-
 
 Route::post('/importCountry', [serviceFunctionController::class, 'importCountry']);
 Route::post('/importState', [serviceFunctionController::class, 'importState']);
