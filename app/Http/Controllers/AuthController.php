@@ -386,7 +386,7 @@ class AuthController extends Controller
                 'confirm_password' => 'required|string|min:8|same:password',
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
-                'email' => 'required|string|email|max:255|unique:stp_students,student_email',
+                'email' => 'required|string|email|max:255',
                 'ic' => 'required|string|unique:stp_students,student_icNumber'
             ]);
 
@@ -394,26 +394,40 @@ class AuthController extends Controller
                 ->where('student_contactNo', $request->contact_number)
                 ->exists();
 
-
             if ($checkingUser) {
                 throw ValidationException::withMessages([
                     'contact_no' => ['Contact has been used'],
                 ]);
             }
 
-            $data = [
-                'student_userName' => $request->name,
-                'student_email' => $request->email,
-                'student_countryCode' => $request->country_code,
-                'student_contactNo' => $request->contact_number,
-                'student_password' => Hash::make($request->password),
-                'student_icNumber' => $request->ic,
-                'user_role' => 4
-            ];
-            $newUser = stp_student::create($data);
-            $userdetail = stp_student_detail::create([
-                'student_id' => $newUser->id
-            ]);
+            $checkEmailWithSocialLogin = stp_student::where('student_email', $request->email)
+                ->where('student_password', null)
+                ->first();
+
+            if ($checkEmailWithSocialLogin) {
+                $data = [
+                    'student_userName' => $request->name,
+                    'student_countryCode' => $request->country_code,
+                    'student_contactNo' => $request->contact_number,
+                    'student_password' => Hash::make($request->password),
+                    'student_icNumber' => $request->ic,
+                ];
+                $checkEmailWithSocialLogin->update($data);
+            } else {
+                $data = [
+                    'student_userName' => $request->name,
+                    'student_email' => $request->email,
+                    'student_countryCode' => $request->country_code,
+                    'student_contactNo' => $request->contact_number,
+                    'student_password' => Hash::make($request->password),
+                    'student_icNumber' => $request->ic,
+                    'user_role' => 4
+                ];
+                $newUser = stp_student::create($data);
+                $userdetail = stp_student_detail::create([
+                    'student_id' => $newUser->id
+                ]);
+            }
 
             return response()->json(
                 [
