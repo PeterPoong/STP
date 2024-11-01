@@ -41,4 +41,10 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URL'), // Your Facebook Redirect URL
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'), // Your Facebook App ID
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'), // Your Facebook App Secret
+        'redirect' => env('GOOGLE_REDIRECT_URL'), // Your Facebook Redirect URL
+    ],
+
 ];
