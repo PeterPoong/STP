@@ -168,6 +168,7 @@ class studentController extends Controller
 
     public function courseDetail(Request $request)
     {
+
         try {
             $request->validate([
                 'courseID' => 'required|integer'
@@ -192,8 +193,11 @@ class studentController extends Controller
             }
             // Fetch all intakes associated with the course
             $intakeList = [];
+
             foreach ($courseList->intake as $intake) {
-                $intakeList[] = $intake->month->core_metaName;
+                if ($intake->intake_status == 1) {
+                    $intakeList[] = $intake->month->core_metaName;
+                }
             }
             $featuredList = [];
             foreach ($courseList->featured as $courseFeatured) {
@@ -207,8 +211,6 @@ class studentController extends Controller
                 }
             }
 
-
-
             foreach ($courseList->school->media as $photo) {
 
                 if ($photo->schoolMedia_type == 67) {
@@ -216,8 +218,9 @@ class studentController extends Controller
                 }
             }
 
-            $courseListDetail = [
 
+
+            $courseListDetail = [
                 'id' => $courseList->id,
                 'course' => $courseList->course_name,
                 'description' => $courseList->course_description,
@@ -231,8 +234,8 @@ class studentController extends Controller
                 'schoolShortDescription' => $courseList->school->school_shortDesc,
                 'schoolLongDescription' => $courseList->school->school_fullDesc,
                 'schoolID' => $courseList->school_id,
+                'schoolLocation' => $courseList->school->school_location ?? null,
                 'qualification' => $courseList->qualification->qualification_name,
-                // 'qualification_name' => $courseList->qualification->qualification_name,
                 'mode' => $courseList->studyMode->core_metaName ?? null,
                 'logo' => $logo,
                 'coverPhoto' => $coverPhoto ?? null,
