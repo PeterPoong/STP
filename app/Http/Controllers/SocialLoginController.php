@@ -166,7 +166,6 @@ class SocialLoginController extends Controller
 
     public function googleCallback()
     {
-
         try {
             // Get the user from Facebook
             $googleUser = Socialite::driver('google')->stateless()->user();
