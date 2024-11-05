@@ -532,7 +532,8 @@ class studentController extends Controller
                         break;
                     }
                 }
-                $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
+
+                $intakeMonths = $course->intake->where('intake_status', 1)->pluck('month.core_metaName')->toArray();
 
                 return [
                     'school_id' => $course->school->id,
