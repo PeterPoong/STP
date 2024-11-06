@@ -92,6 +92,7 @@ class EnquiryController extends Controller
                         'enquiry_phone' => $enquiry->enquiry_phone,
                         'enquiry_subject' => $enquiry->subject->core_metaName,
                         'enquiry_message' => $enquiry->enquiry_message,
+                        'enquiry_status' => $enquiry->enquiry_status
                     ];
                 });
 
