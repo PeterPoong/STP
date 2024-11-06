@@ -11,13 +11,13 @@ use App\Mail\SendSchoolEmail;
 use App\Mail\SendAcceptanceEmail;
 use App\Mail\SendRejectEmail;
 use App\Mail\SendReminder;
+use App\Mail\SendEnquiryEmail;
 use Illuminate\Support\Facades\Mail;
 
 class ServiceFunction
 {
     public function generateOtpAndSendEmail($id, $type, $email)
     {
-
         $current_time = now()->setTimezone('Asia/Kuala_Lumpur')->addMinutes(5)->format('Y-m-d H:i:s');
         $otp = rand(100000, 999999);
         switch ($type) {
@@ -44,6 +44,13 @@ class ServiceFunction
                 break;
         }
         Mail::to($email)->send(new OtpMail($otp));
+    }
+
+
+    public function sendEnquiryEmail($fullName, $email, $contact, $emailSubject, $messageContent)
+    {
+
+        Mail::to('admin@studypal.my')->send(new SendEnquiryEmail($emailSubject, $fullName, $email, $contact, $messageContent));
     }
 
     public function sendAppliedCourseEmail($school, $course, $student, $newApplicantId)

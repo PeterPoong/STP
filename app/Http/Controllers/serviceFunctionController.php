@@ -96,6 +96,8 @@ class serviceFunctionController extends Controller
         }
     }
 
+
+
     public function validateOtp(Request $request)
     {
         try {
@@ -254,6 +256,12 @@ class serviceFunctionController extends Controller
 
         $sendEmailToSchool = $this->serviceFunction->sendAppliedCourseEmail($school, $course, $student, $newApplicantId);
         return $sendEmailToSchool;
+    }
+
+    public function sendEnquiryEmail($fullName, $email, $contact, $emailSubject, $message)
+    {
+
+        $this->serviceFunction->sendEnquiryEmail($fullName, $email, $contact, $emailSubject, $message);
     }
 
     public function sendStudentApplicantStatusEmail($form, $status, $feedback)
