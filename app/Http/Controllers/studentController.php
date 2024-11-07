@@ -839,6 +839,14 @@ class studentController extends Controller
     public function qualificationFilterList(Request $request)
     {
         try {
+            $orderMap = [
+                'Diploma' => 1,
+                'Foundation' => 2,
+                'Degree' => 3,
+                'Master' => 4,
+                'PHD' => 5
+            ];
+
             $qualificationList = stp_qualification::where('qualification_status', 1)
                 ->get()
                 ->map(function ($qualiList) {
@@ -846,7 +854,11 @@ class studentController extends Controller
                         'id' => $qualiList->id,
                         'qualification_name' => $qualiList->qualification_name
                     ];
-                });
+                })
+                ->sortBy(function ($item) use ($orderMap) {
+                    return $orderMap[$item['qualification_name']];
+                })
+                ->values();
             return response()->json([
                 'success' => true,
                 'data' => $qualificationList
