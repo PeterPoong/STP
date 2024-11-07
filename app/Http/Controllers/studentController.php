@@ -98,7 +98,7 @@ class studentController extends Controller
                     });
             };
 
-            $perPage = 6;
+            $perPage = 40;
             $featuredLimit = 5;
 
             // Randomly select featured schools
