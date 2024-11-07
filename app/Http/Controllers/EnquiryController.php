@@ -168,6 +168,8 @@ public function enquiryDetail(Request $request)
             'data'=>[
                 'id'=>$enquiry->id,
                 'name'=>$enquiry->enquiry_name,
+                'email' => $enquiry->enquiry_email,
+                'phone' => $enquiry->enquiry_phone,
                 'subject' => $enquiry->subject->core_metaName ?? null,
                 'message'=>$enquiry->enquiry_message,
                 'status'=>$enquiry->enquiry_status
