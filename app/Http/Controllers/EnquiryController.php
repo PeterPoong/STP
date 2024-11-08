@@ -109,42 +109,41 @@ class EnquiryController extends Controller
     }
 
     public function enquiryListAdmin(Request $request)
-{
-    try {
-        // Get the per_page value from the request, default to 10 if not provided or empty
-        $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_enquiry::count() : (int)$request->per_page)
-            : 10;
+    {
+        try {
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_enquiry::count() : (int)$request->per_page)
+                : 10;
 
-        $request->validate([
-            'subject' => 'integer'
-        ]);
+            $request->validate([
+                'subject' => 'integer'
+            ]);
 
-        $enquiryList = stp_enquiry::when($request->subject, function ($query, $subject) {
-            return $query->where('enquiry_subject', $subject);
-        })
-            ->where('enquiry_status', 1)
-            ->paginate($perPage)
-            ->through(function ($enquiry) {
-                return [
-                    'id' => $enquiry->id,
-                    'enquiry_name' => $enquiry->enquiry_name,
-                    'enquiry_email' => $enquiry->enquiry_email,
-                    'enquiry_phone' => $enquiry->enquiry_phone,
-                    'enquiry_subject' => $enquiry->subject->core_metaName ?? null,
-                    'enquiry_message' => $enquiry->enquiry_message,
-                    'enquiry_status' => $enquiry->enquiry_status,
-                ];
-            });
+            $enquiryList = stp_enquiry::when($request->subject, function ($query, $subject) {
+                return $query->where('enquiry_subject', $subject);
+            })
+                ->where('enquiry_status', 1)
+                ->paginate($perPage)
+                ->through(function ($enquiry) {
+                    return [
+                        'id' => $enquiry->id,
+                        'enquiry_name' => $enquiry->enquiry_name,
+                        'enquiry_email' => $enquiry->enquiry_email,
+                        'enquiry_phone' => $enquiry->enquiry_phone,
+                        'enquiry_subject' => $enquiry->subject->core_metaName ?? null,
+                        'enquiry_message' => $enquiry->enquiry_message,
+                        'enquiry_status' => $enquiry->enquiry_status,
+                    ];
+                });
 
-        return response()->json($enquiryList);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage()
-        ], 500);
+            return response()->json($enquiryList);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
-
 }

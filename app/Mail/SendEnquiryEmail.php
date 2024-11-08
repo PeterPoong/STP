@@ -16,17 +16,17 @@ class SendEnquiryEmail extends Mailable
     public $email;
     public $contact;
     public $emailSubject;
-    public $message;
+    public $messageContent;
 
 
-    public function __construct($emailSubject, $fullName, $email, $contact, $message)
+    public function __construct($emailSubject, $fullName, $email, $contact, $messageContent)
 
     {
         $this->fullName = $fullName;
         $this->email = $email;
         $this->contact = $contact;
         $this->emailSubject = $emailSubject;
-        $this->message = $message;
+        $this->messageContent = $messageContent;
     }
 
     /**
