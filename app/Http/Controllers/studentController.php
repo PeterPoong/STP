@@ -98,7 +98,7 @@ class studentController extends Controller
                     });
             };
 
-            $perPage = 40;
+            $perPage = 10;
             $featuredLimit = 5;
 
             // Randomly select featured schools
@@ -136,7 +136,7 @@ class studentController extends Controller
                 ->get();
 
             // Merge featured and non-featured results for the page
-            $schools = $featuredSchools->concat($nonFeaturedSchools);
+            $schools = $featuredSchools->concat($nonFeaturedSchools)->unique('id');
 
             // Get total count of featured and non-featured schools for pagination
             $totalFeatured = $featuredSchools->count();
@@ -150,7 +150,7 @@ class studentController extends Controller
                 ->where($filterConditions)
                 ->count();
 
-            // Paginate the combined result
+            // Paginate the combined result with unique entries
             $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
                 $schools,
                 $totalFeatured + $totalNonFeatured,
@@ -164,20 +164,34 @@ class studentController extends Controller
                 $featured = $school->featured->contains(function ($item) {
                     return $item->featured_type == 30 && $item->featured_status == 1;
                 });
+                $monthList = [];
+                foreach ($school->courses as $courses) {
+                    foreach ($courses->intake as $c) {
+                        $monthName = $c->month->core_metaName;
+                        if (!in_array($monthName, $monthList)) {
+                            $monthList[] = $monthName;
+                        }
+                    }
+                }
 
                 return [
                     'id' => $school->id,
                     'name' => $school->school_name,
-                    'description' => $school->school_description,
-                    'featured' => $featured,
+                    'category' => $school->institueCategory->core_metaName ?? null,
                     'logo' => $school->school_logo,
-                    'location' => $school->school_location,
+                    'featured' => $featured,
                     'country' => $school->country->country_name ?? null,
                     'state' => $school->state->state_name ?? null,
+                    'city' => $school->city->city_name ?? null,
+                    'description' => $school->school_shortDesc,
+                    'course_count' => $school->courses->count(),
+                    'intake' =>  $monthList,
+                    'location' => $school->school_location,
                     'tuition_fee' => number_format($school->tuition_fee),
-                    'school_category' => $school->schoolCategory->core_metaName ?? null
+
                 ];
             });
+
 
             return response()->json([
                 'success' => true,
@@ -189,6 +203,7 @@ class studentController extends Controller
                 'last_page_url' => $paginator->url($paginator->lastPage()),
                 'next_page_url' => $paginator->nextPageUrl(),
                 'path' => $paginator->path(),
+                'links' => $paginator->links(),
                 'per_page' => $paginator->perPage(),
                 'prev_page_url' => $paginator->previousPageUrl(),
                 'to' => $paginator->lastItem(),
