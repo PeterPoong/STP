@@ -57,6 +57,7 @@ Route::prefix('student')->group(function () {
     Route::post('/createEnquiry', [EnquiryController::class, 'createEnquiry']);
     Route::post('/enquiryList', [EnquiryController::class, 'enquiryList']);
     Route::post('/enquiryListAdmin', [EnquiryController::class, 'enquiryListAdmin']);
+    Route::post('/enquiryDetail', [EnquiryController::class, 'enquiryDetail']);
 
 
     //student portal

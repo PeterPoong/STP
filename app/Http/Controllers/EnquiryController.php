@@ -147,3 +147,42 @@ class EnquiryController extends Controller
         }
     }
 }
+
+public function enquiryDetail(Request $request)
+{
+    try{
+        $request->validate([
+            'id'=> 'required|integer'
+        ]);
+
+        $enquiry = stp_enquiry::find($request->id);
+
+        if(!$enquiry){
+            return response()->json([
+                'success'=>false,
+                'message'=>"Enquiry not found"
+            ]);
+
+        }
+        return response()->json([
+            'success'=>true,
+            'data'=>[
+                'id'=>$enquiry->id,
+                'name'=>$enquiry->enquiry_name,
+                'email' => $enquiry->enquiry_email,
+                'phone' => $enquiry->enquiry_phone,
+                'subject' => $enquiry->subject->core_metaName ?? null,
+                'message'=>$enquiry->enquiry_message,
+                'status'=>$enquiry->enquiry_status
+            ]
+            ]);
+    }catch(\Exception $e) {
+        return response()->json([
+            'success'=>false,
+            'message'=>'Internal Server Error',
+            'errors'=>$e->getMessage()
+        ]);
+    }
+}
+
+}
