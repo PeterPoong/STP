@@ -10,6 +10,7 @@ use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\serviceFunctionController;
 use App\Http\Controllers\studentController;
 use App\Http\Controllers\SocialLoginController;
+use App\Http\Controllers\EnquiryController;
 
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 Route::post('/admin/register', [AuthController::class, 'adminRegister']);
@@ -52,6 +53,10 @@ Route::prefix('student')->group(function () {
 
 
     Route::get('/hotPickCategoryList', [studentController::class, 'hotPickCategoryList']);
+    Route::get('/enquirySubjectList', [EnquiryController::class, 'subjectList']);
+    Route::post('/createEnquiry', [EnquiryController::class, 'createEnquiry']);
+    Route::post('/enquiryList', [EnquiryController::class, 'enquiryList']);
+    Route::post('/enquiryListAdmin', [EnquiryController::class, 'enquiryListAdmin']);
 
 
     //student portal

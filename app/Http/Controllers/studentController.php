@@ -51,65 +51,121 @@ class studentController extends Controller
     public function schoolList(Request $request)
     {
         try {
-            // Start building the query
-            $getSchoolList = stp_school::whereIn('school_status', [1, 3])
-                ->whereHas('courses') // Ensure the school has courses
+            // Validation
+            $request->validate([
+                'search' => 'nullable|string',
+                'countryID' => 'integer',
+                'qualification' => 'integer',
+                'location' => 'array',
+                'category' => 'array',
+                'schoolCategory' => 'integer',
+                'institute' => 'integer',
+                'studyMode' => 'array',
+                'tuitionFee' => 'numeric',
+                'intake' => 'array'
+            ]);
 
-                // Apply filters as needed
-                ->when($request->filled('category'), function ($query) use ($request) {
-                    $query->whereIn('institue_category', $request->category);
-                })
-                ->when($request->filled('country'), function ($query) use ($request) {
-                    $query->where('country_id', $request->country);
-                })
-                ->when($request->filled('location'), function ($query) use ($request) {
-                    $query->whereIn('state_id', $request->location);
-                })
-                ->when($request->filled('search'), function ($query) use ($request) {
-                    $searchTerm = $request->search;
-                    $query->where(function ($q) use ($searchTerm) {
-                        $q->where('school_name', 'like', '%' . $searchTerm . '%')
-                            ->orWhereHas('country', function ($q) use ($searchTerm) {
-                                $q->where('country_name', 'like', '%' . $searchTerm . '%');
-                            });
-                    });
-                })
-                ->when($request->filled('courseCategory'), function ($query) use ($request) {
-                    $query->whereHas('courses', function ($q) use ($request) {
-                        $q->whereIn('category_id', $request->courseCategory);
-                    });
-                })
-                ->when($request->filled('studyLevel'), function ($query) use ($request) {
-                    $query->whereHas('courses', function ($q) use ($request) {
-                        $q->whereIn('qualification_id', $request->studyLevel);
-                    });
-                })
-                ->when($request->filled('studyMode'), function ($query) use ($request) {
-                    $query->whereHas('courses', function ($q) use ($request) {
+            $filterConditions = function ($query) use ($request) {
+                $query->where('school_status', '!=', 0)
+                    ->when($request->filled('qualification'), function ($q) use ($request) {
+                        $q->where('qualification_id', $request->qualification);
+                    })
+                    ->when($request->filled('category'), function ($q) use ($request) {
+                        $q->whereIn('category_id', $request->category);
+                    })
+                    ->when($request->filled('search'), function ($q) use ($request) {
+                        $q->where('school_name', 'like', '%' . $request->search . '%');
+                    })
+                    ->when($request->filled('countryID'), function ($q) use ($request) {
+                        $q->where('country_id', $request->countryID);
+                    })
+                    ->when($request->filled('institute'), function ($q) use ($request) {
+                        $q->where('institue_category', $request->institute);
+                    })
+                    ->when($request->filled('studyMode'), function ($q) use ($request) {
                         $q->whereIn('study_mode', $request->studyMode);
+                    })
+                    ->when($request->filled('location'), function ($q) use ($request) {
+                        $q->whereIn('state_id', $request->location);
+                    })
+                    ->when($request->filled('tuitionFee'), function ($q) use ($request) {
+                        $q->where('tuition_fee', '<=', $request->tuitionFee);
+                    })
+                    ->when($request->filled('intake'), function ($q) use ($request) {
+                        $q->whereHas('intake', function ($q) use ($request) {
+                            $q->whereIn('intake_month', $request->intake);
+                        });
                     });
+            };
+
+            $perPage = 10;
+            $featuredLimit = 5;
+
+            // Randomly select featured schools
+            $featuredSchools = stp_school::query()
+                ->select('stp_schools.*')
+                ->join('stp_featureds', function ($join) {
+                    $join->on('stp_schools.id', '=', 'stp_featureds.school_id')
+                        ->where('stp_featureds.featured_type', 30)
+                        ->where('stp_featureds.featured_status', 1);
                 })
-                ->with(['courses.intake.month', 'featured', 'institueCategory', 'country', 'state', 'city'])
-                ->paginate(10); // Retain pagination
+                ->where($filterConditions)
+                ->inRandomOrder() // Randomize each time
+                ->take($featuredLimit)
+                ->get();
 
-            // Collect school data in $schoolList
-            $schoolList = [];
+            // Calculate offset and limit for the page
+            $page = $request->get('page', 1);
+            $offset = ($page - 1) * $perPage;
 
-            foreach ($getSchoolList as $school) {
+            // Calculate limit for non-featured schools to fill remaining slots
+            $nonFeaturedLimit = $perPage - $featuredSchools->count();
+
+            // Query non-featured schools
+            $nonFeaturedSchools = stp_school::query()
+                ->select('stp_schools.*')
+                ->leftJoin('stp_featureds', function ($join) {
+                    $join->on('stp_schools.id', '=', 'stp_featureds.school_id')
+                        ->where('stp_featureds.featured_type', 30)
+                        ->where('stp_featureds.featured_status', 1);
+                })
+                ->whereNull('stp_featureds.school_id')
+                ->where($filterConditions)
+                ->skip($offset)
+                ->take($nonFeaturedLimit)
+                ->get();
+
+            // Merge featured and non-featured results for the page
+            $schools = $featuredSchools->concat($nonFeaturedSchools)->unique('id');
+
+            // Get total count of featured and non-featured schools for pagination
+            $totalFeatured = $featuredSchools->count();
+            $totalNonFeatured = stp_school::query()
+                ->leftJoin('stp_featureds', function ($join) {
+                    $join->on('stp_schools.id', '=', 'stp_featureds.school_id')
+                        ->where('stp_featureds.featured_type', 30)
+                        ->where('stp_featureds.featured_status', 1);
+                })
+                ->whereNull('stp_featureds.school_id')
+                ->where($filterConditions)
+                ->count();
+
+            // Paginate the combined result with unique entries
+            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                $schools,
+                $totalFeatured + $totalNonFeatured,
+                $perPage,
+                $page,
+                ['path' => $request->url()]
+            );
+
+            // Transform the schools as per requirements
+            $transformedSchools = $paginator->through(function ($school) {
                 $featured = $school->featured->contains(function ($item) {
-                    return $item['featured_type'] == 30 && $item['featured_status'] == 1;
+                    return $item->featured_type == 30 && $item->featured_status == 1;
                 });
-
-                $filteredCourses = $school->courses->filter(function ($course) use ($request) {
-                    if ($request->filled('courseCategory')) {
-                        $courseCategories = is_array($request->courseCategory) ? $request->courseCategory : [$request->courseCategory];
-                        return in_array($course->category_id, $courseCategories);
-                    }
-                    return true;
-                })->values();
-
                 $monthList = [];
-                foreach ($filteredCourses as $courses) {
+                foreach ($school->courses as $courses) {
                     foreach ($courses->intake as $c) {
                         $monthName = $c->month->core_metaName;
                         if (!in_array($monthName, $monthList)) {
@@ -118,7 +174,7 @@ class studentController extends Controller
                     }
                 }
 
-                $schoolList[] = [
+                return [
                     'id' => $school->id,
                     'name' => $school->school_name,
                     'category' => $school->institueCategory->core_metaName ?? null,
@@ -128,46 +184,43 @@ class studentController extends Controller
                     'state' => $school->state->state_name ?? null,
                     'city' => $school->city->city_name ?? null,
                     'description' => $school->school_shortDesc,
-                    'courses' => count($filteredCourses),
-                    'intake' => $monthList,
-                    'location' => $school->school_location
-                ];
-            }
+                    'course_count' => $school->courses->count(),
+                    'intake' =>  $monthList,
+                    'location' => $school->school_location,
+                    'tuition_fee' => number_format($school->tuition_fee),
 
-            // Sort the results by featured status
-            usort($schoolList, function ($a, $b) {
-                return $b['featured'] <=> $a['featured'];
+                ];
             });
 
-            // Return paginated response with modified `data` section
+
             return response()->json([
                 'success' => true,
-                'current_page' => $getSchoolList->currentPage(),
-                'data' => $schoolList, // Replace the data with $schoolList
-                'first_page_url' => $getSchoolList->url(1),
-                'from' => $getSchoolList->firstItem(),
-                'last_page' => $getSchoolList->lastPage(),
-                'last_page_url' => $getSchoolList->url($getSchoolList->lastPage()),
-                'links' => $getSchoolList->links(), // Keeps pagination links structure
-                'next_page_url' => $getSchoolList->nextPageUrl(),
-                'path' => $getSchoolList->path(),
-                'per_page' => $getSchoolList->perPage(),
-                'prev_page_url' => $getSchoolList->previousPageUrl(),
-                'to' => $getSchoolList->lastItem(),
-                'total' => $getSchoolList->total()
+                'current_page' => $paginator->currentPage(),
+                'data' => $transformedSchools->items(),
+                'first_page_url' => $paginator->url(1),
+                'from' => $paginator->firstItem(),
+                'last_page' => $paginator->lastPage(),
+                'last_page_url' => $paginator->url($paginator->lastPage()),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'path' => $paginator->path(),
+                'links' => $paginator->links(),
+                'per_page' => $paginator->perPage(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+                'to' => $paginator->lastItem(),
+                'total' => $paginator->total()
             ]);
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Internal Server Error',
+                'message' => "Internal Server Error",
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 
-
     public function courseDetail(Request $request)
     {
+
         try {
             $request->validate([
                 'courseID' => 'required|integer'
@@ -192,8 +245,11 @@ class studentController extends Controller
             }
             // Fetch all intakes associated with the course
             $intakeList = [];
+
             foreach ($courseList->intake as $intake) {
-                $intakeList[] = $intake->month->core_metaName;
+                if ($intake->intake_status == 1) {
+                    $intakeList[] = $intake->month->core_metaName;
+                }
             }
             $featuredList = [];
             foreach ($courseList->featured as $courseFeatured) {
@@ -207,8 +263,6 @@ class studentController extends Controller
                 }
             }
 
-
-
             foreach ($courseList->school->media as $photo) {
 
                 if ($photo->schoolMedia_type == 67) {
@@ -216,8 +270,9 @@ class studentController extends Controller
                 }
             }
 
-            $courseListDetail = [
 
+
+            $courseListDetail = [
                 'id' => $courseList->id,
                 'course' => $courseList->course_name,
                 'description' => $courseList->course_description,
@@ -231,8 +286,8 @@ class studentController extends Controller
                 'schoolShortDescription' => $courseList->school->school_shortDesc,
                 'schoolLongDescription' => $courseList->school->school_fullDesc,
                 'schoolID' => $courseList->school_id,
+                'schoolLocation' => $courseList->school->school_location ?? null,
                 'qualification' => $courseList->qualification->qualification_name,
-                // 'qualification_name' => $courseList->qualification->qualification_name,
                 'mode' => $courseList->studyMode->core_metaName ?? null,
                 'logo' => $logo,
                 'coverPhoto' => $coverPhoto ?? null,
@@ -446,7 +501,6 @@ class studentController extends Controller
     public function courseList(Request $request)
     {
         try {
-            // Validate the request parameters
             $request->validate([
                 'search' => 'nullable|string',
                 'countryID' => 'integer',
@@ -460,76 +514,121 @@ class studentController extends Controller
                 'intake' => 'array'
             ]);
 
-            // Apply filters and paginate directly
-            $query = stp_course::query()
+            $filterConditions = function ($query) use ($request) {
+                $query->whereHas('school', function ($q) {
+                    $q->whereIn('school_status', [1, 3]);
+                })
+                    ->where('course_status', '!=', 0)
+                    ->when($request->filled('qualification'), function ($q) use ($request) {
+                        $q->where('qualification_id', $request->qualification);
+                    })
+                    ->when($request->filled('category'), function ($q) use ($request) {
+                        $q->whereIn('category_id', $request->category);
+                    })
+                    ->when($request->filled('search'), function ($q) use ($request) {
+                        $q->where('course_name', 'like', '%' . $request->search . '%')
+                            ->orWhereHas('school', function ($q) use ($request) {
+                                $q->where('school_name', 'like', '%' . $request->search . '%');
+                            });
+                    })
+                    ->when($request->filled('countryID'), function ($q) use ($request) {
+                        $q->whereHas('school', function ($q) use ($request) {
+                            $q->where('country_id', $request->countryID);
+                        });
+                    })
+                    ->when($request->filled('institute'), function ($q) use ($request) {
+                        $q->whereHas('school', function ($q) use ($request) {
+                            $q->where('institue_category', $request->institute);
+                        });
+                    })
+                    ->when($request->filled('studyMode'), function ($q) use ($request) {
+                        $q->whereIn('study_mode', $request->studyMode);
+                    })
+                    ->when($request->filled('location'), function ($q) use ($request) {
+                        $q->whereHas('school', function ($q) use ($request) {
+                            $q->whereIn('state_id', $request->location);
+                        });
+                    })
+                    ->when($request->filled('tuitionFee'), function ($q) use ($request) {
+                        $q->where('course_cost', '<=', $request->tuitionFee);
+                    })
+                    ->when($request->filled('intake'), function ($q) use ($request) {
+                        $q->whereHas('intake', function ($q) use ($request) {
+                            $q->whereIn('intake_month', $request->intake);
+                        });
+                    });
+            };
+
+            $perPage = 40;
+            $featuredLimit = 5;
+
+            // Randomly select featured courses
+            $featuredCourses = stp_course::query()
+                ->select('stp_courses.*')
+                ->join('stp_featureds', function ($join) {
+                    $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
+                        ->where('stp_featureds.featured_type', 30)
+                        ->where('stp_featureds.featured_status', 1);
+                })
+                ->where($filterConditions)
+                ->inRandomOrder() // Randomize each time
+                ->take($featuredLimit)
+                ->get();
+
+            // Calculate offset and limit for the page
+            $page = $request->get('page', 1);
+            $offset = ($page - 1) * $perPage;
+
+            // Calculate limit for non-featured courses to fill remaining slots
+            $nonFeaturedLimit = $perPage - $featuredCourses->count();
+
+            // Query non-featured courses
+            $nonFeaturedCourses = stp_course::query()
+                ->select('stp_courses.*')
                 ->leftJoin('stp_featureds', function ($join) {
                     $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
                         ->where('stp_featureds.featured_type', 30)
                         ->where('stp_featureds.featured_status', 1);
                 })
-                ->select('stp_courses.*', 'stp_featureds.featured_type')
+                ->whereNull('stp_featureds.course_id')
+                ->where($filterConditions)
+                ->skip($offset)
+                ->take($nonFeaturedLimit)
+                ->get();
 
-                ->whereHas('school', function ($query) {
-                    $query->whereIn('school_status', [1, 3]);
-                })
-                ->when($request->filled('qualification'), function ($query) use ($request) {
-                    $query->where('qualification_id', $request->qualification);
-                })
-                ->when($request->filled('category'), function ($query) use ($request) {
-                    $query->whereIn('category_id', $request->category);
-                })
-                ->when($request->filled('search'), function ($query) use ($request) {
-                    $query->where('course_name', 'like', '%' . $request->search . '%')
-                        ->orWhereHas('school', function ($query) use ($request) {
-                            $query->where('school_name', 'like', '%' . $request->search . '%');
-                        });
-                })
-                ->when($request->filled('countryID'), function ($query) use ($request) {
-                    $query->whereHas('school', function ($query) use ($request) {
-                        $query->where('country_id', $request->countryID);
-                    });
-                })
-                ->when($request->filled('institute'), function ($query) use ($request) {
-                    $query->whereHas('school', function ($query) use ($request) {
-                        $query->where('institue_category', $request->institute);
-                        $query->whereIn('school_status', [1, 3]);
-                    });
-                })
-                ->when($request->filled('studyMode'), function ($query) use ($request) {
-                    $query->whereIn('study_mode', $request->studyMode);
-                })
-                ->when($request->filled('location'), function ($query) use ($request) {
-                    $query->whereHas('school', function ($query) use ($request) {
-                        $query->whereIn('state_id', $request->location);
-                    });
-                })
-                ->when($request->filled('tuitionFee'), function ($query) use ($request) {
-                    $query->where('course_cost', '<=', $request->tuitionFee);
-                })
-                ->when($request->filled('intake'), function ($query) use ($request) {
-                    $query->whereHas('intake', function ($query) use ($request) {
-                        $query->whereIn('intake_month', $request->intake);
-                    });
-                })
-                ->where('course_status', '!=', 0);
+            // Merge featured and non-featured results for the page
+            $courses = $featuredCourses->concat($nonFeaturedCourses);
 
-            // Sort so courses with featured_type 30 appear first
-            $query->orderByRaw('stp_featureds.featured_type = 30 DESC');
+            // Get total count of featured and non-featured courses for pagination
+            $totalFeatured = $featuredCourses->count();
+            $totalNonFeatured = stp_course::query()
+                ->leftJoin('stp_featureds', function ($join) {
+                    $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
+                        ->where('stp_featureds.featured_type', 30)
+                        ->where('stp_featureds.featured_status', 1);
+                })
+                ->whereNull('stp_featureds.course_id')
+                ->where($filterConditions)
+                ->count();
 
-            // Paginate the results
-            $courses = $query->paginate(40);
+            // Paginate the combined result
+            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                $courses,
+                $totalFeatured + $totalNonFeatured,
+                $perPage,
+                $page,
+                ['path' => $request->url()]
+            );
 
-            // Transform the results
-            $transformedCourses = $courses->through(function ($course) {
+            // Transform the courses as per requirements
+            $transformedCourses = $paginator->through(function ($course) {
+                $featured = $course->featured->contains(function ($item) {
+                    return $item->featured_type == 30 && $item->featured_status == 1;
+                });
 
-                $featured = false;
-                foreach ($course->featured as $c) {
-                    if ($c['featured_type'] == 30 && $c['featured_status'] == 1) {
-                        $featured = true;
-                        break;
-                    }
-                }
-                $intakeMonths = $course->intake->pluck('month.core_metaName')->toArray();
+                $intakeMonths = $course->intake->where('intake_status', 1)
+                    ->pluck('month.core_metaName')
+                    ->toArray();
 
                 return [
                     'school_id' => $course->school->id,
@@ -554,7 +653,7 @@ class studentController extends Controller
                     'school_status' => $course->course_status
                 ];
             });
-            return  $transformedCourses;
+            return $transformedCourses;
 
             return response()->json([
                 'success' => true,
