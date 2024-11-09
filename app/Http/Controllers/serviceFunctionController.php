@@ -264,6 +264,11 @@ class serviceFunctionController extends Controller
         $this->serviceFunction->sendEnquiryEmail($fullName, $email, $contact, $emailSubject, $message);
     }
 
+    public function replyEnquiryEmail($subject, $email, $messageContent)
+    {
+        $this->serviceFunction->replyEnquiryEmail($subject, $email, $messageContent);
+    }
+
     public function sendStudentApplicantStatusEmail($form, $status, $feedback)
     {
         try {

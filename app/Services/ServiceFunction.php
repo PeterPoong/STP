@@ -12,6 +12,7 @@ use App\Mail\SendAcceptanceEmail;
 use App\Mail\SendRejectEmail;
 use App\Mail\SendReminder;
 use App\Mail\SendEnquiryEmail;
+use App\Mail\ReplyEnquiryEmail;
 use Illuminate\Support\Facades\Mail;
 
 class ServiceFunction
@@ -51,6 +52,11 @@ class ServiceFunction
     {
 
         Mail::to('admin@studypal.my')->send(new SendEnquiryEmail($emailSubject, $fullName, $email, $contact, $messageContent));
+    }
+
+    public function replyEnquiryEmail($subject, $email, $messageContent)
+    {
+        Mail::to($email)->send(new ReplyEnquiryEmail($subject, $messageContent));
     }
 
     public function sendAppliedCourseEmail($school, $course, $student, $newApplicantId)
