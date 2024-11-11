@@ -27,6 +27,7 @@ use App\Models\stp_cocurriculum;
 use App\Models\stp_intake;
 use App\Models\stp_school_media;
 use Illuminate\Support\Facades\Storage;
+use App\Models\stp_advertisement_banner;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 
@@ -3024,5 +3025,20 @@ class studentController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function advertisementList(Request $request)
+    {
+        $request->validate([
+            'advertisement_type' => 'required|integer'
+        ]);
+        $advertsmentList = stp_advertisement_banner::where('featured_id', $request->advertisement_type)->where('banner_status', 1)
+            ->where('banner_start', '<=', now())
+            ->where('banner_end', '>=', now())
+            ->get();
+        return response()->json([
+            'success' => true,
+            'data' => $advertsmentList
+        ]);
     }
 }

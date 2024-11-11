@@ -59,6 +59,8 @@ Route::prefix('student')->group(function () {
     Route::post('/enquiryListAdmin', [EnquiryController::class, 'enquiryListAdmin']);
     Route::post('/enquiryDetail', [EnquiryController::class, 'enquiryDetail']);
 
+    Route::post('/advertisementList', [studentController::class, 'advertisementList']);
+
 
     //student portal
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);

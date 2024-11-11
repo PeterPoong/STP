@@ -1001,7 +1001,7 @@ class AdminController extends Controller
             $secondPage = stp_featured::where('featured_type', 30)->where('featured_status', 1)->get();
             $thirdPage = stp_featured::where('featured_type', 31)->where('featured_status', 1)->get();
 
-
+            $hpArray = $hp->pluck('school_id')->toArray();
             $hpArray = $hp->pluck('school_id')->toArray();
             if (empty($hpArray)) {
                 $hpArray = [];
