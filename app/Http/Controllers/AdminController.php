@@ -677,7 +677,7 @@ class AdminController extends Controller
                 'person_in_charge_email' => 'required|email',
                 'category' => 'required|integer',
                 'account' => 'required|integer',
-                'school_google_map_location' => 'required|string|max:255'
+                'location' => 'required'
             ]);
 
             $authUser = Auth::user();
@@ -799,7 +799,7 @@ class AdminController extends Controller
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
                 'school_officalWebsite' => $request->school_website,
-                'school_google_map_location' => $request->school_google_map_location,
+                // 'school_google_map_location' => $request->google_map,
                 'school_logo' => $imagePath ?? $school->school_logo,
                 'account_type' => $request->account,
                 'school_location' => $request->location,
