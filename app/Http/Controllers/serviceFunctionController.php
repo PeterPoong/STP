@@ -532,7 +532,17 @@ class serviceFunctionController extends Controller
 
     public function updateGoogleMapLocation()
     {
-        $getAllSchool = stp_school::get();
-        return $getAllSchool;
+        $getAllSchool = stp_school::where('school_google_map_location', null)->get();
+        foreach ($getAllSchool as $school) {
+            $encodedPlace = urlencode($school->school_name);
+            $googleMapsLink = "https://www.google.com/maps/search/?api=1&query={$encodedPlace}";
+            $school->update([
+                'school_google_map_location' => $googleMapsLink
+            ]);
+        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Google Map Location Updated Successfully'
+        ]);
     }
 }
