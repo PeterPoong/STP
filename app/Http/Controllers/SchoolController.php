@@ -565,8 +565,10 @@ class SchoolController extends Controller
                 // 'password' => 'required|string|min:8',
                 // 'confirm_password' => 'required|string|min:8|same:password',
                 'school_fullDesc' => 'required|string|max:255',
+                'school_google_map_location' => 'nullable|string|max:255',
                 'school_shortDesc' => 'required|string|max:255',
                 'school_address' => 'required|string|max:255',
+                'google_map_location' => 'required|string|max:255',
                 'country' => 'required|integer',
                 'state' => 'required|integer',
                 'city' => 'required|integer',
@@ -621,11 +623,13 @@ class SchoolController extends Controller
                 'institue_category' => $request->category,
                 'school_lg' => $request->lg,
                 'school_lat' => $request->lat,
+                'school_google_map_location' => $request->google_map_location ?? null,
                 // 'person_inChargeName' => $request->PICName,
                 // 'person_inChargeNumber' => $request->PICNo,
                 // 'person_inChargeEmail' => $request->PICEmail,
                 'account_type' => $request->account,
                 'school_officalWebsite' => $request->school_website ?? null,
+                'google_map_location' => $request->google_map_location ?? null,
                 // 'school_logo' => $imagePath ?? null,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
@@ -664,7 +668,7 @@ class SchoolController extends Controller
                 'student_id' => 'integer|nullable',
                 'courses_id' => 'integer|nullable',
                 'search' => 'string|nullable',
-                'qualification_id'=>'integer|nullable'
+                'qualification_id' => 'integer|nullable'
             ]);
 
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -2617,5 +2621,23 @@ class SchoolController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function getLocation(Request $request)
+    {
+
+        $request->validate([
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric'
+        ]);
+
+        $latitude = $request->latitude;
+        $longitude = $request->longitude;
+        $googleMapsLink = "https://www.google.com/maps?q={$latitude},{$longitude}";
+
+        // Return the Google Maps link as a JSON response
+        return response()->json([
+            'google_maps_link' => $googleMapsLink,
+        ]);
     }
 }

@@ -676,7 +676,8 @@ class AdminController extends Controller
                 'person_in_charge_contact' => 'required|string|max:255',
                 'person_in_charge_email' => 'required|email',
                 'category' => 'required|integer',
-                'account' => 'required|integer'
+                'account' => 'required|integer',
+                'school_google_map_location' => 'required|string|max:255'
             ]);
 
             $authUser = Auth::user();
@@ -798,6 +799,7 @@ class AdminController extends Controller
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
                 'school_officalWebsite' => $request->school_website,
+                'school_google_map_location' => $request->school_google_map_location,
                 'school_logo' => $imagePath ?? $school->school_logo,
                 'account_type' => $request->account,
                 'school_location' => $request->location,
@@ -968,6 +970,7 @@ class AdminController extends Controller
                     'school_website' => $school->school_officalWebsite ?? '',
                     'courses' => $courses, // List of courses with filtered featured data
                     'schoolFeatured' => $schoolFeatured, // List of filtered school's featured data
+                    'school_google_map_location' => $school->school_google_map_location ?? '',
                     'category' => $school->institue_category,
                     'PIC_name' => $school->person_inChargeName,
                     'PIC_number' => $school->person_inChargeNumber,

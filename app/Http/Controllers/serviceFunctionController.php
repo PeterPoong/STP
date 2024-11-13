@@ -19,6 +19,8 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+
 
 class serviceFunctionController extends Controller
 {
@@ -472,5 +474,26 @@ class serviceFunctionController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function getIframe(Request $request)
+    {
+        $location = $request->input('location'); // The location name provided by the user
+
+        // Make sure the location is provided
+        if (!$location) {
+            return response()->json(['error' => 'Location is required'], 400);
+        }
+
+        // URL encode the location for use in the query parameter
+        $encodedLocation = urlencode($location);
+
+        // Construct the Google Maps embed URL with the `place` endpoint
+        $embedUrl = "https://www.google.com/maps/embed/v1/place?key=" . env('GOOGLE_MAPS_API_KEY') . "&q={$encodedLocation}";
+
+        // Generate the iframe HTML
+        $iframeCode = "<iframe src='{$embedUrl}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy' referrerpolicy='no-referrer-when-downgrade'></iframe>";
+
+        return response()->json(['iframe' => $iframeCode]);
     }
 }

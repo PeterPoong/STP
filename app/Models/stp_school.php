@@ -32,6 +32,7 @@ class stp_school extends Model
         'school_lat',
         'school_status',
         'school_officalWebsite',
+        'school_google_map_location',
         'person_inChargeName',
         'person_inChargeNumber',
         'person_inChargeEmail',

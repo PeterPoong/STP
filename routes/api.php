@@ -11,6 +11,8 @@ use App\Http\Controllers\serviceFunctionController;
 use App\Http\Controllers\studentController;
 use App\Http\Controllers\SocialLoginController;
 use App\Http\Controllers\EnquiryController;
+use GuzzleHttp\Client;
+
 
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 Route::post('/admin/register', [AuthController::class, 'adminRegister']);
@@ -286,6 +288,9 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('/schoolTranscriptDocumentList', [SchoolController::class, 'schoolTranscriptDocumentList']);
     Route::post('/schoolTranscriptCgpa', [SchoolController::class, 'schoolTranscriptCgpa']);
     Route::post('/getNumberOfDocument', [SchoolController::class, 'getNumberOfDocument']);
+
+    //location 
+    Route::post('/getLocation', [SchoolController::class, 'getLocation']);
 });
 
 // Route::get('auth/facebook', [LoginController::class, 'redirectToFacebook'])->name('login.facebook');
@@ -314,6 +319,7 @@ Route::post('/importCity', [serviceFunctionController::class, 'importCity']);
 Route::post('/getState', [serviceFunctionController::class, 'getState']);
 Route::post('/getCities', [serviceFunctionController::class, 'getCities']);
 Route::get('/getMonth', [serviceFunctionController::class, 'getMonth']);
+Route::post('/getIframe', [serviceFunctionController::class, 'getIframe']);
 
 
 
