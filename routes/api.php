@@ -321,6 +321,7 @@ Route::post('/getCities', [serviceFunctionController::class, 'getCities']);
 Route::get('/getMonth', [serviceFunctionController::class, 'getMonth']);
 Route::post('/getIframe', [serviceFunctionController::class, 'getIframe']);
 Route::post('/getMapEmbed', [serviceFunctionController::class, 'getMapEmbed']);
+Route::get('/updateGoogleMapLocation', [serviceFunctionController::class, 'updateGoogleMapLocation']);
 
 
 
