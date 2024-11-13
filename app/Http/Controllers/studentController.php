@@ -188,7 +188,8 @@ class studentController extends Controller
                     'course_count' => $school->courses->count(),
                     'google_map_location' => $school->school_google_map_location,
                     'intake' =>  $monthList,
-                    'location' => $school->school_location,
+
+                    'location' => $school->school_google_map_location,
                     'tuition_fee' => number_format($school->tuition_fee),
 
                 ];

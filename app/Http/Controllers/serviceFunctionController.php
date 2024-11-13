@@ -476,24 +476,63 @@ class serviceFunctionController extends Controller
         }
     }
 
+    // public function getIframe(Request $request)
+    // {
+    //     $location = $request->input('location'); // The location name provided by the user
+
+    //     // Make sure the location is provided
+    //     if (!$location) {
+    //         return response()->json(['error' => 'Location is required'], 400);
+    //     }
+
+    //     // URL encode the location for use in the query parameter
+    //     $encodedLocation = urlencode($location);
+
+    //     // Construct the Google Maps embed URL with the `place` endpoint
+    //     $embedUrl = "https://www.google.com/maps/embed/v1/place?key=" . env('GOOGLE_MAPS_API_KEY') . "&q={$encodedLocation}";
+
+    //     // Generate the iframe HTML
+    //     $iframeCode = "<iframe src='{$embedUrl}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy' referrerpolicy='no-referrer-when-downgrade'></iframe>";
+
+    //     return response()->json(['iframe' => $iframeCode]);
+    // }
     public function getIframe(Request $request)
     {
-        $location = $request->input('location'); // The location name provided by the user
+        // Get the place name from the request
+        $placeName = urlencode($request->input('location')); // e.g., "Eiffel Tower"
 
-        // Make sure the location is provided
-        if (!$location) {
-            return response()->json(['error' => 'Location is required'], 400);
-        }
-
-        // URL encode the location for use in the query parameter
-        $encodedLocation = urlencode($location);
-
-        // Construct the Google Maps embed URL with the `place` endpoint
-        $embedUrl = "https://www.google.com/maps/embed/v1/place?key=" . env('GOOGLE_MAPS_API_KEY') . "&q={$encodedLocation}";
+        // Construct the embed URL without an API key
+        $embedUrl = "https://www.google.com/maps?q={$placeName}&output=embed";
 
         // Generate the iframe HTML
-        $iframeCode = "<iframe src='{$embedUrl}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy' referrerpolicy='no-referrer-when-downgrade'></iframe>";
+        $iframeCode = "<iframe src='{$embedUrl}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy'></iframe>";
 
         return response()->json(['iframe' => $iframeCode]);
+    }
+
+    public function getMapEmbed(Request $request)
+    {
+        $placeName = $request->input('location'); // E.g., 'Eiffel Tower, Paris, France'
+
+        // Encode the place name to ensure it's URL safe
+        $encodedPlace = urlencode($placeName);
+
+        // Generate the Google Maps link
+        $googleMapsLink = "https://www.google.com/maps/search/?api=1&query={$encodedPlace}";
+
+        // Generate the iframe embed code
+        $iframeCode = "<iframe src='https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q={$encodedPlace}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy' referrerpolicy='no-referrer-when-downgrade'></iframe>";
+
+        // Return both the link and iframe in JSON response
+        return response()->json([
+            'map_link' => $googleMapsLink,
+            'iframe' => $iframeCode
+        ]);
+    }
+
+    public function updateGoogleMapLocation()
+    {
+        $getAllSchool = stp_school::get();
+        return $getAllSchool;
     }
 }

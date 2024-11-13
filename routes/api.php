@@ -320,6 +320,7 @@ Route::post('/getState', [serviceFunctionController::class, 'getState']);
 Route::post('/getCities', [serviceFunctionController::class, 'getCities']);
 Route::get('/getMonth', [serviceFunctionController::class, 'getMonth']);
 Route::post('/getIframe', [serviceFunctionController::class, 'getIframe']);
+Route::post('/getMapEmbed', [serviceFunctionController::class, 'getMapEmbed']);
 
 
 

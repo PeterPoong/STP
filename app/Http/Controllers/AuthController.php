@@ -309,6 +309,24 @@ class AuthController extends Controller
                 $errors['contact_no'] = ['An account with this contact number already exists. Try logging in instead.'];
             }
 
+            //get iframe and map link
+            $placeName =  $request->name; // E.g., 'Eiffel Tower, Paris, France'
+
+            // Encode the place name to ensure it's URL safe
+            $encodedPlace = urlencode($placeName);
+
+            $embedUrl = "https://www.google.com/maps?q={$placeName}&output=embed";
+
+            // Generate the Google Maps link
+            $googleMapsLink = "https://www.google.com/maps/search/?api=1&query={$encodedPlace}";
+
+            // Generate the iframe embed code
+            $iframeCode = "<iframe src='{$embedUrl}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy'></iframe>";
+
+            // Return both the link and iframe in JSON response
+
+
+
             // //check person in charge email
             // $checkPersonInChargeEmail = stp_school::where('person_inChargeEmail', $request->person_in_charge_email)->exists();
             // if ($checkPersonInChargeEmail) {
@@ -344,6 +362,8 @@ class AuthController extends Controller
                 'institue_category' => $request->institue_category ?? null,
                 'school_shortDesc' => $request->school_shortDesc ?? null,
                 'school_address' => $request->school_address,
+                'school_location' => $iframeCode,
+                'school_google_map_location' => $googleMapsLink,
                 // 'school_officalWebsite' => $request->school_website,
                 'person_inChargeName' => $request->person_in_charge_name,
                 'person_inChargeNumber' => $request->person_in_charge_contact,
