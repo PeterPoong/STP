@@ -671,7 +671,6 @@ class AdminController extends Controller
                 'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'featured' => 'nullable|array',
-                'featured.*' => 'integer',
                 'person_in_charge_name' => 'required|string|max:255',
                 'person_in_charge_contact' => 'required|string|max:255',
                 'person_in_charge_email' => 'required|email',
@@ -683,14 +682,14 @@ class AdminController extends Controller
             $authUser = Auth::user();
 
             // Check if email is used by another school
-            $checkingEmail = stp_school::where('id', '!=', $request->id)
-                ->where('school_email', $request->email)
-                ->exists();
-            if ($checkingEmail) {
-                throw ValidationException::withMessages([
-                    'email' => ['Email has been used'],
-                ]);
-            }
+            // $checkingEmail = stp_school::where('id', '!=', $request->id)
+            //     ->where('school_email', $request->email)
+            //     ->exists();
+            // if ($checkingEmail) {
+            //     throw ValidationException::withMessages([
+            //         'email' => ['Email has been used'],
+            //     ]);
+            // }
 
             // Check if contact number is used by another school
             $checkingUserContact = stp_school::where('school_countryCode', $request->country_code)
@@ -768,21 +767,60 @@ class AdminController extends Controller
                     }
                 }
             }
-            // Handle featured types update
-            if ($request->has('featured')) {
-                // First, remove existing featured records for the school
-                stp_featured::where('school_id', $school->id)->delete();
+            // // Handle featured types update
+            // if ($request->has('featured')) {
+            //     // First, remove existing featured records for the school
+            //     stp_featured::where('school_id', $school->id)->delete();
 
-                // Insert new featured records
-                foreach ($request->featured as $featureId) {
+            //     // Insert new featured records
+            //     foreach ($request->featured as $featureId) {
+            //         stp_featured::create([
+            //             'school_id' => $school->id,
+            //             'featured_type' => $featureId,
+            //             'featured_status' => 1
+            //         ]);
+            //     }
+            // }
+            // Handle featured types update
+               $existingFeatured = stp_featured::where('school_id', $request->id)
+               ->pluck('featured_type')
+               ->toArray();
+
+               if (!empty ($request->featured)) {
+                $newFeatured = array_diff($request->featured, $existingFeatured);
+                $existingToKeep = array_intersect ($request->featured, $existingFeatured);
+
+                stp_featured::where('school_id', $request->id)
+                    ->whereIn('featured_type', $existingToKeep)
+                    ->update([
+                        'featured_status'=>1,
+                        'updated_at'=> now()
+                    ]); 
+                foreach ($newFeatured as $featured) {
                     stp_featured::create([
-                        'school_id' => $school->id,
-                        'featured_type' => $featureId,
-                        'featured_status' => 1
+                        'school_id' => $request->id,
+                        'featured_type' => $featured,
+                        'featured_status' => 1,
+                        'created_at' => now(),
+                        'updated_at'=> now(),
+
                     ]);
                 }
+                $removeFeatured = array_diff ($existingFeatured, $request->featured);
+                stp_featured::where('school_id', $request->id)
+                ->whereIn('featured_type', $removeFeatured)
+                ->update([
+                    'featured_status' => 0,
+                    'updated_at' => now ()
+                    ]);
+               }
+            else {
+                stp_featured::where('school_id', $request->id)
+                    ->update([
+                        'featured_status'=> 0,
+                        'updated_at'=> now()
+                    ]);
             }
-
 
             // Update school details
             $school->update([
@@ -921,19 +959,19 @@ class AdminController extends Controller
                 ];
             });
 
-            // Prepare the courses data, filter featured by featured_status = 1
+            //Prepare the courses data, filter featured by featured_status = 1
             $courses = $school->courses->map(function ($course) {
                 return [
                     'course_name' => $course->course_name,
-                    'course_featured' => $course->featured->filter(function ($featured) {
-                        return $featured->featured_status === 1;  // Filter by featured_status = 1
-                    })->map(function ($featured) {
-                        return [
-                            'featured_type' => $featured->featured_type,
-                            'featured_startTime' => $featured->featured_startTime,
-                            'featured_endTime' => $featured->featured_endTime,
-                        ];
-                    }),
+                    // 'course_featured' => $course->featured->filter(function ($featured) {
+                    //     return $featured->featured_status === 1;  // Filter by featured_status = 1
+                    // })->map(function ($featured) {
+                    //     return [
+                    //         'featured_type' => $featured->featured_type,
+                    //         'featured_startTime' => $featured->featured_startTime,
+                    //         'featured_endTime' => $featured->featured_endTime,
+                    //     ];
+                    // }),
                 ];
             });
 
@@ -1169,7 +1207,6 @@ class AdminController extends Controller
             foreach ($request->courseFeatured as $courseFeatured) {
                 stp_featured::create([
                     'course_id' => $course->id,
-                    'school_id' => $request->schoolID,
                     'featured_type' => $courseFeatured,
                     'featured_status' => 1,
                     'created_at' => now()
@@ -1473,7 +1510,6 @@ class AdminController extends Controller
                     stp_featured::create([
                         'course_id' => $request->id,
                         'featured_type' => $featured,
-                        'school_id' => $request->schoolID,
                         'featured_status' => 1,
                         'created_at' => now(),
                         'updated_at' => now(),
