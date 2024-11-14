@@ -527,7 +527,6 @@ class AdminController extends Controller
                 'person_in_charge_email' => 'required|email',
                 'category' => 'required|integer',
                 'account' => 'required|integer'
-
             ]);
 
             $authUser = Auth::user();
@@ -557,6 +556,19 @@ class AdminController extends Controller
                 $imagePath = $image->storeAs('schoolLogo', $imageName, 'public');
             }
 
+            $placeName =  $request->name; // E.g., 'Eiffel Tower, Paris, France'
+
+            // Encode the place name to ensure it's URL safe
+            $encodedPlace = urlencode($placeName);
+
+            $embedUrl = "https://www.google.com/maps?q={$placeName}&output=embed";
+
+            // Generate the Google Maps link
+            $googleMapsLink = "https://www.google.com/maps/search/?api=1&query={$encodedPlace}";
+
+            // Generate the iframe embed code
+            $iframeCode = "<iframe src='{$embedUrl}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy'></iframe>";
+
             $school = stp_school::create([
                 'school_name' => $request->name,
                 'school_email' => $request->email,
@@ -574,9 +586,10 @@ class AdminController extends Controller
                 'person_inChargeName' => $request->person_in_charge_name,
                 'person_inChargeNumber' => $request->person_in_charge_contact,
                 'person_inChargeEmail' => $request->person_in_charge_email,
+                'school_google_map_location' => $googleMapsLink,
                 'school_logo' => $imagePath ?? null,
                 'account_type' => $request->account,
-                'school_location' => $request->location,
+                'school_location' => $iframeCode,
                 'school_status' => 3,
                 'created_by' => $authUser->id
             ]);
@@ -667,6 +680,8 @@ class AdminController extends Controller
                 'email' => 'required|string|email|max:255|email',
                 'school_fullDesc' => 'required|string|max:5000',
                 'school_shortDesc' => 'required|string|max:255',
+                'school_location' => 'required|string|max:255',
+                'school_google_map_location' => 'required|string|max:255',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
@@ -680,7 +695,6 @@ class AdminController extends Controller
             ]);
 
             $authUser = Auth::user();
-
             // Check if email is used by another school
             // $checkingEmail = stp_school::where('id', '!=', $request->id)
             //     ->where('school_email', $request->email)
@@ -782,43 +796,42 @@ class AdminController extends Controller
             //     }
             // }
             // Handle featured types update
-               $existingFeatured = stp_featured::where('school_id', $request->id)
-               ->pluck('featured_type')
-               ->toArray();
+            $existingFeatured = stp_featured::where('school_id', $request->id)
+                ->pluck('featured_type')
+                ->toArray();
 
-               if (!empty ($request->featured)) {
+            if (!empty($request->featured)) {
                 $newFeatured = array_diff($request->featured, $existingFeatured);
-                $existingToKeep = array_intersect ($request->featured, $existingFeatured);
+                $existingToKeep = array_intersect($request->featured, $existingFeatured);
 
                 stp_featured::where('school_id', $request->id)
                     ->whereIn('featured_type', $existingToKeep)
                     ->update([
-                        'featured_status'=>1,
-                        'updated_at'=> now()
-                    ]); 
+                        'featured_status' => 1,
+                        'updated_at' => now()
+                    ]);
                 foreach ($newFeatured as $featured) {
                     stp_featured::create([
                         'school_id' => $request->id,
                         'featured_type' => $featured,
                         'featured_status' => 1,
                         'created_at' => now(),
-                        'updated_at'=> now(),
+                        'updated_at' => now(),
 
                     ]);
                 }
-                $removeFeatured = array_diff ($existingFeatured, $request->featured);
+                $removeFeatured = array_diff($existingFeatured, $request->featured);
                 stp_featured::where('school_id', $request->id)
-                ->whereIn('featured_type', $removeFeatured)
-                ->update([
-                    'featured_status' => 0,
-                    'updated_at' => now ()
+                    ->whereIn('featured_type', $removeFeatured)
+                    ->update([
+                        'featured_status' => 0,
+                        'updated_at' => now()
                     ]);
-               }
-            else {
+            } else {
                 stp_featured::where('school_id', $request->id)
                     ->update([
-                        'featured_status'=> 0,
-                        'updated_at'=> now()
+                        'featured_status' => 0,
+                        'updated_at' => now()
                     ]);
             }
 
@@ -837,7 +850,8 @@ class AdminController extends Controller
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
                 'school_officalWebsite' => $request->school_website,
-                // 'school_google_map_location' => $request->google_map,
+                'school_location' => $request->school_location,
+                'school_google_map_location' => $request->school_google_map_location,
                 'school_logo' => $imagePath ?? $school->school_logo,
                 'account_type' => $request->account,
                 'school_location' => $request->location,
