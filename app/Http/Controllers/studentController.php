@@ -188,8 +188,6 @@ class studentController extends Controller
                     'course_count' => $school->courses->count(),
                     'google_map_location' => $school->school_google_map_location,
                     'intake' =>  $monthList,
-
-                    'location' => $school->school_google_map_location,
                     'tuition_fee' => number_format($school->tuition_fee),
 
                 ];
@@ -290,6 +288,7 @@ class studentController extends Controller
                 'schoolLongDescription' => $courseList->school->school_fullDesc,
                 'schoolID' => $courseList->school_id,
                 'schoolLocation' => $courseList->school->school_location ?? null,
+                'google_map_location' => $courseList->school->school_google_map_location ?? null,
                 'qualification' => $courseList->qualification->qualification_name,
                 'mode' => $courseList->studyMode->core_metaName ?? null,
                 'logo' => $logo,
@@ -410,6 +409,7 @@ class studentController extends Controller
         // return $test->school;
         try {
             $hpFeaturedSchoolList = stp_featured::where('featured_type', 28)
+                ->where('featured_status', 1)
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 3]);
                 })
@@ -653,7 +653,7 @@ class studentController extends Controller
                     'country' => $course->school->country->country_name ?? null,
                     'state' => $course->school->state->state_name ?? null,
                     'institute_category' => $course->school->institueCategory->core_metaName ?? null,
-                    'school_location' => $course->school->school_location,
+                    'school_location' => $course->school->school_google_map_location,
                     'school_status' => $course->course_status
                 ];
             });
