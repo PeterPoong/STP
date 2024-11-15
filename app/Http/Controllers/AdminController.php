@@ -691,7 +691,7 @@ class AdminController extends Controller
                 'person_in_charge_email' => 'required|email',
                 'category' => 'required|integer',
                 'account' => 'required|integer',
-                'location' => 'required'
+
             ]);
 
             $authUser = Auth::user();
@@ -854,7 +854,6 @@ class AdminController extends Controller
                 'school_google_map_location' => $request->school_google_map_location,
                 'school_logo' => $imagePath ?? $school->school_logo,
                 'account_type' => $request->account,
-                'school_location' => $request->location,
                 'updated_by' => $authUser->id
             ]);
 
