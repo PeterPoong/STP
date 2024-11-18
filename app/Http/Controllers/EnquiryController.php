@@ -172,7 +172,8 @@ class EnquiryController extends Controller
                     'phone' => $enquiry->enquiry_phone,
                     'subject' => $enquiry->subject->core_metaName ?? null,
                     'message' => $enquiry->enquiry_message,
-                    'status' => $enquiry->enquiry_status
+                    'status' => $enquiry->enquiry_status,
+                    'messageContent'=> $enquiry->enquiry_reply_message ?? ''
                 ]
             ]);
         } catch (\Exception $e) {
