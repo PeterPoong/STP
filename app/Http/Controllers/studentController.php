@@ -66,39 +66,6 @@ class studentController extends Controller
                 'intake_month' => 'array'
             ]);
 
-            // $filterConditions = function ($query) use ($request) {
-            //     $query->where('school_status', '!=', 0)
-            //         ->when($request->filled('qualification'), function ($q) use ($request) {
-            //             $q->where('qualification_id', $request->qualification);
-            //         })
-            //         ->when($request->filled('category_id'), function ($q) use ($request) {
-            //             $q->whereIn('category_id', $request->category);
-            //         })
-            //         ->when($request->filled('search'), function ($q) use ($request) {
-            //             $q->where('school_name', 'like', '%' . $request->search . '%');
-            //         })
-            //         ->when($request->filled('countryID'), function ($q) use ($request) {
-            //             $q->where('country_id', $request->countryID);
-            //         })
-            //         ->when($request->filled('institute'), function ($q) use ($request) {
-            //             $q->where('institue_category', $request->institute);
-            //         })
-            //         ->when($request->filled('studyMode'), function ($q) use ($request) {
-            //             $q->whereIn('study_mode', $request->studyMode);
-            //         })
-            //         ->when($request->filled('location'), function ($q) use ($request) {
-            //             $q->whereIn('state_id', $request->location);
-            //         })
-            //         ->when($request->filled('tuitionFee'), function ($q) use ($request) {
-            //             $q->where('tuition_fee', '<=', $request->tuitionFee);
-            //         })
-            //         ->when($request->filled('intake'), function ($q) use ($request) {
-            //             $q->whereHas('intake', function ($q) use ($request) {
-            //                 $q->whereIn('intake_month', $request->intake);
-            //             });
-            //         });
-            // };  
-
             $filterConditions = function ($query) use ($request) {
                 $query->where('school_status', '!=', 0)
                     ->when($request->filled('qualification_id'), function ($q) use ($request) {
@@ -119,49 +86,38 @@ class studentController extends Controller
                         $q->where('country_id', $request->countryID);
                     })
                     ->when($request->filled('location'), function ($q) use ($request) {
-                        $q->where('state_id', $request->location);
+                        $q->whereIn('state_id', $request->location);
                     })
                     ->when($request->filled('category_id'), function ($q) use ($request) {
                         $q->whereHas('courses', function ($query) use ($request) {
-                            $query->where('category_id ', $request->category_id);
+                            $query->whereIn('category_id', $request->category_id);
                         });
                     })
-                    ->when($request->filed('institute'), function ($q) use ($request) {
+                    ->when($request->filled('institute'), function ($q) use ($request) {
                         $q->where('institue_category', $request->schoolCategory);
                     })
                     ->when($request->filled('studyMode'), function ($q) use ($request) {
                         $q->whereHas('courses', function ($query) use ($request) {
-                            $query->where('study_mode ', $request->studyMode);
+                            $query->whereIn('study_mode', $request->studyMode);
                         });
                     })
                     ->when($request->filled('tuition_fee'), function ($q) use ($request) {
                         $q->whereHas('courses', function ($query) use ($request) {
-                            $query->where('tuition_fee', '<=', $request->tuition_fee);
+                            $query->where('course_cost', '<=', $request->tuition_fee);
+                        });
+                    })
+                    ->when($request->filled('intake_month'), function ($q) use ($request) {
+                        $q->whereHas('courses', function ($query) use ($request) {
+                            $query->whereHas('intake', function ($query) use ($request) {
+                                $query->whereIn('intake_month', $request->intake_month);
+                            });
                         });
                     });
             };
 
-            $result = stp_school::where($filterConditions)->get();
-            return $result;
-
-
-
-
-
-            // Apply the closure in your query and retrieve results:
-
-
-
-
-
-
-            // Apply the closure in your query and retrieve results:
-
-
             $perPage = 10;
             $featuredLimit = 5;
 
-            // Randomly select featured schools
             $featuredSchools = stp_school::query()
                 ->select('stp_schools.*')
                 ->join('stp_featureds', function ($join) {
@@ -170,9 +126,35 @@ class studentController extends Controller
                         ->where('stp_featureds.featured_status', 1);
                 })
                 ->where($filterConditions)
+                ->with(['courses' => function ($query) use ($request) {
+                    $query->when($request->filled('qualification_id'), function ($q) use ($request) {
+                        $q->where('qualification_id', $request->qualification_id);
+                    })
+                        ->when($request->filled('category_id'), function ($q) use ($request) {
+                            $q->whereIn('category_id', $request->category_id);
+                        })
+                        ->when($request->filled('studyMode'), function ($q) use ($request) {
+                            $q->whereIn('study_mode', $request->studyMode);
+                        })
+                        ->when($request->filled('tuition_fee'), function ($q) use ($request) {
+                            $q->where('course_cost', '<=', $request->tuition_fee);
+                        })
+                        ->when($request->filled('intake_month'), function ($q) use ($request) {
+                            $q->whereHas('intake', function ($subQuery) use ($request) {
+                                $subQuery->where('intake_month', $request->intake_month);
+                            });
+                        });
+                }])
                 ->inRandomOrder() // Randomize each time
                 ->take($featuredLimit)
                 ->get();
+
+
+
+
+
+
+
 
             // Calculate offset and limit for the page
             $page = $request->get('page', 1);
@@ -191,6 +173,25 @@ class studentController extends Controller
                 })
                 ->whereNull('stp_featureds.school_id')
                 ->where($filterConditions)
+                ->with(['courses' => function ($query) use ($request) {
+                    $query->when($request->filled('qualification_id'), function ($q) use ($request) {
+                        $q->where('qualification_id', $request->qualification_id);
+                    })
+                        ->when($request->filled('category_id'), function ($q) use ($request) {
+                            $q->whereIn('category_id', $request->category_id);
+                        })
+                        ->when($request->filled('studyMode'), function ($q) use ($request) {
+                            $q->whereIn('study_mode', $request->studyMode);
+                        })
+                        ->when($request->filled('tuition_fee'), function ($q) use ($request) {
+                            $q->where('course_cost', '<=', $request->tuition_fee);
+                        })
+                        ->when($request->filled('intake_month'), function ($q) use ($request) {
+                            $q->whereHas('intake', function ($subQuery) use ($request) {
+                                $subQuery->where('intake_month', $request->intake_month);
+                            });
+                        });
+                }])
                 ->skip($offset)
                 ->take($nonFeaturedLimit)
                 ->get();
@@ -247,7 +248,7 @@ class studentController extends Controller
                     'course_count' => $school->courses->count(),
                     'google_map_location' => $school->school_google_map_location,
                     'intake' =>  $monthList,
-                    'tuition_fee' => number_format($school->tuition_fee),
+                    // 'tuition_fee' => number_format($school->tuition_fee),
 
                 ];
             });
@@ -256,7 +257,7 @@ class studentController extends Controller
             return response()->json([
                 'success' => true,
                 'current_page' => $paginator->currentPage(),
-                'data' => $transformedSchools->items(),
+                'data' => array_values($transformedSchools->items()),
                 'first_page_url' => $paginator->url(1),
                 'from' => $paginator->firstItem(),
                 'last_page' => $paginator->lastPage(),
