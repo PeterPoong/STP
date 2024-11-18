@@ -7,6 +7,7 @@ use App\Models\stp_core_meta;
 use App\Models\stp_enquiry;
 use App\Http\Controllers\ServiceFunctionController;
 
+
 class EnquiryController extends Controller
 {
     protected $serviceFunctionController;
@@ -56,7 +57,8 @@ class EnquiryController extends Controller
                 'enquiry_email' => $request->email,
                 'enquiry_phone' => $request->contact,
                 'enquiry_subject' => $request->subject,
-                'enquiry_message' => $request->message
+                'enquiry_message' => $request->message,
+                'enquiry_status' => 2
             ]);
 
             $this->serviceFunctionController->sendEnquiryEmail($request->full_name, $request->email, $request->contact, $findSubject->core_metaName, $request->message);
@@ -187,12 +189,22 @@ class EnquiryController extends Controller
     public function replyEnquiry(Request $request)
     {
         $request->validate([
+            'enquiryId' => 'required|integer',
             'subject' => 'required|string|max:255',
             'email' => 'required|email',
             'messageContent' => 'required|string|max:1000',
-        ]);
 
+        ]);
+        $findEnquiry = stp_enquiry::find($request->enquiryId);
 
         $this->serviceFunctionController->replyEnquiryEmail($request->subject, $request->email, $request->messageContent);
+        $findEnquiry->update(
+            [
+                'enquiry_status' => 1,
+                'enquiry_reply_message' => $request->messageContent,
+            ]
+        );
+
+        return 'reply successfully';
     }
 }

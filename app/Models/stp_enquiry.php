@@ -17,6 +17,7 @@ class stp_enquiry extends Model
         "enquiry_subject",
         "enquiry_message",
         "enquiry_status",
+        "enquiry_reply_message",
         "updated_by",
         "created_by"
     ];
