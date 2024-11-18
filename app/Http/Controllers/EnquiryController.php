@@ -125,7 +125,7 @@ class EnquiryController extends Controller
             $enquiryList = stp_enquiry::when($request->subject, function ($query, $subject) {
                 return $query->where('enquiry_subject', $subject);
             })
-                ->where('enquiry_status', 1)
+                ->whereIn('enquiry_status', [1, 2])
                 ->paginate($perPage)
                 ->through(function ($enquiry) {
                     return [
@@ -174,7 +174,8 @@ class EnquiryController extends Controller
                     'phone' => $enquiry->enquiry_phone,
                     'subject' => $enquiry->subject->core_metaName ?? null,
                     'message' => $enquiry->enquiry_message,
-                    'status' => $enquiry->enquiry_status
+                    'status' => $enquiry->enquiry_status,
+                    'messageContent'=> $enquiry->enquiry_reply_message ?? ''
                 ]
             ]);
         } catch (\Exception $e) {
