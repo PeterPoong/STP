@@ -123,7 +123,7 @@ class EnquiryController extends Controller
             $enquiryList = stp_enquiry::when($request->subject, function ($query, $subject) {
                 return $query->where('enquiry_subject', $subject);
             })
-                ->where('enquiry_status', 1)
+                ->whereIn('enquiry_status', [1, 2])
                 ->paginate($perPage)
                 ->through(function ($enquiry) {
                     return [
