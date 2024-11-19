@@ -94,7 +94,7 @@ class studentController extends Controller
                         });
                     })
                     ->when($request->filled('institute'), function ($q) use ($request) {
-                        $q->where('institue_category', $request->schoolCategory);
+                        $q->where('institue_category', $request->institute);
                     })
                     ->when($request->filled('studyMode'), function ($q) use ($request) {
                         $q->whereHas('courses', function ($query) use ($request) {
