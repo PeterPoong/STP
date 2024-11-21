@@ -2488,12 +2488,13 @@ class studentController extends Controller
                 ->get()
                 ->map(function ($institute) {
                     return [
-                        'school_id' => $institute->id,
+                        'school_id' => $institute->school_id,
                         'school_name' => $institute->school->school_name,
                         'school_logo' => $institute->school->school_logo,
 
                     ];
                 });
+
             return response()->json([
                 'success' => true,
                 'data' => $featuredInstituteList
@@ -2539,6 +2540,7 @@ class studentController extends Controller
                         'course_logo' => $featured->courses->course_logo ?? $featured->courses->school->school_logo,
                         'course_qualification' => $featured->courses->qualification->qualification_name,
                         'course_qualification_color' => $featured->courses->qualification->qualification_color_code,
+                        'school_id' => $featured->courses->school->id,
                         'course_school' => $featured->courses->school->school_name,
                         'state' => $featured->courses->school->state->state_name ?? null,
                         'country' => $featured->courses->school->country->country_name ?? null,
