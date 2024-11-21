@@ -515,7 +515,7 @@ class AdminController extends Controller
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255',
-                'school_fullDesc' => 'required|string|max:5000',
+                'school_fullDesc' => 'required',
                 'school_shortDesc' => 'required|string|max:255',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Add cover photo validation
@@ -1234,8 +1234,8 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation Error',
-                'error' => $e->errors()
-            ]);
+                'errors' => $e->errors()
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -1482,7 +1482,6 @@ class AdminController extends Controller
 
             $newIntakes = array_diff($request->intake, $existingIntakes);
             $removeIntakes = array_diff($existingIntakes, $request->intake);
-
             // Insert new intakes
             foreach ($newIntakes as $intake) {
                 stp_intake::updateOrCreate(
@@ -1490,7 +1489,6 @@ class AdminController extends Controller
                     ['intake_status' => 1, 'created_by' => $authUser->id, 'updated_at' => now()]
                 );
             }
-
             // Deactivate removed intakes
             stp_intake::where('course_id', $request->id)
                 ->whereIn('intake_month', $removeIntakes)
@@ -1554,9 +1552,9 @@ class AdminController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => "Validation Error",
+                'message' => 'Validation Error',
                 'errors' => $e->errors()
-            ]);
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -1770,7 +1768,7 @@ class AdminController extends Controller
             $request->validate([
                 'name' => 'required|string|unique:stp_courses_categories,category_name',
                 'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validationt
-                'description' => 'string|max:5000'
+                'description' => 'nullable|string|max:5000'
             ]);
             $authUser = Auth::user();
 
@@ -1797,7 +1795,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid Validation',
-                'error' => $e->errors()
+                'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
@@ -1866,7 +1864,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid Validation',
-                'error' => $e->errors()
+                'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
@@ -2020,7 +2018,6 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
     public function searchTag(Request $request)
     {
         try {
@@ -2110,9 +2107,9 @@ class AdminController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => "Validation Error",
-                'error' => $e->errors()
-            ]);
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => true,
@@ -2127,7 +2124,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'id' => 'required|integer',
-                'name' => 'required|string',
+                'name' => 'required|string|max:255',
                 'category' => 'required|integer'
             ]);
             $authUser = Auth::user();
@@ -2142,6 +2139,12 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => ['message' => "Update Successfully"]
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => true,
@@ -2686,6 +2689,12 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => ['message' => "Update Applicant Successfully"]
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -2723,9 +2732,9 @@ class AdminController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => "Validation Error",
-                'error' => $e->errors()
-            ]);
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => true,
@@ -2761,14 +2770,20 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => ['message' => "Update Package Successfully"]
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Internal Server Error',
-                'error' => $e->getMessage()
-            ], 500);
+            } catch (ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation Error',
+                    'errors' => $e->errors()
+                ], 422);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'succcess' => false,
+                    'message' => 'Internal Server Error',
+                    'errors' => $e->getMessage()
+                ], 500);
+            }
         }
-    }
 
     public function deletePackage(Request $request)
     {
@@ -3499,17 +3514,17 @@ class AdminController extends Controller
                 'banner_start' => 'required|date_format:Y-m-d H:i:s',
                 'banner_end' => 'required|date_format:Y-m-d H:i:s'
             ]);
-
+    
             $authUser = Auth::user();
             $imagePath = null;
-
+    
             // Handle the banner file upload
             if ($request->hasFile('banner_file')) {
                 $image = $request->file('banner_file');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('bannerFile', $imageName, 'public');
             }
-
+    
             // Loop through each featured_id and create a banner for each
             $bannersCreated = [];
             foreach ($request->featured_id as $featuredId) {
@@ -3526,30 +3541,29 @@ class AdminController extends Controller
                 ]);
                 $bannersCreated[] = $banner; // Collect created banners for potential logging or response
             }
-
+    
             return response()->json([
                 'success' => true,
                 'data' => [
                     'message' => 'Successfully Added the Banner(s)',
                     'banners' => $bannersCreated // Optionally return the created banners
                 ]
-            ]);
+            ], 201); // Use 201 for successful resource creation
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation Error',
                 'errors' => $e->errors()
-            ]);
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
                 'errors' => $e->getMessage()
-            ]);
+            ], 500); // Use 500 for unexpected server errors
         }
     }
-
-
+    
     public function editBanner(Request $request)
     {
         try {
@@ -3609,9 +3623,9 @@ class AdminController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => "Validation Error",
+                'message' => 'Validation Error',
                 'errors' => $e->errors()
-            ]);
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 "success" => false,
