@@ -5,14 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\stp_core_meta;
 use App\Models\stp_enquiry;
-use App\Http\Controllers\ServiceFunctionController;
+use App\Http\Controllers\serviceFunctionController;
 
 
 class EnquiryController extends Controller
 {
     protected $serviceFunctionController;
 
-    public function __construct(ServiceFunctionController $serviceFunctionController)
+    public function __construct(serviceFunctionController $serviceFunctionController)
     {
         $this->serviceFunctionController = $serviceFunctionController;
     }
@@ -175,7 +175,7 @@ class EnquiryController extends Controller
                     'subject' => $enquiry->subject->core_metaName ?? null,
                     'message' => $enquiry->enquiry_message,
                     'status' => $enquiry->enquiry_status,
-                    'messageContent'=> $enquiry->enquiry_reply_message ?? ''
+                    'messageContent' => $enquiry->enquiry_reply_message ?? ''
                 ]
             ]);
         } catch (\Exception $e) {
