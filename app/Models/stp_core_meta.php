@@ -134,4 +134,14 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_school::class, 'account_type', 'id');
     }
+
+    public function requestFeatured(): HasMany
+    {
+        return $this->hasMany(stp_featured_request::class, 'featured_type', 'id');
+    }
+
+    public function requestType(): HasMany
+    {
+        return $this->hasMany(stp_featured_request::class, 'request_type', 'id');
+    }
 }

@@ -20,6 +20,7 @@ use App\Models\stp_course_tag;
 use App\Models\stp_courses_category;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_featured;
+use App\Models\stp_featured_request;
 use App\Models\stp_school;
 use App\Models\stp_school_media;
 use App\Models\stp_submited_form;
@@ -3924,6 +3925,117 @@ class AdminController extends Controller
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function featuredRequestList(Request $request)
+    {
+        try {
+            $request->validate([
+                'featured_type' => 'integer',
+                'status' => 'integer'
+            ]);
+            $featuredRequestList = stp_featured_request::query()
+                ->when($request->filled('featured_type'), function ($query) use ($request) {
+                    $query->where('featured_type', $request->featured_type);
+                })
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->where('request_status', $request->status);
+                })
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $featuredRequestList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function featuredRequestDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'request_id' => 'required|integer'
+            ]);
+
+            $requestDetail = stp_featured_request::find($request->request_id);
+            $detail = [
+                'id' => $requestDetail['id'],
+                'school_name' => $requestDetail->school['school_name'],
+                'request_name' => $requestDetail['request_name'],
+                'featured_type' => $requestDetail->featured['core_metaName'],
+                'request_quantity' => $requestDetail['request_quantity'],
+                'featured_duration' => $requestDetail['request_featured_duration'],
+                'transaction_proof' => $requestDetail['request_transaction_prove'],
+                'request_status' => $requestDetail['request_status']
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $detail
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function updateRequestFeatured(Request $request)
+    {
+        try {
+            $request->validate([
+                'request_id' => 'required|integer',
+                'action' => 'required|string'
+            ]);
+
+            $findFeaturedRequest = stp_featured_request::find($request->request_id);
+
+            if ($request->action == "accept") {
+                $status = 1;
+                $message = "You had accept the request successfully";
+            } else {
+                $status = 2;
+                $message = "You had reject the request successfully";
+            }
+
+            $findFeaturedRequest->update([
+                'request_status' => $status
+            ]);
+
+            if ($findFeaturedRequest['request_type'] == 84 && $status == 1) {
+                $data = [
+                    'school_id' => $findFeaturedRequest['school_id'],
+                    'featured_type' => $findFeaturedRequest['featured_type'],
+                    'featured_startTime' => now(),
+                    'featured_endTime' => now()->addDays($findFeaturedRequest['request_featured_duration']),
+                    'request_id' =>  $findFeaturedRequest['id']
+                ];
+                $creteFeaturedSchool = stp_featured::create($data);
+            }
+
+            if ($findFeaturedRequest) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'message' => $message
+                    ]
+                ]);
+            };
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }
