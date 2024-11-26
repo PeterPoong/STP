@@ -632,12 +632,15 @@ class studentController extends Controller
                 ->join('stp_featureds', function ($join) {
                     $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
                         ->where('stp_featureds.featured_type', 30)
-                        ->where('stp_featureds.featured_status', 1);
+                        ->where('stp_featureds.featured_status', 1)
+                        ->where('featured_startTime', '<', now())
+                        ->where('featured_endTime', '>', now());
                 })
                 ->where($filterConditions)
                 ->inRandomOrder() // Randomize each time
                 ->take($featuredLimit)
                 ->get();
+
 
             // Calculate offset and limit for the page
             $page = $request->get('page', 1);
@@ -647,6 +650,19 @@ class studentController extends Controller
             $nonFeaturedLimit = $perPage - $featuredCourses->count();
 
             // Query non-featured courses
+            // $nonFeaturedCourses = stp_course::query()
+            //     ->select('stp_courses.*')
+            //     ->leftJoin('stp_featureds', function ($join) {
+            //         $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
+            //             ->where('stp_featureds.featured_type', 30)
+            //             ->where('stp_featureds.featured_status', 1);
+            //     })
+            //     ->whereNull('stp_featureds.course_id')
+            //     ->where($filterConditions)
+            //     ->skip($offset)
+            //     ->take($nonFeaturedLimit)
+            //     ->get();
+
             $nonFeaturedCourses = stp_course::query()
                 ->select('stp_courses.*')
                 ->leftJoin('stp_featureds', function ($join) {
@@ -654,7 +670,10 @@ class studentController extends Controller
                         ->where('stp_featureds.featured_type', 30)
                         ->where('stp_featureds.featured_status', 1);
                 })
-                ->whereNull('stp_featureds.course_id')
+                ->where(function ($query) {
+                    $query->whereNull('stp_featureds.course_id') // Non-featured courses
+                        ->orWhere('stp_featureds.featured_endTime', '<', now());
+                })
                 ->where($filterConditions)
                 ->skip($offset)
                 ->take($nonFeaturedLimit)
@@ -687,7 +706,7 @@ class studentController extends Controller
             // Transform the courses as per requirements
             $transformedCourses = $paginator->through(function ($course) {
                 $featured = $course->featured->contains(function ($item) {
-                    return $item->featured_type == 30 && $item->featured_status == 1;
+                    return $item->featured_type == 30 && $item->featured_status == 1 && $item->featured_startTime < now() && $item->featured_endTime > now();
                 });
 
                 $intakeMonths = $course->intake->where('intake_status', 1)
