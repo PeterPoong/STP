@@ -2732,7 +2732,8 @@ class SchoolController extends Controller
         try {
             $request->validate([
                 'course_id' => 'required|integer',
-                'request_id' => 'required|integer'
+                'request_id' => 'required|integer',
+                'startDatetime' => 'required|date'
             ]);
 
             $authUser = Auth::user();
@@ -2747,8 +2748,8 @@ class SchoolController extends Controller
                 stp_featured::create([
                     'course_id' => $request->course_id,
                     'featured_type' => $requestFeatured['featured_type'],
-                    'featured_startTime' => now(),
-                    'featured_endTime' => now()->addDays($requestFeatured['request_featured_duration']),
+                    'featured_startTime' => $request->startDatetime,
+                    'featured_endTime' => Carbon::parse($request->startDatetime)->addDays($requestFeatured['request_featured_duration']),
                     'request_id' =>  $requestFeatured['id']
                 ]);
                 return response()->json([
@@ -2853,13 +2854,15 @@ class SchoolController extends Controller
         }
     }
 
-    public function replaceFeaturedCourse(Request $request)
+    public function editFeaturedCourseSetting(Request $request)
     {
         try {
             $request->validate([
                 'featured_id' => 'required|integer',
-                'newCourse_id' => 'required|integer'
+                'newCourse_id' => 'required|integer',
+                'startDate' => 'date'
             ]);
+
             $authUser = Auth::user();
             $validateCourse = stp_course::where('id', $request->newCourse_id)
                 ->where('school_id', $authUser->id)
@@ -2869,7 +2872,15 @@ class SchoolController extends Controller
             }
 
             $findFeatured = stp_featured::find($request->featured_id);
+
+            if ($request->filled('startDate')) {
+                if ($findFeatured['featured_startTime'] < now()) {
+                    throw new \Exception('You cant change ongoing featured course date');
+                }
+            }
+
             $updateFeaturedData = $findFeatured->update([
+                'featured_startTime' => $request->startDate,
                 'course_id' => $request->newCourse_id
             ]);
             if ($updateFeaturedData) {
@@ -2886,6 +2897,8 @@ class SchoolController extends Controller
             ]);
         }
     }
+
+
 
     public function schoolFeaturedType(Request $request)
     {
