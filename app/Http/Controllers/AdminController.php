@@ -1282,9 +1282,40 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function courseListFeatured(Request $request)
+    {
+        try {
+            $courseList = stp_course::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('course_name', 'like', '%' . $request->search . '%');
+            })
+                ->when($request->filled('school_id'), function ($query) use ($request) {
+                    $query->where('school_id', $request->school_id);
+                })
+                ->where('course_status', 1) // Only get active courses
+                ->whereHas('school', function ($query) {
+                    $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
+                })
+                ->get()
+                ->map(function ($course) {
+                    return [
+                        'id' => $course->id,
+                        'name' => $course->course_name,
+                    ];
+                });
 
+            return response()->json([
+                'success' => true,
+                'data' => $courseList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function courseListAdmin(Request $request)
-
     {
         try {
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -1295,6 +1326,9 @@ class AdminController extends Controller
             $courseList = stp_course::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('course_name', 'like', '%' . $request->search . '%');
             })
+                ->when($request->filled('school_id'), function ($query) use ($request) {
+                    $query->where('school_id', $request->school_id);
+                })
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
                 })
@@ -3933,8 +3967,13 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'featured_type' => 'integer',
-                'status' => 'integer'
+                'status' => 'integer',
+                'school_id' => 'integer' // Add validation for school_id
             ]);
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_featured_request::count() : (int)$request->per_page)
+                : 10;
             $featuredRequestList = stp_featured_request::query()
                 ->when($request->filled('featured_type'), function ($query) use ($request) {
                     $query->where('featured_type', $request->featured_type);
@@ -3942,8 +3981,40 @@ class AdminController extends Controller
                 ->when($request->filled('status'), function ($query) use ($request) {
                     $query->where('request_status', $request->status);
                 })
-                ->get();
+                ->when($request->filled('school_id'), function ($query) use ($request) {
+                    $query->where('school_id', $request->school_id);
+                })
+                ->paginate($perPage)
+                ->through(function ($featuredRequest) {
+                    // Map request_status to human-readable status
+                    switch ($featuredRequest['request_status']) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Approved";
+                            break;
+                        case 2:
+                            $status = "Pending";
+                            break;
+                        case 3:
+                            $status = "Rejected";
+                            break;
+                        default:
+                            $status = "Unknown";
+                    }
 
+                    return [
+                        'id' => $featuredRequest->id,
+                        'school_name' => $featuredRequest->school['school_name'],
+                        'request_name' => $featuredRequest['request_name'],
+                        'featured_type' => $featuredRequest->featured['core_metaName'],
+                        'request_quantity' => $featuredRequest['request_quantity'],
+                        'featured_duration' => $featuredRequest['request_featured_duration'],
+                        'transaction_proof' => $featuredRequest['request_transaction_prove'],
+                        'request_status' => $status
+                    ];
+                });
             return response()->json([
                 'success' => true,
                 'data' => $featuredRequestList
@@ -3961,10 +4032,39 @@ class AdminController extends Controller
     {
         try {
             $request->validate([
-                'request_id' => 'required|integer'
+                'request_id' => 'required|integer',
+                'school_id' => 'required|integer'
             ]);
 
-            $requestDetail = stp_featured_request::find($request->request_id);
+            $requestDetail = stp_featured_request::where('id', $request->request_id)
+                ->where('school_id', $request->school_id)
+                ->first();
+
+            if (!$requestDetail) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Featured request not found for this school'
+                ], 404);
+            }
+
+            // Map request_status to human-readable status
+            switch ($requestDetail['request_status']) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Approved";
+                    break;
+                case 2:
+                    $status = "Pending";
+                    break;
+                case 3:
+                    $status = "Rejected";
+                    break;
+                default:
+                    $status = "Unknown";
+            }
+
             $detail = [
                 'id' => $requestDetail['id'],
                 'school_name' => $requestDetail->school['school_name'],
@@ -3973,7 +4073,7 @@ class AdminController extends Controller
                 'request_quantity' => $requestDetail['request_quantity'],
                 'featured_duration' => $requestDetail['request_featured_duration'],
                 'transaction_proof' => $requestDetail['request_transaction_prove'],
-                'request_status' => $requestDetail['request_status']
+                'request_status' => $status
             ];
 
             return response()->json([
@@ -4003,7 +4103,7 @@ class AdminController extends Controller
                 $status = 1;
                 $message = "You had accept the request successfully";
             } else {
-                $status = 2;
+                $status = 3;
                 $message = "You had reject the request successfully";
             }
 
