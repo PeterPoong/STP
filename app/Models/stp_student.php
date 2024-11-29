@@ -28,7 +28,10 @@ class stp_student extends Model
         'facebook_id',
         'created_by',
         'updated_by',
-        'google_id'
+        'google_id',
+        'terms_agreed',
+        'terms_agreed_at',
+        'updated_by'
     ];
 
     public function role()

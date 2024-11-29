@@ -65,6 +65,8 @@ Route::prefix('student')->group(function () {
 
 
     //student portal
+    Route::middleware('auth:sanctum')->post('/checkTermsAgreement', [studentController::class, 'checkTermsAgreement']);
+    Route::middleware('auth:sanctum')->post('/agreeTerms', [studentController::class, 'agreeTerms']);
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
     Route::middleware('auth:sanctum')->post('/editStudentDetail', [studentController::class, 'editStudent']);
     Route::middleware('auth:sanctum')->post('/updateProfilePic', [studentController::class, 'updateProfilePic']);
@@ -222,6 +224,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     //request featured
     Route::post('/featuredRequestList', [AdminController::class, 'featuredRequestList']);
     Route::post('/featuredRequestDetail', [AdminController::class, 'featuredRequestDetail']);
+    Route::post('/getFeaturedList', [AdminController::class, 'getFeaturedList']);
     Route::post('/updateRequestFeatured', [AdminController::class, 'updateRequestFeatured']);
 });
 

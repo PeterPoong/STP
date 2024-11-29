@@ -44,4 +44,9 @@ class stp_featured_request extends Model
     {
         return $this->belongsTo(stp_core_meta::class, 'request_type', 'id');
     }
+
+    public function featuredItems()
+    {
+        return $this->hasMany(stp_featured::class, 'request_id', 'id');
+    }
 }

@@ -17,6 +17,7 @@ use App\Models\stp_school;
 use App\Models\stp_student;
 use App\Models\stp_subject;
 use App\Models\stp_tag;
+use App\Models\User;
 use App\Models\stp_transcript;
 use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
@@ -48,7 +49,95 @@ class studentController extends Controller
     {
         $this->serviceFunctionController = $serviceFunctionController;
     }
+    public function checkTermsAgreement()
+    {
+        try {
+            $user = Auth::user();
+            
+            return response()->json([
+                'success' => true,
+                'hasAgreed' => (bool)$user->terms_agreed,
+                'agreedAt' => $user->terms_agreed_at
+            ]);
 
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to check terms agreement',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function agreeTerms(Request $request)
+    {
+        try {
+            $request->validate([
+                'agreed' => 'required|boolean'
+            ]);
+    
+            // Get the authenticated student using Sanctum
+            $student = auth('sanctum')->user();
+            
+            if (!$student) {
+                \Log::error('Student not found in agreeTerms');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not authenticated'
+                ], 401);
+            }
+    
+            \Log::info('Updating terms agreement for student:', [
+                'student_id' => $student->id,
+                'student_email' => $student->student_email
+            ]);
+    
+            // Update only the authenticated student's terms agreement
+            $updated = $student->update([
+                'terms_agreed' => true,
+                'terms_agreed_at' => now(),
+                'updated_by' => $student->id
+            ]);
+    
+            if (!$updated) {
+                throw new Exception('Failed to update terms agreement');
+            }
+    
+            \Log::info('Terms agreement updated successfully for student:', [
+                'student_id' => $student->id,
+                'terms_agreed' => $student->terms_agreed,
+                'terms_agreed_at' => $student->terms_agreed_at
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Terms agreement updated successfully',
+                'data' => [
+                    'hasAgreed' => (bool)$student->terms_agreed,
+                    'agreedAt' => $student->terms_agreed_at
+                ]
+            ]);
+    
+        } catch (ValidationException $e) {
+            \Log::error('Validation error in agreeTerms:', [
+                'errors' => $e->errors()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            \Log::error('Error in agreeTerms:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update terms agreement',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function schoolList(Request $request)
     {
 
