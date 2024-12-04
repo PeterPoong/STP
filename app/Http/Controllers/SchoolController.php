@@ -39,6 +39,7 @@ use App\Models\stp_other_certificate;
 use App\Models\stp_school_media;
 use PHPUnit\TextUI\Help;
 use Carbon\Carbon;
+use Exception;
 use Throwable;
 
 use function Laravel\Prompts\error;
@@ -2692,10 +2693,12 @@ class SchoolController extends Controller
             $request->validate([
                 'request_name' => 'required|string|max:255',
                 'featured_type' => 'integer|required',
-                'quantity' => 'integer|required',
-                'duration' => 'integer|required',
+                'start_date' => 'required|date',
+                'duration' => 'required|integer',
                 'transaction_proof' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
             ]);
+
+
             $authUser = Auth::user();
             $image = $request->file('transaction_proof');
             $imageName = $imageName = 'transactionProof/' . time() . '.' . $image->getClientOriginalExtension();
@@ -2705,7 +2708,8 @@ class SchoolController extends Controller
                 'request_name' => $request->request_name,
                 'request_type' => 84,
                 'featured_type' => $request->featured_type,
-                'request_quantity' => $request->quantity,
+                'request_quantity' => 1,
+                'start_date' => $request->start_date,
                 'request_featured_duration' => $request->duration,
                 'request_transaction_prove' => $imageName,
                 'request_status' => 2
@@ -2770,33 +2774,57 @@ class SchoolController extends Controller
         }
     }
 
-    public function courseFeaturedList(Request $request)
+
+    public function courseRequestFeaturedList(Request $request)
     {
+
         try {
+            $request->validate([
+                'search' => "nullable|string",
+                'featured_type' => "nullable|integer",
+                "status" => "nullable|integer"
+            ]);
             $authUser = Auth::user();
             $featuredList = stp_featured_request::where('school_id', $authUser->id)
-                ->where('request_status', 1)
+                ->where('request_type', 83)
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('request_name', 'like', '%' . $request->search . '%');
+                })
+                ->when($request->filled('featured_type'), function ($query) use ($request) {
+                    $query->where('featured_type', $request->featured_type);
+                })
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->where('request_status', $request->status);
+                })
                 ->get()
                 ->map(function ($item) {
                     $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
                         return [
                             'id' => $item->id,
-                            'course_name' => $item->courses['course_name'],
-                            'end_date' => $item['featured_endTime'],
+                            'course_name' => $item->courses['course_name'] ?? null,
+                            'end_date' => $item['featured_endTime'] ?? null,
                             'day_left' => abs(Carbon::now()->startOfDay()->diffInDays(Carbon::parse($item['featured_endTime'])->startOfDay())),
                         ];
                     });
+
                     $numberUsed = count($usedFeatured);
+                    $featuredType = [
+                        'featured_id' => $item->featured['id'],
+                        'featured_type' => $item->featured['core_metaName']
+                    ];
 
                     return [
                         'id' => $item->id,
                         'name' => $item->request_name,
+                        'featured_type' => $featuredType,
+                        'duration' => $item->request_featured_duration,
                         'quantity_used' => $numberUsed,
                         'total_quantity' => $item->request_quantity,
                         'request_status' => $item->request_status,
                         'featured_courses' => $usedFeatured
                     ];
                 });
+
 
             return response()->json([
                 'success' => true,
@@ -2807,6 +2835,68 @@ class SchoolController extends Controller
                 'success' => false,
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function schoolRequestFeaturedList(Request $request)
+    {
+        try {
+            $request->validate([
+                'search' => "nullable|string",
+                'featured_type' => "nullable|integer",
+                "status" => "nullable|integer"
+            ]);
+            $authUser = Auth::user();
+            $featuredList = stp_featured_request::where('school_id', $authUser->id)
+                ->where('request_type', 84)
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('request_name', 'like', '%' . $request->search . '%');
+                })
+                ->when($request->filled('featured_type'), function ($query) use ($request) {
+                    $query->where('featured_type', $request->featured_type);
+                })
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->where('request_status', $request->status);
+                })
+                ->get()
+                ->map(function ($item) {
+                    $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'course_name' => $item->courses['course_name'] ?? null,
+                            'end_date' => $item['featured_endTime'] ?? null,
+                            'day_left' => abs(Carbon::now()->startOfDay()->diffInDays(Carbon::parse($item['featured_endTime'])->startOfDay())),
+                        ];
+                    });
+
+                    $numberUsed = count($usedFeatured);
+                    $featuredType = [
+                        'featured_id' => $item->featured['id'],
+                        'featured_type' => $item->featured['core_metaName']
+                    ];
+
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->request_name,
+                        'featured_type' => $featuredType,
+                        'duration' => $item->request_featured_duration,
+                        'quantity_used' => $numberUsed,
+                        'total_quantity' => $item->request_quantity,
+                        'request_status' => $item->request_status,
+                        'featured_courses' => $usedFeatured
+                    ];
+                });
+            return response()->json([
+                'success' => true,
+                'data' => $featuredList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage('request_type', 83)
+
             ]);
         }
     }
@@ -2898,6 +2988,49 @@ class SchoolController extends Controller
         }
     }
 
+    public function editSchoolFeaturedSetting(Request $request)
+    {
+        try {
+            $request->validate([
+                'featured_id' => 'required|integer',
+                'startDate' => 'required|date'
+            ]);
+
+
+            $findFeatured = stp_featured::find($request->featured_id);
+            if ($findFeatured == null) {
+                throw new Exception('Featured Not Found');
+            }
+
+
+            if (now() > $findFeatured['featured_startTime']) {
+                throw new Exception('You are not allow to change the date of ongoing featured');
+            }
+
+            $startDate = Carbon::parse($request->startDate);
+
+            $updateFeaturedDate = $findFeatured->update([
+                'featured_startTime' => $request->startDate,
+                'featured_endTime' => $startDate->copy()->addDays(10)
+            ]);
+
+            if ($updateFeaturedDate) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'message' => 'Successfully update'
+                    ]
+                ]);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
 
 
     public function schoolFeaturedType(Request $request)
@@ -2912,6 +3045,138 @@ class SchoolController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $featuredTypeList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function schoolFeaturedRequestLists(Request $request)
+    {
+        try {
+            $request->validate([
+                'search' => "nullable|string",
+                'featured_type' => "nullable|integer",
+                'status' => "nullable|integer",
+                'request_type' => 'required|string'
+            ]);
+            $authUser = Auth::user();
+
+            $requestType = $request->request_type == "school" ? 84 : 83;
+
+            // Set items per page (can be dynamic)
+            $perPage = 10;
+
+            $featuredList = stp_featured_request::where('school_id', $authUser['id'])
+                ->where('request_type', $requestType)
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('request_name', 'like', '%' . $request->search . '%');
+                })
+                ->when($request->filled('featured_type'), function ($query) use ($request) {
+                    $query->where('featured_type', $request->featured_type);
+                })
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->where('request_status', $request->status);
+                })
+                ->paginate($perPage);
+
+            // Transform the paginated collection
+            $featuredList->getCollection()->transform(function ($item) use ($requestType) {
+                if ($requestType == 84) {
+                    // School featured logic
+                    $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
+                        $featuredCourseStatus = $item['featured_endTime'] < now() ? "Expired" : "Ongoing";
+
+                        return [
+                            'id' => $item->id,
+                            'school_name' => $item->school['school_name'] ?? null,
+                            'start_date' => $item['featured_startTime'] ?? null,
+                            'end_date' => $item['featured_endTime'] ?? null,
+                            'status' => $featuredCourseStatus,
+                            'day_left' => abs(Carbon::now()->startOfDay()->diffInDays(Carbon::parse($item['featured_endTime'])->startOfDay())),
+                        ];
+                    });
+
+                    $numberUsed = count($usedFeatured);
+
+                    $featuredType = [
+                        'featured_id' => $item->featured['id'],
+                        'featured_type' => $item->featured['core_metaName']
+                    ];
+
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->request_name,
+                        'featured_type' => $featuredType,
+                        'duration' => $item->request_featured_duration,
+                        'quantity_used' => $numberUsed,
+                        'total_quantity' => $item->request_quantity,
+                        'request_status' => $item->request_status,
+                        'school_id' => $item->school['id'] ?? null,
+                        'school_name' => $item->school['school_name'] ?? null
+                    ];
+                } else {
+                    // Course featured logic
+                    $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
+                        $featuredCourseStatus = $item['featured_endTime'] < now() ? "Expired" : "Ongoing";
+
+                        return [
+                            'id' => $item->id,
+                            'course_id' => $item->courses['id'] ?? null,
+                            'course_name' => $item->courses['course_name'] ?? null,
+                            'start_date' => $item['featured_startTime'],
+                            'end_date' => $item['featured_endTime'] ?? null,
+                            'status' => $featuredCourseStatus,
+                            'day_left' => abs(Carbon::now()->startOfDay()->diffInDays(Carbon::parse($item['featured_endTime'])->startOfDay())),
+                        ];
+                    });
+
+                    $numberUsed = count($usedFeatured);
+
+                    $featuredType = [
+                        'featured_id' => $item->featured['id'],
+                        'featured_type' => $item->featured['core_metaName']
+                    ];
+
+                    $requestId = stp_featured_request::find($item->id);
+                    $coursesRequest = $requestId->featuredCourse
+                        ->pluck('course_id')
+                        ->unique()
+                        ->values()
+                        ->toArray();
+
+                    $courseAvailable = stp_course::where('school_id', $item->school['id'])
+                        ->whereNotIn('id', $coursesRequest)
+                        ->get()
+                        ->map(function ($query) {
+                            return [
+                                'id' => $query->id,
+                                'course_name' => $query->course_name,
+                            ];
+                        });
+
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->request_name,
+                        'featured_type' => $featuredType,
+                        'duration' => $item->request_featured_duration,
+                        'quantity_used' => $numberUsed,
+                        'total_quantity' => $item->request_quantity,
+                        'request_status' => $item->request_status,
+                        'featured' => $usedFeatured,
+                        'courseAvailable' => $courseAvailable
+                    ];
+                }
+            });
+
+            // Return paginated response
+            return response()->json([
+                'success' => true,
+                'data' => $featuredList
             ]);
         } catch (\Exception $e) {
             return response()->json([
