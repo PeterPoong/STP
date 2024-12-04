@@ -65,6 +65,8 @@ Route::prefix('student')->group(function () {
 
 
     //student portal
+    Route::middleware('auth:sanctum')->post('/checkTermsAgreement', [studentController::class, 'checkTermsAgreement']);
+    Route::middleware('auth:sanctum')->post('/agreeTerms', [studentController::class, 'agreeTerms']);
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
     Route::middleware('auth:sanctum')->post('/editStudentDetail', [studentController::class, 'editStudent']);
     Route::middleware('auth:sanctum')->post('/updateProfilePic', [studentController::class, 'updateProfilePic']);
@@ -163,7 +165,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/intakeList', [AdminController::class, 'intakeList']);
     Route::post('/courseTag', [AdminController::class, 'courseTag']);
     Route::post('/courseDetailApplicant', [AdminController::class, 'courseDetailApplicant']);
-
+    Route::post('/courseListFeatured', [AdminController::class, 'courseListFeatured']);
 
     Route::post('/addTag', [AdminController::class, 'addTag']);
     Route::post('/searchTag', [AdminController::class, 'searchTag']);
@@ -218,6 +220,12 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post("/addDataList", [AdminController::class, 'addDataList']);
     Route::post("/editData", [AdminController::class, 'editData']);
     Route::post("/editDataStatus", [AdminController::class, 'editDataStatus']);
+
+    //request featured
+    Route::post('/featuredRequestList', [AdminController::class, 'featuredRequestList']);
+    Route::post('/featuredRequestDetail', [AdminController::class, 'featuredRequestDetail']);
+    Route::post('/getFeaturedList', [AdminController::class, 'getFeaturedList']);
+    Route::post('/updateRequestFeatured', [AdminController::class, 'updateRequestFeatured']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {
@@ -291,6 +299,17 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 
     //location 
     Route::post('/getLocation', [SchoolController::class, 'getLocation']);
+
+    //request features
+    Route::post('requestCoursesFeatured', [SchoolController::class, 'requestCoursesFeatured']);
+    Route::post('requestFeaturedSchool', [SchoolController::class, 'requestFeaturedSchool']);
+    Route::post('applyFeaturedCourse', [SchoolController::class, 'applyFeaturedCourse']);
+    Route::get('courseFeaturedList', [SchoolController::class, 'courseFeaturedList']);
+    Route::post('featuredCourseAvailable', [SchoolController::class, 'featuredCourseAvailable']);
+    Route::post('replaceFeaturedCourse', [SchoolController::class, 'replaceFeaturedCourse']);
+    Route::get('schoolFeaturedType', [SchoolController::class, 'schoolFeaturedType']);
+
+    Route::get('testFeaturedRequest', [SchoolController::class, 'testFeaturedRequest']);
 });
 
 // Route::get('auth/facebook', [LoginController::class, 'redirectToFacebook'])->name('login.facebook');

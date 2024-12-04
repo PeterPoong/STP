@@ -29,7 +29,9 @@ class User extends Authenticatable
         'status',
         'profile_pic',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'terms_agreed',
+        'terms_agreed_at'
     ];
 
     protected $table = 'stp_users';
@@ -53,6 +55,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'terms_agreed' => 'boolean',
+            'terms_agreed_at' => 'datetime'
         ];
     }
 

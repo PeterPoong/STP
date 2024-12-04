@@ -32,12 +32,16 @@ use App\Http\Controllers\serviceFunctionController;
 use App\Models\stp_cgpa;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_core_meta;
+use App\Models\stp_featured_request;
 use App\Models\stp_higher_transcript;
 use App\Models\stp_intake;
 use App\Models\stp_other_certificate;
 use App\Models\stp_school_media;
 use PHPUnit\TextUI\Help;
 use Carbon\Carbon;
+use Throwable;
+
+use function Laravel\Prompts\error;
 
 class SchoolController extends Controller
 {
@@ -2639,5 +2643,269 @@ class SchoolController extends Controller
         return response()->json([
             'google_maps_link' => $googleMapsLink,
         ]);
+    }
+
+    public function requestCoursesFeatured(Request $request)
+    {
+        try {
+            $request->validate([
+                'request_name' => 'required|string|max:255',
+                'featured_type' => 'integer|required',
+                'quantity' => 'integer|required',
+                'duration' => 'integer|required',
+                'transaction_proof' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+            ]);
+            $authUser = Auth::user();
+            $image = $request->file('transaction_proof');
+            $imageName = $imageName = 'transactionProof/' . time() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('transactionProof', $imageName, 'public');
+            $data = [
+                'school_id' => $authUser->id,
+                'request_name' => $request->request_name,
+                'request_type' => 83,
+                'featured_type' => $request->featured_type,
+                'request_quantity' => $request->quantity,
+                'request_featured_duration' => $request->duration,
+                'request_transaction_prove' => $imageName,
+                'request_status' => 2
+            ];
+            stp_featured_request::create($data);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'Successfully Create request'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function requestFeaturedSchool(Request $request)
+    {
+        try {
+            $request->validate([
+                'request_name' => 'required|string|max:255',
+                'featured_type' => 'integer|required',
+                'quantity' => 'integer|required',
+                'duration' => 'integer|required',
+                'transaction_proof' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+            ]);
+            $authUser = Auth::user();
+            $image = $request->file('transaction_proof');
+            $imageName = $imageName = 'transactionProof/' . time() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('transactionProof', $imageName, 'public');
+            $data = [
+                'school_id' => $authUser->id,
+                'request_name' => $request->request_name,
+                'request_type' => 84,
+                'featured_type' => $request->featured_type,
+                'request_quantity' => $request->quantity,
+                'request_featured_duration' => $request->duration,
+                'request_transaction_prove' => $imageName,
+                'request_status' => 2
+            ];
+            stp_featured_request::create($data);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'Successfully Create request'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function applyFeaturedCourse(Request $request)
+    {
+        try {
+            $request->validate([
+                'course_id' => 'required|integer',
+                'request_id' => 'required|integer'
+            ]);
+
+            $authUser = Auth::user();
+            $requestFeatured = stp_featured_request::find($request->request_id);
+
+
+            $totalQuantity = $requestFeatured['request_quantity'];
+            $featuredData = stp_featured::where('request_id', $requestFeatured['id'])->get();
+            $usedQuantity = count($featuredData);
+
+            if ($totalQuantity > $usedQuantity) {
+                stp_featured::create([
+                    'course_id' => $request->course_id,
+                    'featured_type' => $requestFeatured['featured_type'],
+                    'featured_startTime' => now(),
+                    'featured_endTime' => now()->addDays($requestFeatured['request_featured_duration']),
+                    'request_id' =>  $requestFeatured['id']
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'message' => 'create successfully'
+                    ]
+                ]);
+            } else {
+                throw new \Exception('No slots available');
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function courseFeaturedList(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $featuredList = stp_featured_request::where('school_id', $authUser->id)
+                ->where('request_status', 1)
+                ->get()
+                ->map(function ($item) {
+                    $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'course_name' => $item->courses['course_name'],
+                            'end_date' => $item['featured_endTime'],
+                            'day_left' => abs(Carbon::now()->startOfDay()->diffInDays(Carbon::parse($item['featured_endTime'])->startOfDay())),
+                        ];
+                    });
+                    $numberUsed = count($usedFeatured);
+
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->request_name,
+                        'quantity_used' => $numberUsed,
+                        'total_quantity' => $item->request_quantity,
+                        'request_status' => $item->request_status,
+                        'featured_courses' => $usedFeatured
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $featuredList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function testFeaturedRequest(Request $request)
+    {
+        $data = stp_featured_request::find(1);
+        return $data->featuredCourse;
+        return 'test';
+    }
+
+    public function featuredCourseAvailable(Request $request)
+    {
+        try {
+            $request->validate([
+                'request_id' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            $requestId = stp_featured_request::find($request->request_id);
+            $coursesRequest = $requestId->featuredCourse
+                ->pluck('course_id') // Extract the course_id values
+                ->unique()           // Remove duplicate values
+                ->values()           // Re-index the array (optional)
+                ->toArray();
+
+            $courseAvailable = stp_course::where('school_id', $authUser->id)
+                ->whereNotIn('id', $coursesRequest) // Use whereNotIn for exclusion
+                ->get()
+                ->map(function ($query) {
+                    return [
+                        'id' => $query->id,
+                        'course_name' => $query->course_name,
+                    ];
+                });
+            return response()->json([
+                'success' => true,
+                'data' => $courseAvailable
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function replaceFeaturedCourse(Request $request)
+    {
+        try {
+            $request->validate([
+                'featured_id' => 'required|integer',
+                'newCourse_id' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+            $validateCourse = stp_course::where('id', $request->newCourse_id)
+                ->where('school_id', $authUser->id)
+                ->first();
+            if (empty($validateCourse)) {
+                throw new \Exception('You do not register such course');
+            }
+
+            $findFeatured = stp_featured::find($request->featured_id);
+            $updateFeaturedData = $findFeatured->update([
+                'course_id' => $request->newCourse_id
+            ]);
+            if ($updateFeaturedData) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Successfully Update'
+                ]);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function schoolFeaturedType(Request $request)
+    {
+        try {
+            $featuredTypeList = stp_core_meta::where('core_metaType', 'featured_type')->get()->map(function ($query) {
+                return [
+                    'id' => $query['id'],
+                    'featured_name' => $query['core_metaName']
+                ];
+            });
+            return response()->json([
+                'success' => true,
+                'data' => $featuredTypeList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

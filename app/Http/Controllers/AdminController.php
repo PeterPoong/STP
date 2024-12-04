@@ -20,6 +20,7 @@ use App\Models\stp_course_tag;
 use App\Models\stp_courses_category;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_featured;
+use App\Models\stp_featured_request;
 use App\Models\stp_school;
 use App\Models\stp_school_media;
 use App\Models\stp_submited_form;
@@ -1281,9 +1282,40 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function courseListFeatured(Request $request)
+    {
+        try {
+            $courseList = stp_course::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('course_name', 'like', '%' . $request->search . '%');
+            })
+                ->when($request->filled('school_id'), function ($query) use ($request) {
+                    $query->where('school_id', $request->school_id);
+                })
+                ->where('course_status', 1) // Only get active courses
+                ->whereHas('school', function ($query) {
+                    $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
+                })
+                ->get()
+                ->map(function ($course) {
+                    return [
+                        'id' => $course->id,
+                        'name' => $course->course_name,
+                    ];
+                });
 
+            return response()->json([
+                'success' => true,
+                'data' => $courseList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function courseListAdmin(Request $request)
-
     {
         try {
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -1294,6 +1326,9 @@ class AdminController extends Controller
             $courseList = stp_course::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('course_name', 'like', '%' . $request->search . '%');
             })
+                ->when($request->filled('school_id'), function ($query) use ($request) {
+                    $query->where('school_id', $request->school_id);
+                })
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
                 })
@@ -3938,6 +3973,260 @@ class AdminController extends Controller
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function featuredRequestList(Request $request)
+    {
+        try {
+            $request->validate([
+                'featured_type' => 'integer',
+                'status' => 'integer',
+                'school_id' => 'integer'
+            ]);
+
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_featured_request::count() : (int)$request->per_page)
+                : 10;
+
+            $featuredRequestList = stp_featured_request::query()
+                ->withCount('featuredItems')
+                ->when($request->filled('featured_type'), function ($query) use ($request) {
+                    $query->where('featured_type', $request->featured_type);
+                })
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->where('request_status', $request->status);
+                })
+                ->when($request->filled('school_id'), function ($query) use ($request) {
+                    $query->where('school_id', $request->school_id);
+                })
+                ->paginate($perPage)
+                ->through(function ($featuredRequest) {
+                    switch ($featuredRequest['request_status']) {
+                        case 0:
+                            $status = "Disable";
+                            break;
+                        case 1:
+                            $status = "Approved";
+                            break;
+                        case 2:
+                            $status = "Pending";
+                            break;
+                        case 3:
+                            $status = "Rejected";
+                            break;
+                        default:
+                            $status = "No Data Available";
+                    }
+
+                    return [
+                        'id' => $featuredRequest->id ?? 'No Data Available',
+                        'school_name' => $featuredRequest->school['school_name'] ?? 'No Data Available',
+                        'request_name' => $featuredRequest['request_name'] ?? 'No Data Available',
+                        'featured_type' => $featuredRequest->featured['core_metaName'] ?? 'No Data Available',
+                        'request_quantity' => $featuredRequest['request_quantity'] ?? 'No Data Available',
+                        'featured_duration' => $featuredRequest['request_featured_duration'] ?? 'No Data Available',
+                        'transaction_proof' => $featuredRequest['request_transaction_prove'] ?? 'No Data Available',
+                        'request_type' => $featuredRequest['request_type'] ?? 'No Data Available',
+                        'request_status' => $status,
+                        'featured_count' => $featuredRequest->featured_items_count ?? 'No Data Available'
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $featuredRequestList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function featuredRequestDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'request_id' => 'required|integer',
+            ]);
+
+            $requestDetail = stp_featured_request::where('id', $request->request_id)
+                ->first();
+
+            if (!$requestDetail) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Featured request not found for this school'
+                ], 404);
+            }
+
+            // Map request_status to human-readable status
+            switch ($requestDetail['request_status']) {
+                case 0:
+                    $status = "Disable";
+                    break;
+                case 1:
+                    $status = "Approved";
+                    break;
+                case 2:
+                    $status = "Pending";
+                    break;
+                case 3:
+                    $status = "Rejected";
+                    break;
+                default:
+                    $status = "Unknown";
+            }
+
+            $detail = [
+                'id' => $requestDetail['id'],
+                'school_name' => $requestDetail->school['school_name'],
+                'request_name' => $requestDetail['request_name'],
+                'featured_type' => $requestDetail->featured['core_metaName'],
+                'request_quantity' => $requestDetail['request_quantity'],
+                'featured_duration' => $requestDetail['request_featured_duration'],
+                'transaction_proof' => $requestDetail['request_transaction_prove'],
+                'request_status' => $status
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $detail
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getFeaturedList(Request $request)
+    {
+        try {
+            // Validate request parameters
+            $request->validate([
+                'school_id' => 'nullable|integer'
+            ]);
+
+            // Build the query
+            $query = stp_featured_request::with(['featuredCourse.courses', 'school', 'featured']);
+
+            // Apply school_id filter if provided
+            if ($request->filled('school_id')) {
+                $query->where('school_id', $request->school_id);
+            }
+
+            // Execute query and transform data
+            $featuredRequests = $query->get() // Use get() instead of paginate()
+                ->map(function ($request) {
+                    $featuredData = $request->featuredCourse;
+                    $data = [];
+
+                    // Add course names if request_type is 83 (course)
+                    if ($request->request_type == 83) {
+                        $data['course_names'] = $featuredData->map(function ($featured) {
+                            return [
+                                'id' => $featured->courses->id ?? 'No Data Available',
+                                'featured_id' => $featured->id ?? 'No Data Available',
+                                'request_id' => $featured->request_id ?? 'No Data Available',
+                                'name' => $featured->courses->course_name ?? 'No Data Available',
+                                'start_date' => $featured->featured_startTime ?? 'No Data Available',
+                                'end_date' => $featured->featured_endTime ?? 'No Data Available',
+                                'featured_status' => $featured->featured_status ?? 'No Data Available',
+                                'request_status' => $featured->featured->request_status ?? 'No Data Available',
+                            ];
+                        })->filter()->values();
+                    }
+                    
+                    // Add school name if request_type is 84 (school)
+                    if ($request->request_type == 84) {
+                        $data['school'] = [
+                            'id' => $request->school->id ?? 'No Data Available',
+                            'featured_id' => $request->id ?? 'No Data Available',
+                            'request_id' => $request->id ?? 'No Data Available',
+                            'name' => $request->school->school_name ?? 'No Data Available',
+                            'start_date' => $request->featured_startTime ?? 'No Data Available',
+                            'end_date' => $request->featured_endTime ?? 'No Data Available',
+                            'featured_status' => $request->featured_status ?? 'No Data Available',
+                            'request_status' => $request->request_status ?? 'No Data Available',
+                        ];
+                    }
+
+                    return $data;
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $featuredRequests
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateRequestFeatured(Request $request)
+    {
+        try {
+            $request->validate([
+                'request_id' => 'required|integer',
+                'action' => 'required|string'
+            ]);
+
+            $findFeaturedRequest = stp_featured_request::find($request->request_id);
+
+            if ($request->action == "accept") {
+                $status = 1;
+                $message = "You had accept the request successfully";
+            } else {
+                $status = 3;
+                $message = "You had reject the request successfully";
+            }
+
+            $findFeaturedRequest->update([
+                'request_status' => $status
+            ]);
+
+            if ($findFeaturedRequest['request_type'] == 84 && $status == 1) {
+                $data = [
+                    'school_id' => $findFeaturedRequest['school_id'],
+                    'featured_type' => $findFeaturedRequest['featured_type'],
+                    'featured_startTime' => now(),
+                    'featured_endTime' => now()->addDays($findFeaturedRequest['request_featured_duration']),
+                    'request_id' =>  $findFeaturedRequest['id']
+                ];
+                $creteFeaturedSchool = stp_featured::create($data);
+            }
+
+            if ($findFeaturedRequest) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'message' => $message
+                    ]
+                ]);
+            };
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }
