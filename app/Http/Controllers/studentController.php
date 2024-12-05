@@ -122,6 +122,9 @@ class studentController extends Controller
                 ->select('stp_schools.*')
                 ->join('stp_featureds', function ($join) {
                     $join->on('stp_schools.id', '=', 'stp_featureds.school_id')
+                        ->whereNotNull('stp_featureds.school_id')
+                        ->where('stp_featureds.featured_startTime', '<', now())
+                        ->where('stp_featureds.featured_endTime', '>', now())
                         ->where('stp_featureds.featured_type', 30)
                         ->where('stp_featureds.featured_status', 1);
                 })
@@ -150,12 +153,6 @@ class studentController extends Controller
                 ->get();
 
 
-
-
-
-
-
-
             // Calculate offset and limit for the page
             $page = $request->get('page', 1);
             $offset = ($page - 1) * $perPage;
@@ -169,8 +166,11 @@ class studentController extends Controller
                 ->leftJoin('stp_featureds', function ($join) {
                     $join->on('stp_schools.id', '=', 'stp_featureds.school_id')
                         ->where('stp_featureds.featured_type', 30)
-                        ->where('stp_featureds.featured_status', 1);
+                        ->where('stp_featureds.featured_status', 1)
+                        ->where('featured_startTime', '<', now())
+                        ->where('featured_endTime', '>', now());
                 })
+
                 ->whereNull('stp_featureds.school_id')
                 ->where($filterConditions)
                 ->with(['courses' => function ($query) use ($request) {
@@ -196,6 +196,7 @@ class studentController extends Controller
                 ->take($nonFeaturedLimit)
                 ->get();
 
+            // return $nonFeaturedSchools;
             // Merge featured and non-featured results for the page
             $schools = $featuredSchools->concat($nonFeaturedSchools)->unique('id');
 
@@ -223,7 +224,7 @@ class studentController extends Controller
             // Transform the schools as per requirements
             $transformedSchools = $paginator->through(function ($school) {
                 $featured = $school->featured->contains(function ($item) {
-                    return $item->featured_type == 30 && $item->featured_status == 1;
+                    return $item->featured_type == 30 && $item->featured_status == 1 && $item->featured_startTime < now() && $item->featured_endTime > now();
                 });
                 $monthList = [];
                 foreach ($school->courses as $courses) {
@@ -467,12 +468,16 @@ class studentController extends Controller
     {
         // $test = stp_featured::find(1);
         // return $test->school;
+
         try {
             $hpFeaturedSchoolList = stp_featured::where('featured_type', 28)
+                ->where('featured_startTime', '<', now())
+                ->where('featured_endTime', '>', now())
                 ->where('featured_status', 1)
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 3]);
                 })
+                ->inRandomOrder()
                 ->get()
                 ->map(function ($school) {
                     return ([
@@ -480,7 +485,8 @@ class studentController extends Controller
                         'schoolName' => $school->school->school_name,
                         'schoolLogo' => $school->school->school_logo
                     ]);
-                });
+                })
+                ->unique('schoolID');
             return response()->json([
                 'success' => true,
                 'data' => $hpFeaturedSchoolList
@@ -510,10 +516,17 @@ class studentController extends Controller
 
             $hpFeaturedCoursesList = stp_featured::whereNotNull('course_id')
                 ->where('featured_type', 29)
+                ->where('featured_startTime', '<', now())
+                ->where('featured_endTime', '>', now())
+
                 ->where('featured_status', 1)
                 ->whereHas('courses', function ($query) {
-                    $query->where('course_status', '!=', 0);
+                    $query->where('course_status', '!=', 0)
+                        ->whereHas('school', function ($school) {
+                            $school->whereIn('school_status', [1, 3]);
+                        });
                 })
+                ->inRandomOrder()
                 ->get()->map(function ($courses) {
                     if (empty($courses->courses->course_logo)) {
                         $logo = $courses->courses->school->school_logo;
@@ -530,7 +543,9 @@ class studentController extends Controller
                         'course_school' => $courses->courses->school->school_name,
                         'location' => $courses->courses->school->city->city_name ?? null,
                     ];
-                });
+                })
+                ->unique('id')
+                ->values();
 
             return response()->json([
                 'success' => true,
@@ -623,6 +638,7 @@ class studentController extends Controller
                     });
             };
 
+
             $perPage = 40;
             $featuredLimit = 5;
 
@@ -631,13 +647,22 @@ class studentController extends Controller
                 ->select('stp_courses.*')
                 ->join('stp_featureds', function ($join) {
                     $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
+                        ->whereNotNull('stp_featureds.course_id')
+                        ->where('stp_featureds.featured_startTime', '<', now())
+                        ->where('stp_featureds.featured_endTime', '>', now())
                         ->where('stp_featureds.featured_type', 30)
                         ->where('stp_featureds.featured_status', 1);
                 })
                 ->where($filterConditions)
                 ->inRandomOrder() // Randomize each time
                 ->take($featuredLimit)
-                ->get();
+                ->get()
+                ->unique('id');
+
+
+
+
+
 
             // Calculate offset and limit for the page
             $page = $request->get('page', 1);
@@ -647,18 +672,35 @@ class studentController extends Controller
             $nonFeaturedLimit = $perPage - $featuredCourses->count();
 
             // Query non-featured courses
+            // $nonFeaturedCourses = stp_course::query()
+            //     ->select('stp_courses.*')
+            //     ->leftJoin('stp_featureds', function ($join) {
+            //         $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
+            //             ->where('stp_featureds.featured_type', 30)
+            //             ->where('stp_featureds.featured_status', 1);
+            //     })
+            //     ->whereNull('stp_featureds.course_id')
+            //     ->where($filterConditions)
+            //     ->inRandomOrder()
+            //     ->skip($offset)
+            //     ->take($nonFeaturedLimit)
+            //     ->get();
             $nonFeaturedCourses = stp_course::query()
                 ->select('stp_courses.*')
-                ->leftJoin('stp_featureds', function ($join) {
-                    $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
-                        ->where('stp_featureds.featured_type', 30)
-                        ->where('stp_featureds.featured_status', 1);
+                ->whereDoesntHave('featured', function ($q) {
+                    $q->where('featured_type', 30)
+                        ->where('featured_status', 1)
+                        ->where('featured_startTime', '<', now())
+                        ->where('featured_endTime', '>', now());
                 })
-                ->whereNull('stp_featureds.course_id')
                 ->where($filterConditions)
+                // ->inRandomOrder()
                 ->skip($offset)
                 ->take($nonFeaturedLimit)
                 ->get();
+
+
+
 
             // Merge featured and non-featured results for the page
             $courses = $featuredCourses->concat($nonFeaturedCourses);
@@ -687,7 +729,7 @@ class studentController extends Controller
             // Transform the courses as per requirements
             $transformedCourses = $paginator->through(function ($course) {
                 $featured = $course->featured->contains(function ($item) {
-                    return $item->featured_type == 30 && $item->featured_status == 1;
+                    return $item->featured_type == 30 && $item->featured_status == 1 && $item->featured_startTime < now() && $item->featured_endTime > now();
                 });
 
                 $intakeMonths = $course->intake->where('intake_status', 1)
@@ -716,8 +758,16 @@ class studentController extends Controller
                     'school_location' => $course->school->school_google_map_location,
                     'school_status' => $course->course_status
                 ];
-            });
-            return $transformedCourses;
+            })->values(); // Apply values() to reindex the data
+
+            // Reset the collection in the paginator
+            $paginator->setCollection(collect($transformedCourses));
+
+            // Return the paginated response in the desired format
+            return response()->json($paginator);
+
+            // return $transformedCourses;
+
 
             return response()->json([
                 'success' => true,
@@ -731,7 +781,6 @@ class studentController extends Controller
             ], 500);
         }
     }
-
 
 
     public function studentDetail()
@@ -2484,7 +2533,10 @@ class studentController extends Controller
             $featuredInstituteList = stp_featured::where('school_id', '!=', null)
                 ->where('featured_type', $featuredType)
                 ->where('featured_status', 1)
+                ->where('featured_startTime', '<', now())
+                ->where('featured_endTime', '>', now())
                 ->where('id', '!=', $request->schoolId)
+                ->inRandomOrder()
                 ->get()
                 ->map(function ($institute) {
                     return [
@@ -2493,7 +2545,9 @@ class studentController extends Controller
                         'school_logo' => $institute->school->school_logo,
 
                     ];
-                });
+                })
+                ->unique('school_id');
+
 
             return response()->json([
                 'success' => true,
@@ -2531,7 +2585,10 @@ class studentController extends Controller
             $featuredCoursesList = stp_featured::where('course_id', '!=', null)
                 ->where('featured_type', $featuredType)
                 ->where('featured_status', 1)
+                ->where('featured_startTime', '<', now())
+                ->where('featured_endTime', '>', now())
                 ->where('course_id', '!=', $request->courseId)
+                ->inRandomOrder()
                 ->get()
                 ->map(function ($featured) {
                     return [
@@ -2545,7 +2602,9 @@ class studentController extends Controller
                         'state' => $featured->courses->school->state->state_name ?? null,
                         'country' => $featured->courses->school->country->country_name ?? null,
                     ];
-                });
+                })
+                ->unique('course_id');
+
             return response()->json([
                 'success' => true,
                 'data' => $featuredCoursesList

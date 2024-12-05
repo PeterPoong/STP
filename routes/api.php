@@ -231,9 +231,12 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/featuredRequestList', [AdminController::class, 'featuredRequestList']);
     Route::post('/addNewCourse', [AdminController::class, 'addNewCourse']);
 
+    Route::post('/adminFeaturedCourseList', [AdminController::class, 'adminFeaturedCourseList']);
     //update featured
     Route::post('/editFeaturedCourse', [AdminController::class, 'editFeaturedCourse']);
     Route::post('/editFeaturedSchool', [AdminController::class, 'editFeaturedSchool']);
+    Route::post('/editRequest', [AdminController::class, 'editRequest']);
+    Route::post('/adminFeaturedTypeListRequest', [AdminController::class, 'adminFeaturedTypeListRequest']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {

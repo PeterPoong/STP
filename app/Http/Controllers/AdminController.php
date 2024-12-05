@@ -4085,7 +4085,12 @@ class AdminController extends Controller
             $requestType = $request->requestType == "school" ? 84 : 83;
 
             // Set items per page (can be dynamic)
-            $perPage = 10;
+            // $perPage = 10;
+
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_featured::count() : (int)$request->per_page)
+                : 10;
+
 
             $featuredList = stp_featured_request::where('school_id', $request->school_id)
                 ->where('request_type', $requestType)
@@ -4098,10 +4103,12 @@ class AdminController extends Controller
                 ->when($request->filled('status'), function ($query) use ($request) {
                     $query->where('request_status', $request->status);
                 })
+                ->orderBy('created_at', 'desc')
                 ->paginate($perPage);
 
             // Transform the paginated collection
             $featuredList->getCollection()->transform(function ($item) use ($requestType) {
+                //course
                 if ($requestType == 84) {
                     // School featured logic
                     $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
@@ -4109,6 +4116,7 @@ class AdminController extends Controller
 
                         return [
                             'id' => $item->id,
+                            'school_id' => $item->school['id'] ?? null,
                             'school_name' => $item->school['school_name'] ?? null,
                             'start_date' => $item['featured_startTime'] ?? null,
                             'end_date' => $item['featured_endTime'] ?? null,
@@ -4133,8 +4141,10 @@ class AdminController extends Controller
                         'total_quantity' => $item->request_quantity,
                         'request_status' => $item->request_status,
                         'school_id' => $item->school['id'] ?? null,
-                        'school_name' => $item->school['school_name'] ?? null
+                        'school_name' => $item->school['school_name'] ?? null,
+                        'featured' => $usedFeatured
                     ];
+                    //school
                 } else {
                     // Course featured logic
                     $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
@@ -4311,24 +4321,26 @@ class AdminController extends Controller
                 'featured_courses' => 'nullable|array'
             ]);
 
-            $numberOfCourses = count($request->featured_courses);
+            if (filled($request->featured_courses)) {
+                $numberOfCourses = count($request->featured_courses);
 
-            //validate the number of the quantity tally with the request quantity
-            if ($numberOfCourses > $request->quantity) {
-                throw new Exception('you already reach the limit of your request quantity');
-            }
+                //validate the number of the quantity tally with the request quantity
+                if ($numberOfCourses > $request->quantity) {
+                    throw new Exception('you already reach the limit of your request quantity');
+                }
 
-            $courseIds = collect($request->featured_courses)->pluck('course_id')->toArray();
+                $courseIds = collect($request->featured_courses)->pluck('course_id')->toArray();
 
-            $findCourses = stp_course::where('school_id', $request->school_id)
-                ->whereIn('id', $courseIds)
-                ->pluck('id') // Get only the course IDs from the result
-                ->toArray();
+                $findCourses = stp_course::where('school_id', $request->school_id)
+                    ->whereIn('id', $courseIds)
+                    ->pluck('id') // Get only the course IDs from the result
+                    ->toArray();
 
-            $missingCourses = array_diff($courseIds, $findCourses);
+                $missingCourses = array_diff($courseIds, $findCourses);
 
-            if (!empty($missingCourses)) {
-                throw new Exception('Some  courses are not found');
+                if (!empty($missingCourses)) {
+                    throw new Exception('Some  courses are not found');
+                }
             }
 
 
@@ -4343,7 +4355,7 @@ class AdminController extends Controller
 
             $newRequest = stp_featured_request::create($requestFeaturedData);
             // $newRequest = 1;
-            if ($request->featured_courses != null) {
+            if (filled($request->featured_courses)) {
                 $newFeaturedCoursesList = collect($request->featured_courses)->map(function ($newFeaturedCourse) use ($request, $newRequest) {
                     // Perform your logic for each $newFeaturedCourse
                     $featuredStartTime = Carbon::parse($newFeaturedCourse['start_date']);
@@ -4430,11 +4442,16 @@ class AdminController extends Controller
             $request->validate([
                 'search' => "nullable|string",
                 'featured_type' => "nullable|integer",
-                "status" => "nullable|integer"
+                "status" => "nullable|integer",
+                "request_type" => "nullable|integer"
             ]);
 
             // Paginate the results
-            $perPage = 10; // You can set this dynamically or use a default value
+            // $perPage = 10; // You can set this dynamically or use a default value
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_featured_request::count() : (int)$request->per_page)
+                : 10;
+
             $featuredList = stp_featured_request::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('request_name', 'like', '%' . $request->search . '%') // Search in request_name
                     ->orWhereHas('school', function ($q) use ($request) { // Search in school_name via relationship
@@ -4446,6 +4463,9 @@ class AdminController extends Controller
                 })
                 ->when($request->filled('status'), function ($query) use ($request) {
                     $query->where('request_status', $request->status);
+                })
+                ->when($request->filled('request_type'), function ($query) use ($request) {
+                    $query->where('request_type', $request->request_type);
                 })
                 ->paginate($perPage); // Use paginate instead of get()
 
@@ -4621,7 +4641,7 @@ class AdminController extends Controller
             $findSchoolFeatured = stp_featured::find($request->featured_id);
 
             if (empty($findSchoolFeatured['school_id'])) {
-                throw new Exception('edit featured course unavailable');
+                throw new Exception('you are trying to edit featured course using this api which is not allowed');
             }
             if ($findSchoolFeatured['featured_startTime'] < now()) {
                 throw new Exception('Do not allow to edit date for ongoing featured');
@@ -4704,6 +4724,141 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => "false",
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function editRequest(Request $request)
+    {
+        try {
+            $request->validate([
+                'request_id' => 'required|integer',
+                'request_name' => 'required|string',
+                'featured_type' => 'nullable|integer',
+                'duration' => 'nullable|integer',
+            ]);
+            $findRequest = stp_featured_request::find($request->request_id);
+
+            $updateData = [
+                'request_name' => $request->request_name,
+            ];
+
+            $updateFeaturedData = [];
+
+            if (filled($request->duration)) {
+                $updateData['request_featured_duration'] = $request->duration;
+            }
+
+            if (filled($request->featured_type)) {
+                $updateData['featured_type'] = $request->featured_type;
+            }
+
+            $findRequest->update($updateData);
+
+            if (filled($request->duration) || filled($request->featured_type)) {
+                $allFeatured = $findRequest->featuredCourse;
+
+                foreach ($allFeatured as $featured) {
+                    $updateData = [];
+                    if (filled($request->duration)) {
+                        $startTime = Carbon::parse($featured['featured_startTime']);
+                        $endTime = $startTime->copy()->addDays($request->duration);
+                        $updateData['featured_endTime'] = $endTime;
+                    }
+
+                    if (filled($request->featured_type)) {
+                        $updateData['featured_type'] = $request->featured_type;
+                    }
+
+                    $featured->update($updateData);
+                }
+            }
+
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => "Successfully update request"
+                ]
+            ]);
+
+
+
+
+
+
+            return $findRequest;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function adminFeaturedTypeListRequest(Request $request)
+    {
+        try {
+            $request->validate([
+                'request_type' => 'required|string'
+            ]);
+
+            if ($request->request_type == "course") {
+                $data = stp_core_meta::whereIn('id', [29, 30, 31])->get()->map(function ($item) {
+                    return [
+                        'id' => $item['id'],
+                        'featured_type' => $item['core_metaName']
+                    ];
+                });
+            } else {
+                $data = stp_core_meta::whereIn('id', [28, 30, 31])->get()->map(function ($item) {
+                    return [
+                        'id' => $item['id'],
+                        'featured_type' => $item['core_metaName']
+                    ];
+                });
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function adminFeaturedCourseList(Request $request)
+    {
+        try {
+            $request->validate([
+                'school_id' => 'required|integer'
+            ]);
+
+            $courseList = stp_course::where('school_id', $request->school_id)
+                ->where('course_status', 1)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item['id'],
+                        'course_name' => $item['course_name']
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $courseList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ]);
