@@ -222,10 +222,23 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post("/editDataStatus", [AdminController::class, 'editDataStatus']);
 
     //request featured
-    Route::post('/featuredRequestList', [AdminController::class, 'featuredRequestList']);
-    Route::post('/featuredRequestDetail', [AdminController::class, 'featuredRequestDetail']);
-    Route::post('/getFeaturedList', [AdminController::class, 'getFeaturedList']);
+    // Route::post('/featuredSchoolRequestList', [AdminController::class, 'featuredSchoolRequestList']);
+    // Route::post('/featuredCourseRequestList', [AdminController::class, 'featuredCourseRequestList']);
+    Route::post('/schoolFeaturedSchoolCourseRequestList', [AdminController::class, 'schoolFeaturedSchoolCourseRequestList']);
+    // Route::post('/featuredRequestDetail', [AdminController::class, 'featuredRequestDetail']);
     Route::post('/updateRequestFeatured', [AdminController::class, 'updateRequestFeatured']);
+    Route::post('/adminApplyFeaturedCourseRequest', [AdminController::class, 'adminApplyFeaturedCourseRequest']);
+    Route::post('/adminApplyFeaturedSchoolRequest', [AdminController::class, 'adminApplyFeaturedSchoolRequest']);
+    Route::post('/adminFeaturedCourseAvailable', [AdminController::class, 'adminFeaturedCourseAvailable']);
+    Route::post('/featuredRequestList', [AdminController::class, 'featuredRequestList']);
+    Route::post('/addNewCourse', [AdminController::class, 'addNewCourse']);
+
+    Route::post('/adminFeaturedCourseList', [AdminController::class, 'adminFeaturedCourseList']);
+    //update featured
+    Route::post('/editFeaturedCourse', [AdminController::class, 'editFeaturedCourse']);
+    Route::post('/editFeaturedSchool', [AdminController::class, 'editFeaturedSchool']);
+    Route::post('/editRequest', [AdminController::class, 'editRequest']);
+    Route::post('/adminFeaturedTypeListRequest', [AdminController::class, 'adminFeaturedTypeListRequest']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {
@@ -304,9 +317,15 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('requestCoursesFeatured', [SchoolController::class, 'requestCoursesFeatured']);
     Route::post('requestFeaturedSchool', [SchoolController::class, 'requestFeaturedSchool']);
     Route::post('applyFeaturedCourse', [SchoolController::class, 'applyFeaturedCourse']);
-    Route::get('courseFeaturedList', [SchoolController::class, 'courseFeaturedList']);
+
+    Route::post('courseRequestFeaturedList', [SchoolController::class, 'courseRequestFeaturedList']);
+    Route::post('schoolRequestFeaturedList', [SchoolController::class, 'schoolRequestFeaturedList']);
+    Route::post('schoolFeaturedRequestLists', [SchoolController::class, 'schoolFeaturedRequestLists']);
+
+
     Route::post('featuredCourseAvailable', [SchoolController::class, 'featuredCourseAvailable']);
-    Route::post('replaceFeaturedCourse', [SchoolController::class, 'replaceFeaturedCourse']);
+    Route::post('editFeaturedCourseSetting', [SchoolController::class, 'editFeaturedCourseSetting']);
+    Route::post('editSchoolFeaturedSetting', [SchoolController::class, 'editSchoolFeaturedSetting']);
     Route::get('schoolFeaturedType', [SchoolController::class, 'schoolFeaturedType']);
 
     Route::get('testFeaturedRequest', [SchoolController::class, 'testFeaturedRequest']);

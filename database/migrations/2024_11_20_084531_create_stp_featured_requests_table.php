@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('school_id')->nullable()->constrained('stp_schools')->onDelete('set null');
             $table->foreignId('featured_type')->nullable()->constrained('stp_core_metas')->onDelete('set null');
             $table->foreignId('request_id')->nullable()->constrained('stp_featured_requests')->onDelete('set null');
+            $table->dateTime('start_date')->nullable();
             $table->integer('request_quantity')->nullable();
             $table->integer('featured_duration')->nullable();
             $table->string('request_transaction_prove')->nullable();
