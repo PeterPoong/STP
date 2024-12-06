@@ -53,13 +53,12 @@ class studentController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             return response()->json([
                 'success' => true,
                 'hasAgreed' => (bool)$user->terms_agreed,
                 'agreedAt' => $user->terms_agreed_at
             ]);
-
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
@@ -74,10 +73,10 @@ class studentController extends Controller
             $request->validate([
                 'agreed' => 'required|boolean'
             ]);
-    
+
             // Get the authenticated student using Sanctum
             $student = auth('sanctum')->user();
-            
+
             if (!$student) {
                 \Log::error('Student not found in agreeTerms');
                 return response()->json([
@@ -85,29 +84,29 @@ class studentController extends Controller
                     'message' => 'Student not authenticated'
                 ], 401);
             }
-    
+
             \Log::info('Updating terms agreement for student:', [
                 'student_id' => $student->id,
                 'student_email' => $student->student_email
             ]);
-    
+
             // Update only the authenticated student's terms agreement
             $updated = $student->update([
                 'terms_agreed' => true,
                 'terms_agreed_at' => now(),
                 'updated_by' => $student->id
             ]);
-    
+
             if (!$updated) {
                 throw new Exception('Failed to update terms agreement');
             }
-    
+
             \Log::info('Terms agreement updated successfully for student:', [
                 'student_id' => $student->id,
                 'terms_agreed' => $student->terms_agreed,
                 'terms_agreed_at' => $student->terms_agreed_at
             ]);
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Terms agreement updated successfully',
@@ -116,7 +115,6 @@ class studentController extends Controller
                     'agreedAt' => $student->terms_agreed_at
                 ]
             ]);
-    
         } catch (ValidationException $e) {
             \Log::error('Validation error in agreeTerms:', [
                 'errors' => $e->errors()
@@ -575,7 +573,9 @@ class studentController extends Controller
                         'schoolLogo' => $school->school->school_logo
                     ]);
                 })
-                ->unique('schoolID');
+                ->unique('schoolID')
+                ->values();
+
             return response()->json([
                 'success' => true,
                 'data' => $hpFeaturedSchoolList
