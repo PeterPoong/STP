@@ -684,7 +684,7 @@ class studentController extends Controller
 
             $filterConditions = function ($query) use ($request) {
                 $query->whereHas('school', function ($q) {
-                    $q->whereIn('school_status', [1, 3]);
+                    $q->whereIn('school_status', ["1", "3"]);
                 })
                     ->where('course_status', '!=', 0)
                     ->when($request->filled('qualification'), function ($q) use ($request) {
@@ -743,6 +743,9 @@ class studentController extends Controller
                         ->where('stp_featureds.featured_status', 1);
                 })
                 ->where($filterConditions)
+                ->whereHas('school', function ($q) {
+                    $q->whereIn('school_status', ["1", "3"]);
+                })
                 ->inRandomOrder() // Randomize each time
                 ->take($featuredLimit)
                 ->get()
@@ -783,10 +786,16 @@ class studentController extends Controller
                         ->where('featured_endTime', '>', now());
                 })
                 ->where($filterConditions)
-                // ->inRandomOrder()
+                ->whereHas('school', function ($q) {
+                    $q->whereIn('school_status', ["1", "3"]);
+                })
+                ->inRandomOrder()
                 ->skip($offset)
                 ->take($nonFeaturedLimit)
                 ->get();
+
+
+
 
 
 
@@ -800,10 +809,15 @@ class studentController extends Controller
                 ->leftJoin('stp_featureds', function ($join) {
                     $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
                         ->where('stp_featureds.featured_type', 30)
-                        ->where('stp_featureds.featured_status', 1);
+                        ->where('stp_featureds.featured_status', 1)
+                        ->where('featured_startTime', '<', now())
+                        ->where('featured_endTime', '>', now());
                 })
                 ->whereNull('stp_featureds.course_id')
                 ->where($filterConditions)
+                ->whereHas('school', function ($q) {
+                    $q->whereIn('school_status', ["1", "3"]);
+                })
                 ->count();
 
             // Paginate the combined result
