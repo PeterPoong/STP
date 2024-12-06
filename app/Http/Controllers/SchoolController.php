@@ -3117,7 +3117,8 @@ class SchoolController extends Controller
                         'total_quantity' => $item->request_quantity,
                         'request_status' => $item->request_status,
                         'school_id' => $item->school['id'] ?? null,
-                        'school_name' => $item->school['school_name'] ?? null
+                        'school_name' => $item->school['school_name'] ?? null,
+                        'featured' => $usedFeatured
                     ];
                 } else {
                     // Course featured logic
