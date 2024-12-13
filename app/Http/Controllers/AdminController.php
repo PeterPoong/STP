@@ -4160,7 +4160,18 @@ class AdminController extends Controller
                 if ($requestType == 84) {
                     // School featured logic
                     $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
-                        $featuredCourseStatus = $item['featured_endTime'] < now() ? "Expired" : "Ongoing";
+                        // $featuredCourseStatus = $item['featured_endTime'] < now() ? "Expired" : "Ongoing";
+                        if ($item['featured_startTime'] > now() && $item['featured_endTime'] > now()) {
+                            $featuredSchoolStatus = "Schedule";
+                        }
+
+                        if ($item['featured_startTime'] < now() && $item['featured_endTime'] > now()) {
+                            $featuredSchoolStatus = "Ongoing";
+                        }
+
+                        if ($item['featured_startTime'] < now() && $item['featured_endTime'] < now()) {
+                            $featuredSchoolStatus = "Expired";
+                        }
 
                         return [
                             'id' => $item->id,
@@ -4168,7 +4179,7 @@ class AdminController extends Controller
                             'school_name' => $item->school['school_name'] ?? null,
                             'start_date' => $item['featured_startTime'] ?? null,
                             'end_date' => $item['featured_endTime'] ?? null,
-                            'status' => $featuredCourseStatus,
+                            'status' => $featuredSchoolStatus,
                             'day_left' => abs(Carbon::now()->startOfDay()->diffInDays(Carbon::parse($item['featured_endTime'])->startOfDay())),
                         ];
                     });
@@ -4624,6 +4635,8 @@ class AdminController extends Controller
             });
 
             // Return paginated response
+
+
             return response()->json([
                 'success' => true,
                 'data' => $featuredList

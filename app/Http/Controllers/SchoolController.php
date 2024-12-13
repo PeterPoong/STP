@@ -32,6 +32,7 @@ use App\Http\Controllers\serviceFunctionController;
 use App\Models\stp_cgpa;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_core_meta;
+use App\Models\stp_featured_price;
 use App\Models\stp_featured_request;
 use App\Models\stp_higher_transcript;
 use App\Models\stp_intake;
@@ -40,6 +41,7 @@ use App\Models\stp_school_media;
 use PHPUnit\TextUI\Help;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Http\Client\ResponseSequence;
 use Throwable;
 
 use function Laravel\Prompts\error;
@@ -2961,18 +2963,32 @@ class SchoolController extends Controller
                 throw new \Exception('You do not register such course');
             }
 
+
+
+
             $findFeatured = stp_featured::find($request->featured_id);
+            if (!$findFeatured) {
+                throw new \Exception('Featured record not found.');
+            }
+            $updateData = [
+                'course_id' => $request->newCourse_id
+            ];
 
             if ($request->filled('startDate')) {
                 if ($findFeatured['featured_startTime'] < now()) {
                     throw new \Exception('You cant change ongoing featured course date');
                 }
+
+                $updateData['featured_startTime'] = $request->startDate;
             }
 
-            $updateFeaturedData = $findFeatured->update([
-                'featured_startTime' => $request->startDate,
-                'course_id' => $request->newCourse_id
-            ]);
+
+
+
+
+
+
+            $updateFeaturedData = $findFeatured->update($updateData);
             if ($updateFeaturedData) {
                 return response()->json([
                     'success' => true,
@@ -3089,14 +3105,27 @@ class SchoolController extends Controller
                 if ($requestType == 84) {
                     // School featured logic
                     $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
-                        $featuredCourseStatus = $item['featured_endTime'] < now() ? "Expired" : "Ongoing";
+                        // $featuredCourseStatus = $item['featured_endTime'] < now() ? "Expired" : "Ongoing";
+
+                        if ($item['featured_startTime'] > now() && $item['featured_endTime'] > now()) {
+                            $featuredSchoolStatus = "Schedule";
+                        }
+
+                        if ($item['featured_startTime'] < now() && $item['featured_endTime'] > now()) {
+                            $featuredSchoolStatus = "Ongoing";
+                        }
+
+                        if ($item['featured_startTime'] < now() && $item['featured_endTime'] < now()) {
+                            $featuredSchoolStatus = "Expired";
+                        }
+
 
                         return [
                             'id' => $item->id,
                             'school_name' => $item->school['school_name'] ?? null,
                             'start_date' => $item['featured_startTime'] ?? null,
                             'end_date' => $item['featured_endTime'] ?? null,
-                            'status' => $featuredCourseStatus,
+                            'status' => $featuredSchoolStatus ?? null,
                             'day_left' => abs(Carbon::now()->startOfDay()->diffInDays(Carbon::parse($item['featured_endTime'])->startOfDay())),
                         ];
                     });
@@ -3123,7 +3152,18 @@ class SchoolController extends Controller
                 } else {
                     // Course featured logic
                     $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
-                        $featuredCourseStatus = $item['featured_endTime'] < now() ? "Expired" : "Ongoing";
+                        // $featuredCourseStatus = $item['featured_endTime'] < now() ? "Expired" : "Ongoing";
+                        if ($item['featured_startTime'] > now() && $item['featured_endTime'] > now()) {
+                            $featuredCourseStatus = "Schedule";
+                        }
+
+                        if ($item['featured_startTime'] < now() && $item['featured_endTime'] > now()) {
+                            $featuredCourseStatus = "Ongoing";
+                        }
+
+                        if ($item['featured_startTime'] < now() && $item['featured_endTime'] < now()) {
+                            $featuredCourseStatus = "Expired";
+                        }
 
                         return [
                             'id' => $item->id,
@@ -3178,6 +3218,44 @@ class SchoolController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $featuredList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
+    public function schoolFeaturedPriceList(Request $request)
+    {
+        try {
+            $request->validate([
+                'featured_type' => 'required|string'
+            ]);
+
+            // return $request->featured_type;
+            if ($request->featured_type !== "course" && $request->featured_type !== "school") {
+                throw new Exception('Only Accept course and school');
+            }
+
+
+            $getPrice = stp_featured_price::where('featured_type', $request->featured_type)
+                ->where('stp_featured_price_status', 1)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'featured_id' => $item->featured_name['id'],
+                        'featured_name' => $item->featured_name['core_metaName'],
+                        'price' => $item->featured_price
+                    ];
+                });
+            return response()->json([
+                'success' => true,
+                'data' => $getPrice
             ]);
         } catch (\Exception $e) {
             return response()->json([

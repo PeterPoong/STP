@@ -327,6 +327,7 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('editFeaturedCourseSetting', [SchoolController::class, 'editFeaturedCourseSetting']);
     Route::post('editSchoolFeaturedSetting', [SchoolController::class, 'editSchoolFeaturedSetting']);
     Route::get('schoolFeaturedType', [SchoolController::class, 'schoolFeaturedType']);
+    Route::post('schoolFeaturedPriceList', [SchoolController::class, 'schoolFeaturedPriceList']);
 
     Route::get('testFeaturedRequest', [SchoolController::class, 'testFeaturedRequest']);
 });
