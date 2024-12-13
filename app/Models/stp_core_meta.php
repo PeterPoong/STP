@@ -144,4 +144,9 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_featured_request::class, 'request_type', 'id');
     }
+
+    public function featuredPrice(): HasMany
+    {
+        return $this->hasMany(stp_featured_price::class, 'featured_id', 'id');
+    }
 }
