@@ -192,7 +192,7 @@ class AdminController extends Controller
     public function studentList(Request $request)
     {
         $user = $request->user();
-        $studentList = stp_student::where('student_status', 1)->get();
+        $studentList = stp_student::where('student_status', 1)->orderBy('created_at', 'desc')->get();
         return response()->json([
             "success" => true,
             "data" => $studentList
