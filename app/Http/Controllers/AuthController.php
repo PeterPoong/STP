@@ -414,9 +414,23 @@ class AuthController extends Controller
                 ->where('student_contactNo', $request->contact_number)
                 ->exists();
 
+            $checkingUserEmail = stp_student::where('student_email', $request->email)
+                // ->where('student_status', 1)
+                ->exists();
+
+
+
+
+
             if ($checkingUser) {
                 throw ValidationException::withMessages([
                     'contact_no' => ['Contact has been used'],
+                ]);
+            }
+
+            if ($checkingUserEmail) {
+                throw ValidationException::withMessages([
+                    'email' => ['Email has been used'],
                 ]);
             }
 
