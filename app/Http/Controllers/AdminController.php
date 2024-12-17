@@ -210,7 +210,7 @@ class AdminController extends Controller
             $studentList = stp_student::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_userName', 'like', '%' . $request->search . '%');
             })
-
+                ->orderBy('created_at', 'desc')
                 ->paginate($perPage)
                 ->through(function ($student) {
                     switch ($student->student_status) {
