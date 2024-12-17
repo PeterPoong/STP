@@ -234,6 +234,8 @@ class AdminController extends Controller
                         'id' => $student->id,
                         'name' => $student->student_userName,
                         'email' => $student->student_email,
+                        'contact_number' => $student->student_countryCode . $student->student_contactNo,
+                        'created_at' => Carbon::parse($student->created_at)->format('Y-m-d H:i'),
                         'status' => $status
                     ];
                 });
@@ -517,7 +519,7 @@ class AdminController extends Controller
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255',
-                'school_fullDesc' => 'required|string|max:5000',
+                'school_fullDesc' => 'required',
                 'school_shortDesc' => 'required|string|max:255',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Add cover photo validation
@@ -1236,8 +1238,8 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation Error',
-                'error' => $e->errors()
-            ]);
+                'errors' => $e->errors()
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -1283,9 +1285,40 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function courseListFeatured(Request $request)
+    {
+        try {
+            $courseList = stp_course::when($request->filled('search'), function ($query) use ($request) {
+                $query->where('course_name', 'like', '%' . $request->search . '%');
+            })
+                ->when($request->filled('school_id'), function ($query) use ($request) {
+                    $query->where('school_id', $request->school_id);
+                })
+                ->where('course_status', 1) // Only get active courses
+                ->whereHas('school', function ($query) {
+                    $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
+                })
+                ->get()
+                ->map(function ($course) {
+                    return [
+                        'id' => $course->id,
+                        'name' => $course->course_name,
+                    ];
+                });
 
+            return response()->json([
+                'success' => true,
+                'data' => $courseList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function courseListAdmin(Request $request)
-
     {
         try {
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -1296,6 +1329,9 @@ class AdminController extends Controller
             $courseList = stp_course::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('course_name', 'like', '%' . $request->search . '%');
             })
+                ->when($request->filled('school_id'), function ($query) use ($request) {
+                    $query->where('school_id', $request->school_id);
+                })
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
                 })
@@ -1484,7 +1520,6 @@ class AdminController extends Controller
 
             $newIntakes = array_diff($request->intake, $existingIntakes);
             $removeIntakes = array_diff($existingIntakes, $request->intake);
-
             // Insert new intakes
             foreach ($newIntakes as $intake) {
                 stp_intake::updateOrCreate(
@@ -1492,7 +1527,6 @@ class AdminController extends Controller
                     ['intake_status' => 1, 'created_by' => $authUser->id, 'updated_at' => now()]
                 );
             }
-
             // Deactivate removed intakes
             stp_intake::where('course_id', $request->id)
                 ->whereIn('intake_month', $removeIntakes)
@@ -1556,9 +1590,9 @@ class AdminController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => "Validation Error",
+                'message' => 'Validation Error',
                 'errors' => $e->errors()
-            ]);
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -1772,7 +1806,7 @@ class AdminController extends Controller
             $request->validate([
                 'name' => 'required|string|unique:stp_courses_categories,category_name',
                 'icon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validationt
-                'description' => 'string|max:5000'
+                'description' => 'nullable|string|max:5000'
             ]);
             $authUser = Auth::user();
 
@@ -1799,7 +1833,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid Validation',
-                'error' => $e->errors()
+                'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
@@ -1868,7 +1902,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid Validation',
-                'error' => $e->errors()
+                'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
@@ -2022,7 +2056,6 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
     public function searchTag(Request $request)
     {
         try {
@@ -2112,9 +2145,9 @@ class AdminController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => "Validation Error",
-                'error' => $e->errors()
-            ]);
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => true,
@@ -2129,7 +2162,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'id' => 'required|integer',
-                'name' => 'required|string',
+                'name' => 'required|string|max:255',
                 'category' => 'required|integer'
             ]);
             $authUser = Auth::user();
@@ -2144,6 +2177,12 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => ['message' => "Update Successfully"]
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => true,
@@ -2688,6 +2727,12 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => ['message' => "Update Applicant Successfully"]
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -2725,9 +2770,9 @@ class AdminController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => "Validation Error",
-                'error' => $e->errors()
-            ]);
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => true,
@@ -2763,11 +2808,17 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => ['message' => "Update Package Successfully"]
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
-                'success' => true,
+                'succcess' => false,
                 'message' => 'Internal Server Error',
-                'error' => $e->getMessage()
+                'errors' => $e->getMessage()
             ], 500);
         }
     }
@@ -3535,22 +3586,21 @@ class AdminController extends Controller
                     'message' => 'Successfully Added the Banner(s)',
                     'banners' => $bannersCreated // Optionally return the created banners
                 ]
-            ]);
+            ], 201); // Use 201 for successful resource creation
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation Error',
                 'errors' => $e->errors()
-            ]);
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
                 'errors' => $e->getMessage()
-            ]);
+            ], 500); // Use 500 for unexpected server errors
         }
     }
-
 
     public function editBanner(Request $request)
     {
@@ -3611,9 +3661,9 @@ class AdminController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => "Validation Error",
+                'message' => 'Validation Error',
                 'errors' => $e->errors()
-            ]);
+            ], 422); // Explicitly return 422 for validation errors
         } catch (\Exception $e) {
             return response()->json([
                 "success" => false,
@@ -4268,6 +4318,80 @@ class AdminController extends Controller
     //         ]);
     //     }
     // }
+
+    public function getFeaturedList(Request $request)
+    {
+        try {
+            // Validate request parameters
+            $request->validate([
+                'school_id' => 'nullable|integer'
+            ]);
+
+            // Build the query
+            $query = stp_featured_request::with(['featuredCourse.courses', 'school', 'featured']);
+
+            // Apply school_id filter if provided
+            if ($request->filled('school_id')) {
+                $query->where('school_id', $request->school_id);
+            }
+
+            // Execute query and transform data
+            $featuredRequests = $query->get() // Use get() instead of paginate()
+                ->map(function ($request) {
+                    $featuredData = $request->featuredCourse;
+                    $data = [];
+
+                    // Add course names if request_type is 83 (course)
+                    if ($request->request_type == 83) {
+                        $data['course_names'] = $featuredData->map(function ($featured) {
+                            return [
+                                'id' => $featured->courses->id ?? 'No Data Available',
+                                'featured_id' => $featured->id ?? 'No Data Available',
+                                'request_id' => $featured->request_id ?? 'No Data Available',
+                                'name' => $featured->courses->course_name ?? 'No Data Available',
+                                'start_date' => $featured->featured_startTime ?? 'No Data Available',
+                                'end_date' => $featured->featured_endTime ?? 'No Data Available',
+                                'featured_status' => $featured->featured_status ?? 'No Data Available',
+                                'request_status' => $featured->featured->request_status ?? 'No Data Available',
+                            ];
+                        })->filter()->values();
+                    }
+
+                    // Add school name if request_type is 84 (school)
+                    if ($request->request_type == 84) {
+                        $data['school'] = [
+                            'id' => $request->school->id ?? 'No Data Available',
+                            'featured_id' => $request->id ?? 'No Data Available',
+                            'request_id' => $request->id ?? 'No Data Available',
+                            'name' => $request->school->school_name ?? 'No Data Available',
+                            'start_date' => $request->featured_startTime ?? 'No Data Available',
+                            'end_date' => $request->featured_endTime ?? 'No Data Available',
+                            'featured_status' => $request->featured_status ?? 'No Data Available',
+                            'request_status' => $request->request_status ?? 'No Data Available',
+                        ];
+                    }
+
+                    return $data;
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $featuredRequests
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function updateRequestFeatured(Request $request)
     {
