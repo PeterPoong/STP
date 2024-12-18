@@ -207,10 +207,11 @@ class AdminController extends Controller
                 ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
                 : 10;
 
-            $studentList = stp_student::when($request->filled('search'), function ($query) use ($request) {
+            $query = stp_student::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_userName', 'like', '%' . $request->search . '%');
-            })
-                ->orderBy('created_at', 'desc')
+            });
+            $totalCount = $query->count();
+            $studentList = $query->orderBy('created_at', 'desc')
                 ->paginate($perPage)
                 ->through(function ($student) {
                     switch ($student->student_status) {
@@ -239,6 +240,12 @@ class AdminController extends Controller
                         'status' => $status
                     ];
                 });
+            // return response()->json([
+            //     'current_page' => $studentList->currentPage(),
+            //     'total' => $totalCount, // Add the total number of filtered records
+            //     'data' => $studentList->items() // Paginated data for the current page
+            // ]);
+
             return response()->json($studentList);
         } catch (\Exception $e) {
             return response()->json([
