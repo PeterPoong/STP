@@ -1176,7 +1176,7 @@ class AdminController extends Controller
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'string|max:5000',
-                'requirement' => 'string|max:255',
+                'requirement' => 'string|max:5000',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
