@@ -207,10 +207,11 @@ class AdminController extends Controller
                 ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
                 : 10;
 
-            $studentList = stp_student::when($request->filled('search'), function ($query) use ($request) {
+            $query = stp_student::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_userName', 'like', '%' . $request->search . '%');
-            })
-                ->orderBy('created_at', 'desc')
+            });
+            $totalCount = $query->count();
+            $studentList = $query->orderBy('created_at', 'desc')
                 ->paginate($perPage)
                 ->through(function ($student) {
                     switch ($student->student_status) {
@@ -234,9 +235,17 @@ class AdminController extends Controller
                         'id' => $student->id,
                         'name' => $student->student_userName,
                         'email' => $student->student_email,
+                        'contact_number' => $student->student_countryCode . $student->student_contactNo,
+                        'created_at' => Carbon::parse($student->created_at)->format('Y-m-d H:i'),
                         'status' => $status
                     ];
                 });
+            // return response()->json([
+            //     'current_page' => $studentList->currentPage(),
+            //     'total' => $totalCount, // Add the total number of filtered records
+            //     'data' => $studentList->items() // Paginated data for the current page
+            // ]);
+
             return response()->json($studentList);
         } catch (\Exception $e) {
             return response()->json([
@@ -1167,7 +1176,7 @@ class AdminController extends Controller
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'string|max:5000',
-                'requirement' => 'string|max:255',
+                'requirement' => 'string|max:5000',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
