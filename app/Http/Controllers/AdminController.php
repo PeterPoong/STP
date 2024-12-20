@@ -258,50 +258,76 @@ class AdminController extends Controller
     public function editStudent(Request $request)
     {
         try {
+            // $request->validate([
+            //     'id' => 'required|integer',
+            //     'name' => 'required|string|max:255',
+            //     'first_name' => 'string|max:255',
+            //     'last_name' => 'string|max:255',
+            //     'address' => 'string|max:255',
+            //     'country' => 'integer',
+            //     'city' => 'integer',
+            //     'state' => 'integer',
+            //     'gender' => 'integer',
+            //     'postcode' => 'string',
+            //     'ic' => 'string|min:6',
+            //     'password' => 'string|min:8|nullable', // Allow password to be nullable
+            //     'confirm_password' => 'string|min:8|nullable|same:password', // Allow confirm_password to be nullable
+            //     'country_code' => 'required',
+            //     'contact_number' => 'required|numeric|digits_between:1,15',
+            //     'email' => 'required|string|email|max:255',
+            //     'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000' // Image validation
+            // ]);
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'first_name' => 'string|max:255',
-                'last_name' => 'string|max:255',
-                'address' => 'string|max:255',
-                'country' => 'integer',
-                'city' => 'integer',
-                'state' => 'integer',
-                'gender' => 'integer',
-                'postcode' => 'string',
-                'ic' => 'string|min:6',
-                'password' => 'string|min:8|nullable', // Allow password to be nullable
-                'confirm_password' => 'string|min:8|nullable|same:password', // Allow confirm_password to be nullable
-                'country_code' => 'required',
-                'contact_number' => 'required|numeric|digits_between:1,15',
+                'first_name' => 'nullable|string|max:255',
+                'last_name' => 'nullable|string|max:255',
+                'address' => 'nullable|string|max:255',
+                'country' => 'nullable|integer',
+                'city' => 'nullable|integer',
+                'state' => 'nullable|integer',
+                'gender' => 'nullable|integer',
+                'postcode' => 'nullable|string',
+                'ic' => 'nullable|string|min:6',
+                'password' => 'nullable|string|min:8|nullable', // Allow password to be nullable
+                'confirm_password' => 'nullable|string|min:8|nullable|same:password', // Allow confirm_password to be nullable
+                'country_code' => 'nullable|integer',
+                'contact_number' => 'nullable|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000' // Image validation
             ]);
 
             $authUser = Auth::user();
 
-            // Check IC number uniqueness
-            $checkingIc = stp_student::where('student_icNumber', $request->ic)
-                ->where('id', '!=', $request->id)
-                ->exists();
+            //if ic is not null
+            if ($request->ic != null) {
+                // Check IC number uniqueness
+                $checkingIc = stp_student::where('student_icNumber', $request->ic)
+                    ->where('id', '!=', $request->id)
+                    ->exists();
 
-            if ($checkingIc) {
-                throw ValidationException::withMessages([
-                    'ic' => ['IC has been used'],
-                ]);
+                if ($checkingIc) {
+                    throw ValidationException::withMessages([
+                        'ic' => ['IC has been used'],
+                    ]);
+                }
             }
+
 
             // Check contact number uniqueness
-            $checkingUserContact = stp_student::where('student_countryCode', $request->country_code)
-                ->where('student_contactNo', $request->contact_number)
-                ->where('id', '!=', $request->id)
-                ->exists();
+            if ($request->country_code != null &&  $request->contact_number != null) {
+                $checkingUserContact = stp_student::where('student_countryCode', $request->country_code)
+                    ->where('student_contactNo', $request->contact_number)
+                    ->where('id', '!=', $request->id)
+                    ->exists();
 
-            if ($checkingUserContact) {
-                throw ValidationException::withMessages([
-                    'contact_number' => ['Contact number has been used'],
-                ]);
+                if ($checkingUserContact) {
+                    throw ValidationException::withMessages([
+                        'contact_number' => ['Contact number has been used'],
+                    ]);
+                }
             }
+
 
             $student = stp_student::find($request->id);
             $studentDetail = $student->detail;
@@ -332,10 +358,10 @@ class AdminController extends Controller
             // Update student information
             $updateData = [
                 "student_userName" => $request->name,
-                'student_icNumber' => $request->ic,
+                'student_icNumber' => $request->ic ?? null,
                 'student_email' => $request->email,
-                'student_countryCode' => $request->country_code,
-                'student_contactNo' => $request->contact_number,
+                'student_countryCode' => $request->country_code ?? null,
+                'student_contactNo' => $request->contact_number ?? null,
                 'updated_by' => $authUser->id
             ];
 
@@ -347,6 +373,10 @@ class AdminController extends Controller
             $updateingStudent = $student->update($updateData);
 
             // Update student details
+            if ($studentDetail == null) {
+                throw new Exception('student detail not found');
+            }
+
             $updatingDetail = $studentDetail->update([
                 "student_detailFirstName" => $request->first_name ?? "",
                 "student_detailLastName" => $request->last_name ?? "",
@@ -683,49 +713,66 @@ class AdminController extends Controller
     public function editSchool(Request $request)
     {
         try {
+            // $request->validate([
+            //     'id' => 'required|integer',
+            //     'name' => 'required|string|max:255',
+            //     'country_code' => 'required',
+            //     'contact_number' => 'required|numeric|digits_between:1,15',
+            //     'email' => 'required|string|email|max:255|email',
+            //     'school_fullDesc' => 'required|string|max:5000',
+            //     'school_shortDesc' => 'required|string|max:255',
+            //     'school_location' => 'required|string',
+            //     'school_google_map_location' => 'required|string',
+            //     'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+            //     'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+            //     'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+            //     'featured' => 'nullable|array',
+            //     'person_in_charge_name' => 'required|string|max:255',
+            //     'person_in_charge_contact' => 'required|string|max:255',
+            //     'person_in_charge_email' => 'required|email',
+            //     'category' => 'required|integer',
+            //     'account' => 'required|integer',
+
+            // ]);
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'country_code' => 'required',
-                'contact_number' => 'required|numeric|digits_between:1,15',
+                'country_code' => 'nullable',
+                'contact_number' => 'nullable|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255|email',
-                'school_fullDesc' => 'required|string|max:5000',
-                'school_shortDesc' => 'required|string|max:255',
-                'school_location' => 'required|string',
-                'school_google_map_location' => 'required|string',
+                'school_fullDesc' => 'nullable|string|max:5000',
+                'school_shortDesc' => 'nullable|string|max:255',
+                'school_location' => 'nullable|string',
+                'school_google_map_location' => 'nullable|string',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'cover' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'album.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'featured' => 'nullable|array',
-                'person_in_charge_name' => 'required|string|max:255',
-                'person_in_charge_contact' => 'required|string|max:255',
-                'person_in_charge_email' => 'required|email',
-                'category' => 'required|integer',
+                'person_in_charge_name' => 'nullable|string|max:255',
+                'person_in_charge_contact' => 'nullable|string|max:255',
+                'person_in_charge_email' => 'nullable|email',
+                'category' => 'nullable|integer',
+                'school_website' => 'nullable|string',
                 'account' => 'required|integer',
 
             ]);
 
             $authUser = Auth::user();
-            // Check if email is used by another school
-            // $checkingEmail = stp_school::where('id', '!=', $request->id)
-            //     ->where('school_email', $request->email)
-            //     ->exists();
-            // if ($checkingEmail) {
-            //     throw ValidationException::withMessages([
-            //         'email' => ['Email has been used'],
-            //     ]);
-            // }
+
 
             // Check if contact number is used by another school
-            $checkingUserContact = stp_school::where('school_countryCode', $request->country_code)
-                ->where('school_contactNo', $request->contact_number)
-                ->where('id', '!=', $request->id)
-                ->exists();
-            if ($checkingUserContact) {
-                throw ValidationException::withMessages([
-                    'contact_no' => ['Contact number has been used'],
-                ]);
+            if ($request->country_code !== null &&  $request->contact_number !== null) {
+                $checkingUserContact = stp_school::where('school_countryCode', $request->country_code)
+                    ->where('school_contactNo', $request->contact_number)
+                    ->where('id', '!=', $request->id)
+                    ->exists();
+                if ($checkingUserContact) {
+                    throw ValidationException::withMessages([
+                        'contact_no' => ['Contact number has been used'],
+                    ]);
+                }
             }
+
 
             $school = stp_school::find($request->id);
 
@@ -864,6 +911,9 @@ class AdminController extends Controller
                 'school_location' => $request->school_location,
                 'school_google_map_location' => $request->school_google_map_location,
                 'school_logo' => $imagePath ?? $school->school_logo,
+                'person_inChargeEmail' => $request->person_in_charge_email,
+                'person_inChargeNumber' => $request->person_in_charge_contact,
+                'person_inChargeName' => $request->person_in_charge_name,
                 'account_type' => $request->account,
                 'updated_by' => $authUser->id
             ]);
@@ -1459,20 +1509,37 @@ class AdminController extends Controller
             $authUser = Auth::user();
 
             // Validate request
+            // $request->validate([
+            //     'id' => 'required|integer',
+            //     'name' => 'required|string|max:255',
+            //     'schoolID' => 'required|integer',
+            //     'description' => 'nullable|string|max:5000',
+            //     'requirement' => 'required|string|max:255',
+            //     'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
+            //     'period' => 'required|string|max:255',
+            //     'intake' => 'required|array',
+            //     'intake.*' => 'integer|between:41,52',
+            //     'courseFeatured' => 'nullable|array',
+            //     'courseFeatured.*' => 'integer',
+            //     'category' => 'required|integer',
+            //     'qualification' => 'required|integer',
+            //     'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+            // ]);
+
             $request->validate([
                 'id' => 'required|integer',
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'nullable|string|max:5000',
-                'requirement' => 'required|string|max:255',
-                'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
-                'period' => 'required|string|max:255',
-                'intake' => 'required|array',
-                'intake.*' => 'integer|between:41,52',
+                'requirement' => 'nullable|string|max:255',
+                'cost' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
+                'period' => 'nullable|string|max:255',
+                'intake' => 'nullable|array',
+                'intake.*' => 'nullable|integer|between:41,52',
                 'courseFeatured' => 'nullable|array',
-                'courseFeatured.*' => 'integer',
+                'courseFeatured.*' => 'nullable|integer',
                 'category' => 'required|integer',
-                'qualification' => 'required|integer',
+                'qualification' => 'nullable|integer',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
             ]);
 
