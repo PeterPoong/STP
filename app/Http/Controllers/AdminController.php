@@ -1539,7 +1539,7 @@ class AdminController extends Controller
                 'courseFeatured' => 'nullable|array',
                 'courseFeatured.*' => 'nullable|integer',
                 'category' => 'required|integer',
-                'qualification' => 'nullable|integer',
+                'qualification' => 'required|nullable|integer',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
             ]);
 
@@ -4678,6 +4678,10 @@ class AdminController extends Controller
                 })
                 ->paginate($perPage); // Use paginate instead of get()
 
+
+
+
+
             // Transform the paginated results
             $featuredList->getCollection()->transform(function ($item) {
                 $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
@@ -4695,11 +4699,12 @@ class AdminController extends Controller
                     'featured_type' => $item->featured['core_metaName']
                 ];
 
+
                 return [
                     'id' => $item->id,
                     'school' => [
-                        'school_id' => $item->school['id'],
-                        'school_name' => $item->school['school_name']
+                        'school_id' => $item->school['id'] ?? null,
+                        'school_name' => $item->school['school_name'] ?? null
                     ],
                     'request_name' => $item->request_name,
                     'featured_type' => $featuredType,
@@ -4709,6 +4714,8 @@ class AdminController extends Controller
                     'request_status' => $item->request_status
                 ];
             });
+
+
 
             // Return paginated response
 
