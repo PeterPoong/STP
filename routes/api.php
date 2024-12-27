@@ -342,6 +342,7 @@ Route::group(['middleware' => ['web']], function () {
 });
 Route::post('/decrypt-data', [SocialLoginController::class, 'decryptData']);
 Route::post('/facebook/deleteFacebookData', [SocialLoginController::class, 'deleteFacebookData']);
+Route::post('/social/updateContact', [SocialLoginController::class, 'updateContact']);
 
 
 

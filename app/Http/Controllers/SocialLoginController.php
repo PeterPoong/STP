@@ -175,6 +175,11 @@ class SocialLoginController extends Controller
             if ($existingUser) {
                 $token = $existingUser->createToken('authToken')->plainTextToken;
                 $user_id = $existingUser->id;
+                if ($existingUser->student_countryCode === null && $existingUser->student_contactNo === null) {
+                    $contact = false;
+                } else {
+                    $contact = true;
+                }
             } else {
                 $checkExistingOfEmail = stp_student::where('student_email', $googleUser->getEmail())->first();
                 if ($checkExistingOfEmail) {
@@ -184,6 +189,18 @@ class SocialLoginController extends Controller
                     $checkExistingOfEmail->update($data);
                     $token = $checkExistingOfEmail->createToken('authToken')->plainTextToken;
                     $user_id = $checkExistingOfEmail->id;
+                    if ($checkExistingOfEmail->student_countryCode === null && $checkExistingOfEmail->student_contactNo === null) {
+                        $contact = false;
+                    } else {
+                        $contact = true;
+                    }
+
+
+                    // if ($checkExistingOfEmail->student_countryCode == null && $checkExistingOfEmail->student_contactNo == null) {
+                    //     $contact = false;
+                    // } else {
+                    //     $contact = true;
+                    // }
                 } else {
                     $data = [
                         'student_userName' => $googleUser->getName(),
@@ -195,6 +212,7 @@ class SocialLoginController extends Controller
                     stp_student_detail::create(['student_id' => $newUser->id]);
                     $token = $newUser->createToken('authToken')->plainTextToken;
                     $user_id = $newUser->id;
+                    $contact = false;
                 }
             }
 
@@ -202,9 +220,12 @@ class SocialLoginController extends Controller
             $data = [
                 'token' => $token,
                 'id' => $user_id,
-                'user_name' => $googleUser->getName()
+                'user_name' => $googleUser->getName(),
+                'contact' => $contact
+
             ];
             $jsonData = json_encode($data);
+
 
             // Encrypt the JSON string
             $encryptedData = Crypt::encryptString($jsonData);
@@ -214,16 +235,61 @@ class SocialLoginController extends Controller
             $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'URL'));
 
             session()->forget('facebook_redirect'); // Clear the session after use
+            // return redirect()->intended('https://www.youtube.com/');
             return redirect()->intended($redirectUrl . 'FacebookSocialPageRedirectPage?data=' . $encryptedData);
         } catch (\Exception $e) {
             // Handle cases like cancellation or errors during login
             // $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'http://localhost:5173/'));
+
             $redirectUrl = session('facebook_redirect', env('FRONTEND_REDIRECT_URL', 'URL'));
+            // $redirectUrl = session('', 'http://localhost:5174/SocialContactPage');
 
             session()->forget('facebook_redirect'); // Clear the session after use
 
             // Redirect to your desired frontend page with an error message
             return redirect($redirectUrl)->withErrors('Unable to login using Facebook.');
+        }
+    }
+
+    public function updateContact(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'country_id' => 'required|string',
+                'contact_number' => 'required|string'
+            ]);
+
+            $validateContact = stp_student::where('student_countryCode', $request->country_id)
+                ->where('student_contactNo', $request->contact_number)
+                ->where('student_status', 1)
+                ->first();
+
+            // return $validateContact;
+
+            if ($validateContact) {
+                throw new Exception("Contact already exist");
+            }
+            $findUser = stp_student::find($request->id);
+            $updateData = [
+                'student_countryCode' => $request->country_id,
+                'student_contactNo' => $request->contact_number
+            ];
+
+            $findUser->update($updateData);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => "Successfully update contact"
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }
