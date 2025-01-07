@@ -482,10 +482,21 @@ class studentController extends Controller
     {
         try {
             $request->validate([
-                'id' => 'required|integer'
+                'id' => 'integer'
             ]);
 
-            $school = stp_school::find($request->id);
+            if (!empty($request->id)) {
+                $school = stp_school::find($request->id);
+            } else {
+                $request->validate([
+                    'schoolName' => 'required|string'
+                ]);
+                $school = stp_school::where('school_name', $request->schoolName)->get()->first();
+            }
+
+
+
+
 
             $courses = $school->courses;
 
