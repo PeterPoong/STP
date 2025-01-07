@@ -90,4 +90,9 @@ class stp_student extends Model
     {
         return $this->hasMany(stp_other_certificate::class, 'student_id', 'id');
     }
+
+    public function interestCourses(): HasMany
+    {
+        return $this->hasMany(stp_courseInterest::class, 'student_id', 'id');
+    }
 }

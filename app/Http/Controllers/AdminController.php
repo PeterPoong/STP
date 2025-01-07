@@ -10,6 +10,7 @@ use App\Models\stp_intake;
 use App\Models\stp_package;
 use App\Models\stp_student_detail;
 use App\Models\stp_user_detail;
+use App\Models\stp_RIASECType;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\stp_student;
@@ -5078,6 +5079,59 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function riasecTypesList(Request $request)
+    {
+        try {
+            $typeList = stp_RIASECType::where('status', 1)->get();
+            return response()->json([
+                'success' => true,
+                'data' => $typeList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    public function addRiasecTypes(Request $request)
+    {
+        try {
+            $request->validate([
+                'newRiasecType' => 'required|string',
+                'unique_description' => 'string',
+                'strength' => 'string'
+            ]);
+
+            $newData = [
+                'type_name' => $request->newRiasecType
+            ];
+
+            if (!empty($request->unique_description)) {
+                $newData['unique_description'] = $request->unique_description;
+            }
+
+            if (!empty($request->strength)) {
+                $newData['strength'] = $request->strength;
+            }
+            stp_RIASECType::insert($newData);
+
+            return  response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => "Successfully added new riasec type"
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
             ]);
         }

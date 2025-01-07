@@ -64,6 +64,8 @@ Route::prefix('student')->group(function () {
     Route::post('/advertisementList', [studentController::class, 'advertisementList']);
 
 
+
+
     //student portal
     Route::middleware('auth:sanctum')->post('/checkTermsAgreement', [studentController::class, 'checkTermsAgreement']);
     Route::middleware('auth:sanctum')->post('/agreeTerms', [studentController::class, 'agreeTerms']);
@@ -126,6 +128,8 @@ Route::prefix('student')->group(function () {
 
     Route::middleware('auth:sanctum')->post('/resetTranscript', [studentController::class, 'resetTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourseTranscript', [studentController::class, 'applyCourseTranscript']);
+
+    Route::middleware('auth:sanctum')->post('/personalityQuestionList', [studentController::class, 'personalityQuestionList']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -239,6 +243,11 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editFeaturedSchool', [AdminController::class, 'editFeaturedSchool']);
     Route::post('/editRequest', [AdminController::class, 'editRequest']);
     Route::post('/adminFeaturedTypeListRequest', [AdminController::class, 'adminFeaturedTypeListRequest']);
+
+    //personality test
+    Route::get('/riasecTypesList', [AdminController::class, 'riasecTypesList']);
+    Route::post('/addRiasecTypes', [AdminController::class, 'addRiasecTypes']);
+    Route::post('/addRiasecTypes', [AdminController::class, 'addRiasecTypes']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {

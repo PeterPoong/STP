@@ -371,11 +371,30 @@ class studentController extends Controller
     {
 
         try {
-            $request->validate([
-                'courseID' => 'required|integer'
-            ]);
+            // $request->validate([
+            //     'courseID' => 'required|integer'
+            // ]);
 
-            $courseList = stp_course::find($request->courseID);
+            // $courseList = stp_course::find($request->courseID);
+
+            $request->validate([
+                'courseID' => 'integer'
+            ]);
+            if (!empty($request->courseID)) {
+                $courseList = stp_course::find($request->courseID);
+            } else {
+                $request->validate([
+                    'schoolName' => 'required|string',
+                    'courseName' => 'required|string'
+                ]);
+                $courseList = stp_course::where('course_name', $request->courseName)
+                    ->whereHas('school', function ($query) use ($request) {
+                        $query->where('school_name', $request->schoolName);
+                    })
+                    ->get()
+                    ->first();
+            }
+
 
 
             if (empty($courseList->course_logo)) {
@@ -3254,6 +3273,8 @@ class studentController extends Controller
         }
     }
 
+
+
     public function advertisementList(Request $request)
     {
         $request->validate([
@@ -3268,4 +3289,6 @@ class studentController extends Controller
             'data' => $advertsmentList
         ]);
     }
+
+    public function personalityQuestionList(Request $request) {}
 }
