@@ -28,6 +28,7 @@ use App\Models\stp_submited_form;
 use App\Models\stp_state;
 use App\Models\stp_subject;
 use App\Models\stp_tag;
+use App\Models\stp_personalityQuestions;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -1532,7 +1533,7 @@ class AdminController extends Controller
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'nullable|string|max:5000',
-                'requirement' => 'nullable|string|max:255',
+                'requirement' => 'nullable|string|',
                 'cost' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'nullable|string|max:255',
                 'intake' => 'nullable|array',
@@ -5132,6 +5133,148 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function updateRiasecTypes(Request $request)
+    {
+        try {
+            // Validate request data
+            $request->validate([
+                'id' => 'required|integer',
+                'updateRiasecType' => 'string',
+                'newDescription' => 'string',
+                'newStrength' => 'string',
+                'status' => "string"
+            ]);
+
+            // Find the data by ID
+            $findData = stp_RIASECType::find($request->id);
+
+            // If data is not found, throw an exception
+            if (!$findData) {
+                throw new Exception('No data found');
+            }
+
+            // Prepare the data to be updated
+            $newData = [];
+            if (!empty($request->updateRiasecType)) {
+                $newData['type_name'] = $request->updateRiasecType;
+            }
+
+            if (!empty($request->newDescription)) {
+                $newData['unique_description'] = $request->newDescription;
+            }
+
+            if (!empty($request->newStrength)) {
+                $newData['strength'] = $request->newStrength;
+            }
+
+            if (!empty($request->status)) {
+                if ($request->status == "true") {
+                    $newData['status'] = 1;
+                } else {
+                    $newData['status'] = 0;
+                }
+            }
+
+            // If there is new data, update the record
+            if (!empty($newData)) {
+                $findData->update($newData);
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'message' => 'update successful'
+                    ]
+                ]);
+            }
+
+            // Return a success response with updated data
+            return response()->json([
+                'success' => true,
+                'message' => 'Data updated successfully',
+                'data' => $findData
+            ]);
+        } catch (\Exception $e) {
+            // Return error response with message
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal server error',
+                'error' => $e->getMessage() // Only send the message, not the entire exception
+            ], 500);
+        }
+    }
+
+    public function addPersonalQuestion(Request $request)
+    {
+        try {
+            $request->validate([
+                'newQuestion' => 'required|string',
+                'questionType' => 'required|integer'
+            ]);
+
+            $newData = [
+                'question' => $request->newQuestion,
+                'riasec_type' => $request->questionType
+            ];
+
+            $addNewQuesion = stp_personalityQuestions::insert($newData);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'Successfully created new question'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function updatePersonalQuestion(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer',
+                'newQuestion' => 'string',
+                'newType' => 'integer',
+                'status' => 'string'
+            ]);
+
+            $data = stp_personalityQuestions::find($request->id);
+            $updateData = [];
+            if (!empty($request->newQuestion)) {
+                $updateData['question'] = $request->newQuestion;
+            }
+
+            if (!empty($request->newType)) {
+                $updateData['riasec_type'] = $request->newType;
+            }
+
+            if (!empty($request->status)) {
+                if ($request->status == "true") {
+                    $updateData['status'] = 1;
+                } else {
+                    $updateData['status'] = 0;
+                }
+            }
+
+            $updateData = $data->update($updateData);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'Update Successfully'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
                 'error' => $e->getMessage()
             ]);
         }

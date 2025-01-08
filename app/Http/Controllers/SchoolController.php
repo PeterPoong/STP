@@ -406,11 +406,11 @@ class SchoolController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'schoolID' => 'required|integer',
-                'name' => 'required|string|max:255',
-                'description' => 'string|max:255',
-                'requirement' => 'string|max:255',
+                'name' => 'required|string',
+                'description' => 'string',
+                'requirement' => 'string',
                 'cost' => 'required|regex:/^\d+(\.\d{1,2})?$/',
-                'period' => 'required|string|max:255',
+                'period' => 'required|string',
                 'intake' => 'required|array',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validation
             ]);

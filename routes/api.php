@@ -247,7 +247,11 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     //personality test
     Route::get('/riasecTypesList', [AdminController::class, 'riasecTypesList']);
     Route::post('/addRiasecTypes', [AdminController::class, 'addRiasecTypes']);
-    Route::post('/addRiasecTypes', [AdminController::class, 'addRiasecTypes']);
+    Route::post('/updateRiasecTypes', [AdminController::class, 'updateRiasecTypes']);
+    //personality question 
+    Route::post('/addPersonalQuestion', [AdminController::class, 'addPersonalQuestion']);
+    Route::post('/updatePersonalQuestion', [AdminController::class, 'updatePersonalQuestion']);
+    Route::post('/personalityQuestion', [AdminController::class, 'updatePersonalQuestion']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {
