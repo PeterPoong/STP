@@ -6,6 +6,7 @@ use App\Models\stp_achievement;
 use App\Models\stp_core_meta;
 use App\Models\stp_country;
 use App\Models\stp_course;
+use App\Models\stp_courseInterest;
 use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use App\Models\stp_higher_transcript;
@@ -3302,4 +3303,43 @@ class studentController extends Controller
     }
 
     public function personalityQuestionList(Request $request) {}
+
+
+    public function addInterestedCourse(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            if (!$authUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User is not authenticated',
+                ], 401);
+            }
+    
+            $request->validate([
+                'course_id' => 'required|integer',
+            ]);
+    
+            $createInterestedCourse = stp_courseInterest::create([
+                'student_id' => $authUser->id,
+                'course_id' => $request->course_id,
+                'created_by' => $authUser->id,
+                'status' => 1,
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully added the course to interest'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Internal Server Error',
+                    'error' => $e->getMessage(),
+                ]
+            );
+        }
+    }
+    
 }
