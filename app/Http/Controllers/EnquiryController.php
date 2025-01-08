@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\stp_core_meta;
 use App\Models\stp_enquiry;
-use App\Http\Controllers\ServiceFunctionController;
+// use App\Http\Controllers\ServiceFunctionController;
 
 
 class EnquiryController extends Controller
