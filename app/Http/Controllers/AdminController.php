@@ -26,6 +26,7 @@ use App\Models\stp_school;
 use App\Models\stp_school_media;
 use App\Models\stp_submited_form;
 use App\Models\stp_state;
+use App\Models\stp_courseInterest;
 use App\Models\stp_subject;
 use App\Models\stp_tag;
 use App\Models\stp_personalityQuestions;
@@ -5279,4 +5280,91 @@ class AdminController extends Controller
             ]);
         }
     }
+    public function sendInterestedCourseCategoryEmail(Request $request)
+    {
+        try {
+            // Get the current date and month
+            $currentDate = now();
+            $currentMonth = $currentDate->format('m');
+            $currentYear = $currentDate->format('Y');
+    
+            // Start building the query
+            $query = stp_courseInterest::where('status', 1)
+                ->where(function ($q) use ($currentMonth, $currentYear) {
+                    $q->whereYear('created_at', $currentYear)
+                      ->whereMonth('created_at', $currentMonth)
+                      ->orWhere(function ($subQuery) use ($currentMonth, $currentYear) {
+                          $subQuery->whereYear('updated_at', $currentYear)
+                                   ->whereMonth('updated_at', $currentMonth);
+                      });
+                });
+    
+            // Apply filter for school_id if provided
+            if ($request->filled('school_id')) {
+                $query->whereHas('course', function ($q) use ($request) {
+                    $q->where('school_id', $request->school_id);
+                });
+            }
+    
+            // Apply filter for category_id if provided
+            if ($request->filled('category_id')) {
+                $query->whereHas('course', function ($q) use ($request) {
+                    $q->where('category_id', $request->category_id);
+                });
+            }
+    
+            // Retrieve the interested course categories with relationships
+            $interestedCourseCategory = $query
+                ->with(['course.school', 'course.category'])
+                ->get()
+                ->map(function ($item) {
+                    // Determine the latest date between created_at and updated_at
+                    $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
+    
+                    return [
+                        'latest_date' => $latestDate,
+                        'school_id' => $item->course->school->id,
+                        'category_type' => $item->course->category->id,
+                    ];
+                });
+    
+            // Group by school ID and calculate category counts
+            $schoolsData = $interestedCourseCategory
+                ->groupBy('school_id')
+                ->map(function ($schoolGroup, $schoolID) {
+                    $courseCount = $schoolGroup->groupBy('category_type')
+                        ->map(function ($categoryGroup, $category) {
+                            return [
+                                'category' => $category,
+                                'number_count' => $categoryGroup->count(),
+                            ];
+                        })
+                        ->values()
+                        ->toArray();
+    
+                    return [
+                        'schoolID' => $schoolID,
+                        'courseCount' => $courseCount,
+                    ];
+                })
+                ->values()
+                ->toArray();
+    
+            // Return the response with the result
+            return response()->json([
+                'success' => true,
+                'month' => $currentMonth,
+                'year' => $currentYear,
+                'data' => $schoolsData,
+            ]);
+        } catch (\Exception $e) {
+            // Return error response in case of failure
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }    
+    
 }

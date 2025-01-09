@@ -3427,9 +3427,12 @@ class studentController extends Controller
                     return [
                         'id' => $item->id,
                         'student_id' => $item->student_id,
+                        'student_name'=> $item->student->student_userName,
                         'course_id' => $item->course_id,
+                        'course_name'=> $item->course->course_name,
                         'status' => $item->status,
                         'school_id' => $item->course->school_id ?? null,
+                        'school_name'=> $item->course->school->school_name,
                         'school_email' => $item->course->school->school_email ?? null,
                         'category_type' => $item->course->category->category_name ?? null,
                         'latest_date' => $latestDate,
