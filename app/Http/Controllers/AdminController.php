@@ -5366,5 +5366,73 @@ class AdminController extends Controller
             ]);
         }
     }    
+    public function SendInterestedEmail(Request $request)
+    {
+        try {
+            // Get the current date and month
+            $currentDate = now();
+            $currentMonth = $currentDate->format('m');
+            $currentYear = $currentDate->format('Y');
     
+            // Start building the query
+            $query = stp_courseInterest::where('status', 1)
+                ->where(function ($q) use ($currentMonth, $currentYear) {
+                    $q->whereYear('created_at', $currentYear)
+                      ->whereMonth('created_at', $currentMonth)
+                      ->orWhere(function ($subQuery) use ($currentMonth, $currentYear) {
+                          $subQuery->whereYear('updated_at', $currentYear)
+                                   ->whereMonth('updated_at', $currentMonth);
+                      });
+                });
+    
+            // Apply filter for school_id if provided
+            if ($request->filled('school_id')) {
+                $query->whereHas('course', function ($q) use ($request) {
+                    $q->where('school_id', $request->school_id);
+                });
+            }
+    
+            // Retrieve the interested course categories with relationships
+            $interestedCourseCategory = $query
+                ->with(['course.school', 'course.category'])
+                ->get()
+                ->map(function ($item) {
+                    // Determine the latest date between created_at and updated_at
+                    $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
+        
+                    return [
+                        'school_id' => $item->course->school->id,
+                    ];
+                });
+    
+            // Group by school ID and calculate the total interested
+            $schoolsData = $interestedCourseCategory
+                ->groupBy('school_id')
+                ->map(function ($schoolGroup, $schoolID) {
+                    return [
+                        'schoolId' => $schoolID,
+                        'totalInterested' => $schoolGroup->count(),
+                    ];
+                })
+                ->values()
+                ->toArray();
+    
+            // Return the response with the result
+            return response()->json([
+                'success' => true,
+                'month' => $currentMonth,
+                'year' => $currentYear,
+                'data' => $schoolsData,
+            ]);
+        } catch (\Exception $e) {
+            // Return error response in case of failure
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+    
+
 }
