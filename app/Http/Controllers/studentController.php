@@ -27,10 +27,13 @@ use App\Models\stp_cgpa;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_intake;
 use App\Models\stp_school_media;
+use App\Models\stp_personalityQuestions;
 use Illuminate\Support\Facades\Storage;
 use App\Models\stp_advertisement_banner;
+use App\Models\stp_personalityTestResult;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
+
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -3301,5 +3304,112 @@ class studentController extends Controller
         ]);
     }
 
-    public function personalityQuestionList(Request $request) {}
+    public function personalityQuestionList(Request $request)
+    {
+        try {
+            $getQuestionList = stp_personalityQuestions::where('status', 1)
+                ->get()
+                ->map(function ($question) {
+                    return [
+                        'question' => $question->question,
+                        'riasec_type' => [
+                            'id' => $question->question_type->id,
+                            'type_name' => $question->question_type->type_name,
+                        ]
+                    ];
+                });
+            return response()->json([
+                'success' => true,
+                'data' => $getQuestionList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function submitTestResult(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+
+            $request->validate([
+                'scores' => 'required'
+            ]);
+            $newData = [
+                'student_id' => $authUser->id,
+                'score' => json_encode($request->scores)
+            ];
+
+
+            $finduserResult = stp_personalityTestResult::where('student_id', $authUser->id)->first();
+
+            if (!empty($finduserResult)) {
+                $updateStatus = $finduserResult->update(['status' => 0]);
+            }
+
+            $addResult = stp_personalityTestResult::insert($newData);
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "successfully save the result"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getTestResult(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $getResult = stp_personalityTestResult::where('student_id', $authUser->id)->where('status', 1)->get()->first();
+            $result = [
+                "score" => json_decode($getResult->score, true),
+                "created_at" => $getResult->created_at
+            ];
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function riasecCourseCategory(Request $request)
+    {
+        try {
+            $request->validate([
+                'riasecType' => 'required|integer'
+            ]);
+
+            $getCourseCategory = stp_courses_category::where('riasecTypes', $request->riasecType)->get()->map(function ($courseCategory) {
+                return [
+                    'id' => $courseCategory->id,
+                    'category_name' => $courseCategory->category_name
+                ];
+            });
+            return response()->json([
+                'success' => true,
+                'data' => $getCourseCategory
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

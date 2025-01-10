@@ -129,7 +129,10 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/resetTranscript', [studentController::class, 'resetTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourseTranscript', [studentController::class, 'applyCourseTranscript']);
 
-    Route::middleware('auth:sanctum')->post('/personalityQuestionList', [studentController::class, 'personalityQuestionList']);
+    Route::middleware('auth:sanctum')->get('/personalityQuestionList', [studentController::class, 'personalityQuestionList']);
+    Route::middleware('auth:sanctum')->post('/submitTestResult', [studentController::class, 'submitTestResult']);
+    Route::middleware('auth:sanctum')->get('/getTestResult', [studentController::class, 'getTestResult']);
+    Route::middleware('auth:sanctum')->post('/riasecCourseCategory', [studentController::class, 'riasecCourseCategory']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -251,7 +254,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     //personality question 
     Route::post('/addPersonalQuestion', [AdminController::class, 'addPersonalQuestion']);
     Route::post('/updatePersonalQuestion', [AdminController::class, 'updatePersonalQuestion']);
-    Route::post('/personalityQuestion', [AdminController::class, 'updatePersonalQuestion']);
+    Route::post('/personalityQuestionList', [AdminController::class, 'personalityQuestionList']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {

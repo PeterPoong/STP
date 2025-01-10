@@ -5279,4 +5279,38 @@ class AdminController extends Controller
             ]);
         }
     }
+
+    public function personalityQuestionList(Request $request)
+    {
+        try {
+            $request->validate([
+                'search' => 'string',
+                'type' => 'integer',
+                'status' => 'integer'
+            ]);
+
+            $questionList = stp_personalityQuestions::query()
+                ->when($request->has('search') && !empty($request->search), function ($query) use ($request) {
+                    return $query->where('question', 'like', '%' . $request->search . '%');
+                })
+                ->when($request->has('type') && !empty($request->type), function ($query) use ($request) {
+                    return $query->where('riasec_type', $request->type);
+                })
+                ->when($request->has('status'), function ($query) use ($request) {
+                    return $query->where('status', $request->status);
+                })
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $questionList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

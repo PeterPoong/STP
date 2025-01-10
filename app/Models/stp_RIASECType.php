@@ -21,4 +21,9 @@ class stp_RIASECType extends Model
     {
         return $this->hasMany(stp_personalityQuestions::class, 'riasec_type', 'id');
     }
+
+    public function courseCategory(): hasMany
+    {
+        return $this->hasMany(stp_courses_category::class, 'riasec_type', 'id');
+    }
 }

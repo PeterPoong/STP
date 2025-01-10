@@ -95,4 +95,9 @@ class stp_student extends Model
     {
         return $this->hasMany(stp_courseInterest::class, 'student_id', 'id');
     }
+
+    public function personalityResult(): HasOne
+    {
+        return $this->hasOne(stp_personalityTestResult::class, 'student_id', 'id');
+    }
 }
