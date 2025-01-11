@@ -14,6 +14,7 @@ use App\Models\stp_RIASECType;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\stp_student;
+use App\Services\ServiceFunction;
 
 use App\Models\stp_country;
 use App\Models\stp_course;
@@ -36,6 +37,8 @@ use Illuminate\Support\Facades\Hash;
 use Intervention\Image\Facades\Image as Image;
 use Illuminate\Support\Facades\Storage;
 
+
+
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -44,6 +47,13 @@ use function PHPSTORM_META\type;
 
 class AdminController extends Controller
 {
+    protected $serviceFunction;
+
+    public function __construct(ServiceFunction $serviceFunction)
+    {
+        $this->serviceFunction = $serviceFunction;
+    }
+
     public function addStudent(Request $request)
     {
         try {
@@ -5358,18 +5368,28 @@ class AdminController extends Controller
                     return [
                         'latest_date' => $latestDate,
                         'school_id' => $item->course->school->id,
+                        'school_name' => $item->course->school->school_name,
+                        'school_email' => $item->course->school->school_email,
                         'category_type' => $item->course->category->id,
+                        'category_name' => $item->course->category->category_name,
                     ];
                 });
+
+
+
 
             // Group by school ID and calculate category counts
             $schoolsData = $interestedCourseCategory
                 ->groupBy('school_id')
                 ->map(function ($schoolGroup, $schoolID) {
                     $courseCount = $schoolGroup->groupBy('category_type')
-                        ->map(function ($categoryGroup, $category) {
+                        ->map(function ($categoryGroup, $category) use ($schoolGroup) {
+                            // Find the category name based on category type
+                            $categoryName = $schoolGroup;
+
                             return [
                                 'category' => $category,
+                                'category_name' => $categoryName[0]['category_name'],  // Add category_name to the result
                                 'number_count' => $categoryGroup->count(),
                             ];
                         })
@@ -5378,6 +5398,8 @@ class AdminController extends Controller
 
                     return [
                         'schoolID' => $schoolID,
+                        'schoolName' => $schoolGroup[0]['school_name'],
+                        'schoolEmail' => $schoolGroup[0]['school_email'],
                         'courseCount' => $courseCount,
                     ];
                 })
@@ -5385,12 +5407,18 @@ class AdminController extends Controller
                 ->toArray();
 
             // Return the response with the result
-            return response()->json([
-                'success' => true,
-                'month' => $currentMonth,
-                'year' => $currentYear,
-                'data' => $schoolsData,
-            ]);
+            // return response()->json([
+            //     'success' => true,
+            //     'month' => $currentMonth,
+            //     'year' => $currentYear,
+            //     'data' => $schoolsData,
+            // ]);
+            foreach ($schoolsData as $school) {
+                $sendEmail = $this->serviceFunction->sendInterestedCourseCategoryEmail($school['schoolEmail'], $school['schoolName'], $school['courseCount']);
+                if ($sendEmail) {
+                    return $sendEmail;
+                }
+            }
         } catch (\Exception $e) {
             // Return error response in case of failure
             return response()->json([
