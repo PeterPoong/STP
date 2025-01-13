@@ -3345,14 +3345,12 @@ class studentController extends Controller
                 'score' => json_encode($request->scores)
             ];
 
-
             $finduserResult = stp_personalityTestResult::where('student_id', $authUser->id)->first();
-
-            if (!empty($finduserResult)) {
-                $updateStatus = $finduserResult->update(['status' => 0]);
+            if ($finduserResult !== null) {
+                $finduserResult->update($newData);
+            } else {
+                $addResult = stp_personalityTestResult::insert($newData);
             }
-
-            $addResult = stp_personalityTestResult::insert($newData);
             return response()->json([
                 'success' => true,
                 'data' => ['message' => "successfully save the result"]
