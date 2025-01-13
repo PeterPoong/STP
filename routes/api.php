@@ -77,6 +77,11 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/addEditHigherTranscript', [studentController::class, 'addEditHigherTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
 
+    //interested course
+    Route::middleware('auth:sanctum')->post('/addInterestedCourse', [studentController::class, 'addInterestedCourse']);
+    Route::middleware('auth:sanctum')->post('/removeInterestedCourse', [studentController::class, 'removeInterestedCourse']);
+    Route::middleware('auth:sanctum')->post('/interestedCourseList', [studentController::class, 'interestedCourseList']);
+
     Route::middleware('auth:sanctum')->post('/addProgramCgpa', [studentController::class, 'addProgramCgpa']);
     Route::middleware('auth:sanctum')->post('/editProgramCgpa', [studentController::class, 'editProgramCgpa']);
     Route::middleware('auth:sanctum')->post('/programCgpaList', [studentController::class, 'programCgpaList']);
@@ -147,6 +152,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
     Route::post('/replyEnquiry', [EnquiryController::class, 'replyEnquiry']);
 
+    Route::get('/sendInterestedCourseCategoryEmail', [AdminController::class, 'sendInterestedCourseCategoryEmail']);
 
 
     Route::post('/schoolList', [AdminController::class, 'schoolList']);

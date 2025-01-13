@@ -13,6 +13,7 @@ use App\Mail\SendRejectEmail;
 use App\Mail\SendReminder;
 use App\Mail\SendEnquiryEmail;
 use App\Mail\ReplyEnquiryEmail;
+use App\Mail\SendInterestedCourseCategoryEmail;
 use Illuminate\Support\Facades\Mail;
 
 class ServiceFunction
@@ -125,5 +126,13 @@ class ServiceFunction
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function sendInterestedCourseCategoryEmail($email, $schoolName, $data)
+    {
+        Mail::to("peterpoonghaoyuan@gmail.com")->send(new SendInterestedCourseCategoryEmail($schoolName, $data));
+        return response()->json([
+            'success'
+        ]);
     }
 }
