@@ -2908,6 +2908,7 @@ class studentController extends Controller
         try {
             $authUser = Auth::user();
             $getTranscriptSubject = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_category', 32)
                 ->where('transcript_status', 1)
                 ->get()
                 ->map(function ($subject) {
@@ -2919,9 +2920,25 @@ class studentController extends Controller
                     ];
                 });
 
+            $getSPMTrial = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_category', 85)
+                ->where('transcript_status', 1)
+                ->get()
+                ->map(function ($subject) {
+                    return [
+                        'subject_id' => $subject->subject->id,
+                        'subject_name' => $subject->subject->subject_name,
+                        'subject_grade_id' => $subject->grade->id,
+                        'subject_grade' => $subject->grade->core_metaName,
+                    ];
+                });
+
+            $data['spm'] = $getTranscriptSubject;
+            $data['trial'] = $getSPMTrial;
+
             return response()->json([
                 'success' => true,
-                'data' => $getTranscriptSubject
+                'data' => $data
             ]);
         } catch (\Exception $e) {
             return response()->json([
