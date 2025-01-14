@@ -128,9 +128,9 @@ class ServiceFunction
         }
     }
 
-    public function sendInterestedCourseCategoryEmail($email, $schoolName, $data)
+    public function sendInterestedCourseCategoryEmail($email, $schoolName, $data, $totalCourse)
     {
-        Mail::to("peterpoonghaoyuan@gmail.com")->send(new SendInterestedCourseCategoryEmail($schoolName, $data));
+        Mail::to("peterpoonghaoyuan@gmail.com")->send(new SendInterestedCourseCategoryEmail($schoolName, $data, $totalCourse));
         return response()->json([
             'success'
         ]);

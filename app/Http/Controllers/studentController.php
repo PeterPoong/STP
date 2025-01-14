@@ -964,6 +964,11 @@ class studentController extends Controller
                 'category' => 'required|integer'
             ]);
 
+            if ($request->category == 85) {
+                $category = 32;
+            } else {
+                $category = $request->category;
+            }
             $list = stp_subject::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('subject_name', 'like', '%' . $request->search . '%');
             })
@@ -971,7 +976,7 @@ class studentController extends Controller
                     $query->whereNotIn('id', $request->selectedSubject);
                 })
                 ->where('subject_status', 1)
-                ->where('subject_category', $request->category)
+                ->where('subject_category', $category)
                 ->get();
 
             $subjectList = [];
@@ -2082,12 +2087,17 @@ class studentController extends Controller
                 'category_id' => 'integer|nullable'
             ]);
 
+            if ($request->category_id == 85) {
+                $category = 32;
+            } else {
+                $category = $request->category_id;
+            }
             // Query the stp_subject table to get subjects with the matching category
             $subjectList = stp_subject::query()
                 ->where('subject_status', 1) // Assuming 1 means 'Active'
-                ->when($request->filled('category_id'), function ($query) use ($request) {
+                ->when($request->filled('category_id'), function ($query) use ($category) {
                     // Filtering the subjects by the selected category
-                    $query->where('subject_category', $request->category_id);
+                    $query->where('subject_category', $category);
                 })
                 ->paginate(10) // Paginating the result
                 ->through(function ($subject) {
@@ -3001,8 +3011,8 @@ class studentController extends Controller
             ]);
             $authUser = Auth::user();
             //spm
-            if ($request->transcriptType == 32) {
-                $resetTranscript = stp_transcript::where('student_id', $authUser->id);
+            if ($request->transcriptType == 32 || $request->transcriptType == 85) {
+                $resetTranscript = stp_transcript::where('student_id', $authUser->id)->where('transcript_category', $request->transcriptType);
             } else {
                 $resetTranscript = stp_higher_transcript::where('student_id', $authUser->id)->where('category_id', $request->transcriptType);
                 //remove cgpa
@@ -3141,6 +3151,8 @@ class studentController extends Controller
     {
         try {
             $authUser = Auth::user();
+
+
             $categoryList = stp_core_meta::query()
                 ->where('core_metaStatus', 1) // Only active categories
                 ->where('core_metaType', 'transcript_category') // Only transcript categories
@@ -3151,15 +3163,18 @@ class studentController extends Controller
                         'transcript_category' => $category->core_metaName
                     ];
                 });
+
+
             $getTranscriptSubject = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_category', 32)
                 ->where('transcript_status', 1)
                 ->get()
                 ->map(function ($subject) {
                     return [
                         'subject_id' => $subject->subject->id,
                         'subject_name' => $subject->subject->subject_name,
-                        'subject_grade_id' => $subject->grade->id,
-                        'subject_grade' => $subject->grade->core_metaName,
+                        'subject_grade_id' => $subject->grade->id ?? null,
+                        'subject_grade' => $subject->grade->core_metaName ?? null,
                     ];
                 });
 
@@ -3185,8 +3200,49 @@ class studentController extends Controller
                 'document' => $spmMediaList
             ];
 
+
+
+
+            $getSpmTrial = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_category', 85)
+                ->where('transcript_status', 1)
+                ->get()
+                ->map(function ($subject) {
+                    return [
+                        'subject_id' => $subject->subject->id,
+                        'subject_name' => $subject->subject->subject_name,
+                        'subject_grade_id' => $subject->grade->id,
+                        'subject_grade' => $subject->grade->core_metaName,
+                    ];
+                });
+
+            $spmTrialMedia = stp_student_media::query()
+                ->where('studentMedia_status', 1)
+                ->where('student_id', $authUser->id)
+                ->where('studentMedia_type', 85)
+                ->get() // Get all records instead of paginating
+                ->map(function ($spmMediaList) {
+                    $dateTime = new \DateTime($spmMediaList->created_at);
+                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
+                    return [
+                        "id" => $spmMediaList->id,
+                        "studentMedia_name" => $spmMediaList->studentMedia_name,
+                        "studentMedia_location" => $spmMediaList->studentMedia_location,
+                        "category_id" => $spmMediaList->studentMedia_type,
+                        "created_at" => $appliedDate,
+                        "status" => $spmMediaList->studentMedia_status ? "Active" : "Inactive"
+                    ];
+                });
+            $getSpmTrial = [
+                'subjects' => $getSpmTrial, // Use 'subjects' as key
+                'document' => $spmTrialMedia
+            ];
+
+            $spm['spm'] = $getTranscriptSubject;
+            $spm['trial'] = $getSpmTrial;
+
             $getAllHigherTranscriptId = stp_core_meta::where('core_metaType', 'transcript_category')
-                ->where('id', '!=', 32)
+                ->whereNotIn('id', [32, 85])
                 ->get();
 
 
@@ -3287,7 +3343,7 @@ class studentController extends Controller
 
             $result = [
                 'categories' => $categoryList,
-                'transcripts' => $getTranscriptSubject,
+                'transcripts' => $spm,
                 'higherTranscripts' => $higherTranscriptList
 
             ];

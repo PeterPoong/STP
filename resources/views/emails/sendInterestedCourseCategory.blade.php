@@ -4,11 +4,12 @@
     <meta charset="utf-8">
     <title>Monthly Report</title>
     <style>
-        body {
+        body, .container, .content, .footer, .header {
             font-family: Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: black !important; /* Ensure all text is black */
         }
+
         .container {
             max-width: 600px;
             margin: 20px auto;
@@ -16,30 +17,20 @@
             border: 1px solid #ddd;
             border-radius: 5px;
         }
+
         .header {
+            color: black !important;
             background-color: #f8f9fa;
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 5px;
         }
+
         .content {
             padding: 15px;
             text-align: center; /* Center align the content including the button */
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
+
         .footer {
             margin-top: 20px;
             padding-top: 20px;
@@ -47,7 +38,7 @@
             font-size: 12px;
             color: #666;
         }
-        /* Button Styles */
+
         .button {
             display: inline-block;
             padding: 10px 20px;
@@ -77,31 +68,22 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>Monthly Student Interested Report</h2>
+            <h2>Exciting Update: New Student Inquiries for your university {{ $schoolName }}!</h2>
         </div>
         
         <div class="content">
-            <p>Hello Admin,</p>
+            <p>Hello <strong>{{ $schoolName }}</strong> Admin,</p>
             
-            <p>You have received a new monthly report with the following details:</p>
-            
-            <table>
-                <tr>
-                    <th>Course Category</th>
-                    <th>Number of Students Interested</th>
-                </tr>
-                @foreach ($courseCategory as $item)
-                    <tr>
-                        <td><strong>{{ $item['category_name'] }}</strong></td>
-                        <td>{{ $item['number_count'] }}</td>
-                    </tr>
-                @endforeach
-            </table>
-            
-            <p>This report was received on {{ date('F j, Y \a\t g:i a') }}</p>
+            <p>We have great news! There are <strong>{{ $totalCourse }}</strong> students interested in your courses this month. Out of these, @foreach ($courseCategory as $index => $item) 
+                @if ($loop->last)
+                    and <strong>{{ $item['number_count'] }}</strong> students are interested in <strong>{{ $item['category_name'] }}</strong>.
+                @else
+                    <strong>{{ $item['number_count'] }}</strong> students are interested in <strong>{{ $item['category_name'] }}</strong>, 
+                @endif
+            @endforeach. This report was received on {{ date('F j, Y \a\t g:i a') }}.</p>
             
             <!-- Centered Button -->
-            <a href="https://studypal.my/schoolPortalLogin" class="button">View more Detail</a>
+            <a href="https://studypal.my/schoolPortalLogin" class="button">View More Details</a>
         </div>
         
         <div class="footer">

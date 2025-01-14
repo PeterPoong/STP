@@ -37,6 +37,8 @@ use Illuminate\Support\Facades\Hash;
 use Intervention\Image\Facades\Image as Image;
 use Illuminate\Support\Facades\Storage;
 
+use Illuminate\Support\Facades\Log;
+
 
 
 // use Dotenv\Exception\ValidationException;
@@ -5379,28 +5381,35 @@ class AdminController extends Controller
 
 
             // Group by school ID and calculate category counts
+
             $schoolsData = $interestedCourseCategory
                 ->groupBy('school_id')
                 ->map(function ($schoolGroup, $schoolID) {
+                    // Group by category type for the school
                     $courseCount = $schoolGroup->groupBy('category_type')
                         ->map(function ($categoryGroup, $category) use ($schoolGroup) {
                             // Find the category name based on category type
-                            $categoryName = $schoolGroup;
+                            $categoryName = $categoryGroup->first()['category_name'];  // Get category_name from the first item
 
                             return [
                                 'category' => $category,
-                                'category_name' => $categoryName[0]['category_name'],  // Add category_name to the result
-                                'number_count' => $categoryGroup->count(),
+                                'category_name' => $categoryName,  // Add category_name to the result
+                                'number_count' => $categoryGroup->count(),  // Count of courses in this category
                             ];
                         })
                         ->values()
                         ->toArray();
 
+                    // Calculate the total number of courses for this school by summing up the number counts for each category
+                    $schoolTotalCount = collect($courseCount)->sum('number_count');
+
                     return [
                         'schoolID' => $schoolID,
                         'schoolName' => $schoolGroup[0]['school_name'],
                         'schoolEmail' => $schoolGroup[0]['school_email'],
+                        'totalCourses' => $schoolTotalCount,
                         'courseCount' => $courseCount,
+                        // Add the total course count for this school
                     ];
                 })
                 ->values()
@@ -5411,10 +5420,10 @@ class AdminController extends Controller
             //     'success' => true,
             //     'month' => $currentMonth,
             //     'year' => $currentYear,
-            //     'data' => $schoolsData,
+            //     'data' => $schoolsData,  // This now contains the 'totalCourses' field for each school
             // ]);
             foreach ($schoolsData as $school) {
-                $sendEmail = $this->serviceFunction->sendInterestedCourseCategoryEmail($school['schoolEmail'], $school['schoolName'], $school['courseCount']);
+                $sendEmail = $this->serviceFunction->sendInterestedCourseCategoryEmail($school['schoolEmail'], $school['schoolName'], $school['courseCount'], $school['totalCourses']);
                 if ($sendEmail) {
                     return $sendEmail;
                 }

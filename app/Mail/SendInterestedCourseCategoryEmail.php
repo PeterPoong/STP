@@ -14,11 +14,13 @@ class SendInterestedCourseCategoryEmail extends Mailable
 
     public $courseCategory;
     public $schoolName;
+    public $totalCourse;
 
-    public function __construct($schoolName, $data)
+    public function __construct($schoolName, $data, $totalCourse)
     {
         $this->courseCategory = $data;
         $this->schoolName = $schoolName;
+        $this->totalCourse = $totalCourse;
     }
 
     /**
@@ -27,7 +29,7 @@ class SendInterestedCourseCategoryEmail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Congratulations!! Your Monthly Student Interested Report had Arrived'
+            subject: 'Exciting Update: New Student Inquiries for your university ' . $this->schoolName . '!'
         );
     }
 
