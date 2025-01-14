@@ -5333,7 +5333,6 @@ class AdminController extends Controller
             $currentDate = now();
             $currentMonth = $currentDate->format('m');
             $currentYear = $currentDate->format('Y');
-
             // Start building the query
             $query = stp_courseInterest::where('status', 1)
                 ->where(function ($q) use ($currentMonth, $currentYear) {
@@ -5366,9 +5365,7 @@ class AdminController extends Controller
                 ->map(function ($item) {
                     // Determine the latest date between created_at and updated_at
                     $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
-
                     return [
-                        'latest_date' => $latestDate,
                         'school_id' => $item->course->school->id,
                         'school_name' => $item->course->school->school_name,
                         'school_email' => $item->course->school->school_email,
@@ -5437,7 +5434,6 @@ class AdminController extends Controller
             ]);
         }
     }
-
     public function interestedCourseListAdmin(Request $request)
     {
         try {

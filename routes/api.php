@@ -152,8 +152,10 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
     Route::post('/replyEnquiry', [EnquiryController::class, 'replyEnquiry']);
 
-    // Route::get('/sendInterestedCourseCategoryEmail', [AdminController::class, 'sendInterestedCourseCategoryEmail']);
-    Route::get('/sendInterestedCourseCategoryEmail', [AdminController::class, 'sendInterestedCourseCategoryEmail'])->withoutMiddleware('auth:sanctum');
+    Route::post('/interestedCourseListAdmin', [AdminController::class, 'interestedCourseListAdmin']);
+
+    Route::get('/sendInterestedCourseCategoryEmail', [AdminController::class, 'sendInterestedCourseCategoryEmail']);
+    Route::get('/sendInterestedEmail', [AdminController::class, 'sendInterestedEmail']);
 
 
     Route::post('/schoolList', [AdminController::class, 'schoolList']);
