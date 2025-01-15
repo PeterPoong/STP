@@ -5326,7 +5326,7 @@ class AdminController extends Controller
             ]);
         }
     }
-    public function sendInterestedCourseCategoryEmail(Request $request)
+    public function cronCorseCategoryInterested(Request $request)
     {
         try {
             // Get the current date and month
@@ -5419,14 +5419,90 @@ class AdminController extends Controller
             //     'year' => $currentYear,
             //     'data' => $schoolsData,  // This now contains the 'totalCourses' field for each school
             // ]);
+
             foreach ($schoolsData as $school) {
                 $sendEmail = $this->serviceFunction->sendInterestedCourseCategoryEmail($school['schoolEmail'], $school['schoolName'], $school['courseCount'], $school['totalCourses']);
-                if ($sendEmail) {
-                    return $sendEmail;
-                }
             }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => "send successfully"
+                ]
+            ]);
         } catch (\Exception $e) {
             // Return error response in case of failure
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+    public function adminCourseCategoryInterested(Request $request)
+    {
+        try {
+            $query = stp_courseInterest::where('status', 1);
+            // Apply categoryId filter if provided in the request body
+            if ($request->has('categoryId') && $request->input('categoryId')) {
+                $query->whereHas('course.category', function ($q) use ($request) {
+                    $q->where('id', $request->input('categoryId'));
+                });
+            }
+            // Get all results
+            $interestedCourses = $query
+                ->with([
+                    'course.school:id,school_name,school_email',
+                    'course.category:id,category_name'
+                ])
+                ->get();
+
+            // Group results by category type
+            $groupedByCategories = $interestedCourses
+                ->groupBy(function ($item) {
+                    return $item->course->category->category_name ?? 'Uncategorized';
+                })
+                ->map(function ($group, $category) {
+                    return [
+                        'category' => $category,
+                        'categoryId' => $group->first()->course->category->id ?? null,
+                        'totalNumber' => $group->count(),
+                        'school' => $group->map(function ($item) {
+                            return [
+                                'schoolId' => $item->course->school->id,
+                                'schoolName' => $item->course->school->school_name,
+                                'schoolEmail' => $item->course->school->school_email,
+                            ];
+                        })->values()->toArray(),
+                    ];
+                })->first();
+
+
+
+
+            // Total count
+            $total = $interestedCourses->count();
+            // return $groupedByCategories;
+
+            foreach ($groupedByCategories['school'] as $school) {
+                $sendEmail = $this->serviceFunction->adminCourseCategoryInterested($groupedByCategories['category'], $groupedByCategories['totalNumber'], $school['schoolEmail'], $school['schoolName']);
+                // return $sendEmail;
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'send email successfully'
+                ]
+            ]);
+
+
+
+            return response()->json(
+                $groupedByCategories,
+            );
+        } catch (\Exception $e) {
+            // \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',

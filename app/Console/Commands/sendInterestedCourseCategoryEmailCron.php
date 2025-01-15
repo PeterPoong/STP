@@ -27,20 +27,20 @@ class sendInterestedCourseCategoryEmailCron extends Command
     public function handle()
     {
         info("CRON JOB Running email 1");
-        // $url = 'http://192.168.0.75:8000/api/admin/sendInterestedCourseCategoryEmail';
+        $url = 'http://192.168.0.75:8000/api/admin/cronCorseCategoryInterested';
 
-        // // Make the API call using GET (or POST if needed)
-        // try {
-        //     $response = Http::get($url);
+        // Make the API call using GET (or POST if needed)
+        try {
+            $response = Http::get($url);
 
-        //     // Check if the request was successful
-        //     if ($response->successful()) {
-        //         $this->info('API call was successful');
-        //     } else {
-        //         $this->error('API call failed with status: ' . $response->status());
-        //     }
-        // } catch (\Exception $e) {
-        //     $this->error('Error calling API: ' . $e->getMessage());
-        // }
+            // Check if the request was successful
+            if ($response->successful()) {
+                $this->info('API call was successful');
+            } else {
+                $this->error('API call failed with status: ' . $response->status());
+            }
+        } catch (\Exception $e) {
+            $this->error('Error calling API: ' . $e->getMessage());
+        }
     }
 }

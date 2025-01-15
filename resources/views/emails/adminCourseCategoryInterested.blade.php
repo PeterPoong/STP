@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Monthly Report</title>
+    <title>Student Interest Update</title>
     <style>
         body, .container, .content, .footer, .header {
             font-family: Arial, sans-serif;
@@ -75,21 +75,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>Exciting Update: New Student Inquiries for your university {{ $schoolName }}!</h2>
+            <h2>Student Interest Update: Prospects for <b>{{$courseCategory}}</b>Program</h2>
         </div>
         
         <div class="content">
             <p>Hello <strong>{{ $schoolName }}</strong> Admin,</p>
             
-            <p>We have great news! There are <strong>{{ $totalCourse }}</strong> students interested in your courses this month. The students are interested in the following courses: 
-            
-            @foreach ($courseCategory as $index => $item)
-                @if ($loop->last)
-                    <strong>{{ $item['category_name'] }}</strong>.
-                @else
-                    <strong>{{ $item['category_name'] }}</strong>,
-                @endif
-            @endforeach
+            <p>We have great news! There are <strong>{{ $totalCourse }}</strong> students interested in {{$courseCategory}}.
             </p>
 
             <p>This report was received on {{ date('F j, Y \a\t g:i a') }}.</p>

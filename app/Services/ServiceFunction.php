@@ -14,7 +14,9 @@ use App\Mail\SendReminder;
 use App\Mail\SendEnquiryEmail;
 use App\Mail\ReplyEnquiryEmail;
 use App\Mail\SendInterestedCourseCategoryEmail;
+use App\Mail\AdminCourseCategoryInterested;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class ServiceFunction
 {
@@ -130,9 +132,11 @@ class ServiceFunction
 
     public function sendInterestedCourseCategoryEmail($email, $schoolName, $data, $totalCourse)
     {
-        Mail::to("peterpoonghaoyuan@gmail.com")->send(new SendInterestedCourseCategoryEmail($schoolName, $data, $totalCourse));
-        return response()->json([
-            'success'
-        ]);
+        Mail::to($email)->send(new SendInterestedCourseCategoryEmail($schoolName, $data, $totalCourse));
+    }
+
+    public function adminCourseCategoryInterested($category, $totalNumber, $schoolEmail, $schoolName)
+    {
+        Mail::to($schoolEmail)->send(new AdminCourseCategoryInterested($category, $totalNumber, $schoolName));
     }
 }
