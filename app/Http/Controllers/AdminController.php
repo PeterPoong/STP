@@ -5284,7 +5284,12 @@ class AdminController extends Controller
     {
         try {
             $query = stp_courseInterest::where('status', 1);
-            
+          // Apply categoryId filter if provided in the request body
+        if ($request->has('categoryId') && $request->input('categoryId')) {
+            $query->whereHas('course.category', function ($q) use ($request) {
+                $q->where('id', $request->input('categoryId'));
+            });
+        }
             // Get all results
             $interestedCourses = $query
                 ->with([
