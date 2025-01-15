@@ -5305,15 +5305,13 @@ class AdminController extends Controller
                 })
                 ->map(function ($group, $category) {
                     return [
-                        'categoryName' => $category,
+                        'category' => $category,
                         'categoryId' => $group->first()->course->category->id ?? null,
-                        'categoryTotalInterest' => $group->count(),
-                        'schoolList' => $group->map(function ($item) {
+                        'totalNumber' => $group->count(),
+                        'school' => $group->map(function ($item) {
                             return [
                                 'schoolId'=> $item->course->school->id,
                                 'schoolName' => $item->course->school->school_name,
-                                'courseId'=> $item->course->id,
-                                'courseName' => $item->course->course_name,
                                 'schoolEmail' => $item->course->school->school_email,
                             ];
                         })->values()->toArray(),
@@ -5325,11 +5323,9 @@ class AdminController extends Controller
             // Total count
             $total = $interestedCourses->count();
     
-            return response()->json([
-                'success' => true,
-                'categories' => $groupedByCategories,
-                'totalInterest' => $total,
-            ]);
+            return response()->json(
+                $groupedByCategories,
+            );
         } catch (\Exception $e) {
             \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
             return response()->json([
