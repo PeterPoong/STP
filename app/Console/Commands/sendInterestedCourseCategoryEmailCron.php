@@ -27,8 +27,7 @@ class sendInterestedCourseCategoryEmailCron extends Command
     public function handle()
     {
         info("CRON JOB Running email 1");
-        $url = 'http://192.168.0.75:8000/api/admin/cronCorseCategoryInterested';
-
+        $url = 'https://backendstudypal.studypal.my/api/admin/cronCorseCategoryInterested';
         // Make the API call using GET (or POST if needed)
         try {
             $response = Http::get($url);
