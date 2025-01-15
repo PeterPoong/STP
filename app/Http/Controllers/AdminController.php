@@ -5584,6 +5584,7 @@ class AdminController extends Controller
                 })
                 ->map(function ($group, $category) {
                     return [
+                        'categoryId' => $group->first()->course->category->id ?? null,
                         'category_type' => $category,
                         'category_total' => $group->count(),
                         'schoolList' => $group->map(function ($item) {
