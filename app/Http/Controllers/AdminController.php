@@ -35,7 +35,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Intervention\Image\Facades\Image as Image;
 use Illuminate\Support\Facades\Storage;
-
+use Illuminate\Pagination\LengthAwarePaginator;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -5320,9 +5320,6 @@ class AdminController extends Controller
                 ->values()
                 ->toArray();
     
-            // Total count
-            $total = $interestedCourses->count();
-    
             return response()->json(
                 $groupedByCategories,
             );
@@ -5403,119 +5400,122 @@ class AdminController extends Controller
             ]);
         }
     }
-    public function interestedCourseListAdmin(Request $request)
-    {
-        try {
-            $perPage = $request->filled('per_page') && $request->per_page !== ""
-                ? ($request->per_page === 'All' ? stp_student::count() : (int)$request->per_page)
-                : 10;
-    
-            $query = stp_courseInterest::where('status', 1);
-    
-            if ($request->filled('student_id')) {
-                $query->where('student_id', $request->student_id);
-            }
-    
-            if ($request->filled('school_name')) {
-                $query->whereHas('course.school', function ($q) use ($request) {
-                    $q->where('school_name', 'like', '%' . $request->school_name . '%');
-                });
-            }
-    
-            if ($request->filled('course_name')) {
-                $query->whereHas('course', function ($q) use ($request) {
-                    $q->where('course_name', 'like', '%' . $request->course_name . '%');
-                });
-            }
-    
-            if ($request->filled('category_id')) {
-                $query->whereHas('course', function ($q) use ($request) {
-                    $q->where('category_id', $request->category_id);
-                });
-            }
-    
-            if ($request->filled('month_year')) {
-                if (strpos($request->month_year, ' - ') !== false) {
-                    // Handle date range
-                    [$startDate, $endDate] = explode(' - ', $request->month_year);
-                    [$startMonth, $startYear] = explode('/', $startDate);
-                    [$endMonth, $endYear] = explode('/', $endDate);
-                    
-                    $query->where(function ($q) use ($startMonth, $startYear, $endMonth, $endYear) {
-                        $q->where(function ($subQ) use ($startMonth, $startYear, $endMonth, $endYear) {
-                            $subQ->whereDate('created_at', '>=', "$startYear-$startMonth-01")
-                                ->whereDate('created_at', '<=', date('Y-m-t', strtotime("$endYear-$endMonth-01")));
-                        })->orWhere(function ($subQ) use ($startMonth, $startYear, $endMonth, $endYear) {
-                            $subQ->whereDate('updated_at', '>=', "$startYear-$startMonth-01")
-                                ->whereDate('updated_at', '<=', date('Y-m-t', strtotime("$endYear-$endMonth-01")));
-                        });
-                    });
-                } elseif (preg_match('/^\d{1,2}\/\d{4}$/', $request->month_year)) {
-                    // Handle single month (existing logic)
-                    [$month, $year] = explode('/', $request->month_year);
-                    $query->where(function ($q) use ($month, $year) {
-                        $q->whereYear('created_at', $year)
-                            ->whereMonth('created_at', $month)
-                            ->orWhereYear('updated_at', $year)
-                            ->whereMonth('updated_at', $month);
-                    });
-                }
-            }
-    
-            // Get paginated results
-            $interestedCourses = $query
-                ->with([
-                    'course.school:id,school_name,school_email',
-                    'course.category:id,category_name'
-                ])
-                ->paginate($perPage);
-    
-            // Group results by category type
-            $groupedByCategories = collect($interestedCourses->items())
-                ->groupBy(function ($item) {
-                    return $item->course->category->category_name ?? 'Uncategorized';
-                })
-                ->map(function ($group, $category) {
-                    return [
-                        'categoryId' => $group->first()->course->category->id ?? null,
-                        'category_type' => $category,
-                        'category_total' => $group->count(),
-                        'schoolList' => $group->map(function ($item) {
-                            $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
-                            return [
-                                'schoolName' => $item->course->school->school_name,
-                                'courseName' => $item->course->course_name,
-                                'schoolEmail' => $item->course->school->school_email,
-                                'latestDate' => $latestDate,
-                            ];
-                        })->values()->toArray(),
-                    ];
-                })
-                ->values()
-                ->toArray();
-    
-            // Total count
-            $total = $query->count();
-    
-            return response()->json([
-                'success' => true,
-                'categories' => $groupedByCategories,
-                'total' => $total,
-                'pagination' => [
-                    'current_page' => $interestedCourses->currentPage(),
-                    'last_page' => $interestedCourses->lastPage(),
-                    'per_page' => $interestedCourses->perPage(),
-                    'total' => $interestedCourses->total(),
-                ],
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Internal Server Error',
-                'error' => $e->getMessage(),
-            ]);
+   
+public function interestedCourseListAdmin(Request $request)
+{
+    try {
+        $perPage = $request->filled('per_page') && $request->per_page !== ""
+            ? ($request->per_page === 'All' ? stp_courseInterest::count() : (int)$request->per_page)
+            : 10;
+
+        $query = stp_courseInterest::where('status', 1);
+
+        if ($request->filled('student_id')) {
+            $query->where('student_id', $request->student_id);
         }
-    }    
+
+        if ($request->filled('school_name')) {
+            $query->whereHas('course.school', function ($q) use ($request) {
+                $q->where('school_name', 'like', '%' . $request->school_name . '%');
+            });
+        }
+
+        if ($request->filled('course_name')) {
+            $query->whereHas('course', function ($q) use ($request) {
+                $q->where('course_name', 'like', '%' . $request->course_name . '%');
+            });
+        }
+
+        if ($request->filled('category_id')) {
+            $query->whereHas('course', function ($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+        }
+
+        if ($request->filled('month_year')) {
+            if (strpos($request->month_year, ' - ') !== false) {
+                [$startDate, $endDate] = explode(' - ', $request->month_year);
+                [$startMonth, $startYear] = explode('/', $startDate);
+                [$endMonth, $endYear] = explode('/', $endDate);
+                
+                $query->where(function ($q) use ($startMonth, $startYear, $endMonth, $endYear) {
+                    $q->where(function ($subQ) use ($startMonth, $startYear, $endMonth, $endYear) {
+                        $subQ->whereDate('created_at', '>=', "$startYear-$startMonth-01")
+                            ->whereDate('created_at', '<=', date('Y-m-t', strtotime("$endYear-$endMonth-01")));
+                    })->orWhere(function ($subQ) use ($startMonth, $startYear, $endMonth, $endYear) {
+                        $subQ->whereDate('updated_at', '>=', "$startYear-$startMonth-01")
+                            ->whereDate('updated_at', '<=', date('Y-m-t', strtotime("$endYear-$endMonth-01")));
+                    });
+                });
+            } elseif (preg_match('/^\d{1,2}\/\d{4}$/', $request->month_year)) {
+                [$month, $year] = explode('/', $request->month_year);
+                $query->where(function ($q) use ($month, $year) {
+                    $q->whereYear('created_at', $year)
+                        ->whereMonth('created_at', $month)
+                        ->orWhereYear('updated_at', $year)
+                        ->whereMonth('updated_at', $month);
+                });
+            }
+        }
+
+        $interestedCourses = $query
+            ->with([
+                'course.school:id,school_name,school_email',
+                'course.category:id,category_name'
+            ])
+            ->get();
+
+        $groupedByCategories = collect($interestedCourses)
+            ->groupBy(function ($item) {
+                return $item->course->category->category_name ?? 'Uncategorized';
+            })
+            ->map(function ($group, $category) {
+                return [
+                    'categoryId' => $group->first()->course->category->id ?? null,
+                    'category_type' => $category,
+                    'category_total' => $group->count(),
+                    'schoolList' => $group->map(function ($item) {
+                        $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
+                        return [
+                            'schoolName' => $item->course->school->school_name,
+                            'courseName' => $item->course->course_name,
+                            'schoolEmail' => $item->course->school->school_email,
+                            'latestDate' => $latestDate,
+                        ];
+                    })->values()->toArray(),
+                ];
+            })
+            ->values();
+
+        // Paginate the grouped data
+        $page = $request->input('page', 1);
+        $paginated = new LengthAwarePaginator(
+            $groupedByCategories->forPage($page, $perPage)->values(),
+            $groupedByCategories->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return response()->json([
+            'success' => true,
+            'categories' => $paginated->items(),
+            'pagination' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Internal Server Error',
+            'error' => $e->getMessage(),
+        ]);
+    }
+}
+
 
 }

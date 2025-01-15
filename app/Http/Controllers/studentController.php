@@ -3341,8 +3341,9 @@ class studentController extends Controller
             );
         }
     }
-    public function removeInterestedCourse(Request $request){
-        try{
+    public function removeInterestedCourse(Request $request)
+    {
+        try {
             $authUser = Auth::user();
             if (!$authUser) {
                 return response()->json([
@@ -3350,34 +3351,48 @@ class studentController extends Controller
                     'message' => 'User is not authenticated',
                 ], 401);
             }
-
-            $request->validate ([
-                'id' => 'required | integer',
-                'type'=>'required | string'
+    
+            // Validate the request inputs
+            $request->validate([
+                'course_id' => 'required|integer',
+                'type' => 'required|string'
             ]);
-
-            if ($request ->type == 'disable'){
-                $status = 0;
-            }else{
-                $status = 1;
+    
+            // Determine the new status
+            $status = ($request->type == 'disable') ? 0 : 1;
+    
+            // Find the interest record by course_id and the authenticated user's ID
+            $interest = stp_courseInterest::where('course_id', $request->course_id)
+                ->where('student_id', $authUser->id)
+                ->first();
+    
+            // Check if the interest exists
+            if (!$interest) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course interest not found or does not belong to the authenticated user.',
+                ], 404);
             }
-           $interest = stp_courseInterest::find($request->id);
-           $interest->update([
-            'status'=> $status,
-            'updated_by'=> $authUser->id
-           ]);
-        
-           return response()->json([
-            'success' => true,
-            'data' => ['message' => 'Successfully disable interested course status']
-        ]);
+    
+            // Update the interest status
+            $interest->update([
+                'status' => $status,
+                'updated_by' => $authUser->id,
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully updated the interested course status.'],
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Internal Server Error'
-            ]);
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage() // Optionally include this for debugging
+            ], 500);
         }
     }
+    
     public function interestedCourseList(Request $request)
     {
         try {
