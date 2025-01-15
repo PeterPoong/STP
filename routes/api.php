@@ -151,8 +151,8 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
    
     Route::post('/interestedCourseListAdmin', [AdminController::class, 'interestedCourseListAdmin']);
 
-    Route::get('/sendInterestedCourseCategoryEmail', [AdminController::class, 'sendInterestedCourseCategoryEmail']);
-    Route::get('/sendInterestedEmail', [AdminController::class, 'sendInterestedEmail']);
+    Route::post('/adminCourseCategoryInterested', [AdminController::class, 'adminCourseCategoryInterested']);
+    Route::get('/cronCorseCategoryInterested', [AdminController::class, 'cronCorseCategoryInterested']);
 
 
     Route::post('/schoolList', [AdminController::class, 'schoolList']);

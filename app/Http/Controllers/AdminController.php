@@ -5280,59 +5280,62 @@ class AdminController extends Controller
             ]);
         }
     }
-    public function sendInterestedCourseCategoryEmail(Request $request)
+    public function adminCourseCategoryInterested(Request $request)
     {
         try {
-            // Get the current date and month
-            $currentDate = now();
-            $currentMonth = $currentDate->format('m');
-            $currentYear = $currentDate->format('Y');
+            $query = stp_courseInterest::where('status', 1);
+            
+            // Get all results
+            $interestedCourses = $query
+                ->with([
+                    'course.school:id,school_name,school_email',
+                    'course.category:id,category_name'
+                ])
+                ->get();
     
-            // Build base query
-            $query = stp_courseInterest::where('status', 1)
-                ->where(function ($q) use ($currentMonth, $currentYear) {
-                    $q->whereYear('created_at', $currentYear)
-                      ->whereMonth('created_at', $currentMonth)
-                      ->orWhere(function ($subQuery) use ($currentMonth, $currentYear) {
-                          $subQuery->whereYear('updated_at', $currentYear)
-                                   ->whereMonth('updated_at', $currentMonth);
-                      });
-                });
-    
-            // Retrieve the interested course categories with relationships
-            $interestedCourseCategory = $query
-                ->with(['course.school', 'course.category'])
-                ->get()
+            // Group results by category type
+            $groupedByCategories = $interestedCourses
                 ->groupBy(function ($item) {
-                    return $item->course->school->id . '-' . $item->course->category->id;
+                    return $item->course->category->category_name ?? 'Uncategorized';
                 })
-                ->map(function ($group) {
-                    $firstItem = $group->first();
+                ->map(function ($group, $category) {
                     return [
-                        'schoolId' => $firstItem->course->school->id,
-                        'schoolName' => $firstItem->course->school->school_name,
-                        'categoryName' => $firstItem->course->category->category_name,
-                        'numberOfStudent' => $group->count()
+                        'categoryName' => $category,
+                        'categoryId' => $group->first()->course->category->id ?? null,
+                        'categoryTotalInterest' => $group->count(),
+                        'schoolList' => $group->map(function ($item) {
+                            return [
+                                'schoolId'=> $item->course->school->id,
+                                'schoolName' => $item->course->school->school_name,
+                                'courseId'=> $item->course->id,
+                                'courseName' => $item->course->course_name,
+                                'schoolEmail' => $item->course->school->school_email,
+                            ];
+                        })->values()->toArray(),
                     ];
                 })
                 ->values()
                 ->toArray();
     
-            // Return the response with the result
+            // Total count
+            $total = $interestedCourses->count();
+    
             return response()->json([
                 'success' => true,
-                'data' => $interestedCourseCategory
+                'categories' => $groupedByCategories,
+                'totalInterest' => $total,
             ]);
-            
         } catch (\Exception $e) {
+            \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage(),
             ]);
         }
-    }    
-    public function SendInterestedEmail(Request $request)
+    }
+    
+    public function cronCorseCategoryInterested(Request $request)
     {
         try {
             // Get the current date and month
