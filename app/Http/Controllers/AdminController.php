@@ -5335,7 +5335,7 @@ class AdminController extends Controller
         }
     }
     
-    public function cronCorseCategoryInterested(Request $request)
+    public function cronCourseCategoryInterested(Request $request)
     {
         try {
             // Get the current date and month
