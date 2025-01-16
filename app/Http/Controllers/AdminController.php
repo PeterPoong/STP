@@ -5478,11 +5478,19 @@ class AdminController extends Controller
                 })->first();
 
 
+            if ($groupedByCategories == null) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'message' => "Nothing to Send"
+                    ]
+                ]);
+            }
 
 
             // Total count
             $total = $interestedCourses->count();
-            return $groupedByCategories;
+
             // return $groupedByCategories;
 
             foreach ($groupedByCategories['school'] as $school) {
