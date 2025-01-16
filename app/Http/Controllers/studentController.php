@@ -6,6 +6,7 @@ use App\Models\stp_achievement;
 use App\Models\stp_core_meta;
 use App\Models\stp_country;
 use App\Models\stp_course;
+use App\Models\stp_courseInterest;
 use App\Models\stp_courses_category;
 use App\Models\stp_featured;
 use App\Models\stp_higher_transcript;
@@ -17,6 +18,7 @@ use App\Models\stp_school;
 use App\Models\stp_student;
 use App\Models\stp_subject;
 use App\Models\stp_tag;
+use App\Models\User;
 use App\Models\stp_transcript;
 use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
@@ -26,10 +28,13 @@ use App\Models\stp_cgpa;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_intake;
 use App\Models\stp_school_media;
+use App\Models\stp_personalityQuestions;
 use Illuminate\Support\Facades\Storage;
 use App\Models\stp_advertisement_banner;
+use App\Models\stp_personalityTestResult;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
+
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -48,7 +53,93 @@ class studentController extends Controller
     {
         $this->serviceFunctionController = $serviceFunctionController;
     }
+    public function checkTermsAgreement()
+    {
+        try {
+            $user = Auth::user();
 
+            return response()->json([
+                'success' => true,
+                'hasAgreed' => (bool)$user->terms_agreed,
+                'agreedAt' => $user->terms_agreed_at
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to check terms agreement',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function agreeTerms(Request $request)
+    {
+        try {
+            $request->validate([
+                'agreed' => 'required|boolean'
+            ]);
+
+            // Get the authenticated student using Sanctum
+            $student = auth('sanctum')->user();
+
+            if (!$student) {
+                \Log::error('Student not found in agreeTerms');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not authenticated'
+                ], 401);
+            }
+
+            \Log::info('Updating terms agreement for student:', [
+                'student_id' => $student->id,
+                'student_email' => $student->student_email
+            ]);
+
+            // Update only the authenticated student's terms agreement
+            $updated = $student->update([
+                'terms_agreed' => true,
+                'terms_agreed_at' => now(),
+                'updated_by' => $student->id
+            ]);
+
+            if (!$updated) {
+                throw new Exception('Failed to update terms agreement');
+            }
+
+            \Log::info('Terms agreement updated successfully for student:', [
+                'student_id' => $student->id,
+                'terms_agreed' => $student->terms_agreed,
+                'terms_agreed_at' => $student->terms_agreed_at
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Terms agreement updated successfully',
+                'data' => [
+                    'hasAgreed' => (bool)$student->terms_agreed,
+                    'agreedAt' => $student->terms_agreed_at
+                ]
+            ]);
+        } catch (ValidationException $e) {
+            \Log::error('Validation error in agreeTerms:', [
+                'errors' => $e->errors()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            \Log::error('Error in agreeTerms:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update terms agreement',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function schoolList(Request $request)
     {
 
@@ -122,6 +213,9 @@ class studentController extends Controller
                 ->select('stp_schools.*')
                 ->join('stp_featureds', function ($join) {
                     $join->on('stp_schools.id', '=', 'stp_featureds.school_id')
+                        ->whereNotNull('stp_featureds.school_id')
+                        ->where('stp_featureds.featured_startTime', '<', now())
+                        ->where('stp_featureds.featured_endTime', '>', now())
                         ->where('stp_featureds.featured_type', 30)
                         ->where('stp_featureds.featured_status', 1);
                 })
@@ -150,12 +244,6 @@ class studentController extends Controller
                 ->get();
 
 
-
-
-
-
-
-
             // Calculate offset and limit for the page
             $page = $request->get('page', 1);
             $offset = ($page - 1) * $perPage;
@@ -169,8 +257,11 @@ class studentController extends Controller
                 ->leftJoin('stp_featureds', function ($join) {
                     $join->on('stp_schools.id', '=', 'stp_featureds.school_id')
                         ->where('stp_featureds.featured_type', 30)
-                        ->where('stp_featureds.featured_status', 1);
+                        ->where('stp_featureds.featured_status', 1)
+                        ->where('featured_startTime', '<', now())
+                        ->where('featured_endTime', '>', now());
                 })
+
                 ->whereNull('stp_featureds.school_id')
                 ->where($filterConditions)
                 ->with(['courses' => function ($query) use ($request) {
@@ -196,6 +287,7 @@ class studentController extends Controller
                 ->take($nonFeaturedLimit)
                 ->get();
 
+            // return $nonFeaturedSchools;
             // Merge featured and non-featured results for the page
             $schools = $featuredSchools->concat($nonFeaturedSchools)->unique('id');
 
@@ -223,7 +315,7 @@ class studentController extends Controller
             // Transform the schools as per requirements
             $transformedSchools = $paginator->through(function ($school) {
                 $featured = $school->featured->contains(function ($item) {
-                    return $item->featured_type == 30 && $item->featured_status == 1;
+                    return $item->featured_type == 30 && $item->featured_status == 1 && $item->featured_startTime < now() && $item->featured_endTime > now();
                 });
                 $monthList = [];
                 foreach ($school->courses as $courses) {
@@ -283,11 +375,30 @@ class studentController extends Controller
     {
 
         try {
-            $request->validate([
-                'courseID' => 'required|integer'
-            ]);
+            // $request->validate([
+            //     'courseID' => 'required|integer'
+            // ]);
 
-            $courseList = stp_course::find($request->courseID);
+            // $courseList = stp_course::find($request->courseID);
+
+            $request->validate([
+                'courseID' => 'integer'
+            ]);
+            if (!empty($request->courseID)) {
+                $courseList = stp_course::find($request->courseID);
+            } else {
+                $request->validate([
+                    'schoolName' => 'required|string',
+                    'courseName' => 'required|string'
+                ]);
+                $courseList = stp_course::where('course_name', $request->courseName)
+                    ->whereHas('school', function ($query) use ($request) {
+                        $query->where('school_name', $request->schoolName);
+                    })
+                    ->get()
+                    ->first();
+            }
+
 
 
             if (empty($courseList->course_logo)) {
@@ -375,10 +486,21 @@ class studentController extends Controller
     {
         try {
             $request->validate([
-                'id' => 'required|integer'
+                'id' => 'integer'
             ]);
 
-            $school = stp_school::find($request->id);
+            if (!empty($request->id)) {
+                $school = stp_school::find($request->id);
+            } else {
+                $request->validate([
+                    'schoolName' => 'required|string'
+                ]);
+                $school = stp_school::where('school_name', $request->schoolName)->get()->first();
+            }
+
+
+
+
 
             $courses = $school->courses;
 
@@ -467,12 +589,16 @@ class studentController extends Controller
     {
         // $test = stp_featured::find(1);
         // return $test->school;
+
         try {
             $hpFeaturedSchoolList = stp_featured::where('featured_type', 28)
+                ->where('featured_startTime', '<', now())
+                ->where('featured_endTime', '>', now())
                 ->where('featured_status', 1)
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 3]);
                 })
+                ->inRandomOrder()
                 ->get()
                 ->map(function ($school) {
                     return ([
@@ -480,7 +606,10 @@ class studentController extends Controller
                         'schoolName' => $school->school->school_name,
                         'schoolLogo' => $school->school->school_logo
                     ]);
-                });
+                })
+                ->unique('schoolID')
+                ->values();
+
             return response()->json([
                 'success' => true,
                 'data' => $hpFeaturedSchoolList
@@ -510,10 +639,17 @@ class studentController extends Controller
 
             $hpFeaturedCoursesList = stp_featured::whereNotNull('course_id')
                 ->where('featured_type', 29)
+                ->where('featured_startTime', '<', now())
+                ->where('featured_endTime', '>', now())
+
                 ->where('featured_status', 1)
                 ->whereHas('courses', function ($query) {
-                    $query->where('course_status', '!=', 0);
+                    $query->where('course_status', '!=', 0)
+                        ->whereHas('school', function ($school) {
+                            $school->whereIn('school_status', [1, 3]);
+                        });
                 })
+                ->inRandomOrder()
                 ->get()->map(function ($courses) {
                     if (empty($courses->courses->course_logo)) {
                         $logo = $courses->courses->school->school_logo;
@@ -530,7 +666,9 @@ class studentController extends Controller
                         'course_school' => $courses->courses->school->school_name,
                         'location' => $courses->courses->school->city->city_name ?? null,
                     ];
-                });
+                })
+                ->unique('id')
+                ->values();
 
             return response()->json([
                 'success' => true,
@@ -580,7 +718,7 @@ class studentController extends Controller
 
             $filterConditions = function ($query) use ($request) {
                 $query->whereHas('school', function ($q) {
-                    $q->whereIn('school_status', [1, 3]);
+                    $q->whereIn('school_status', ["1", "3"]);
                 })
                     ->where('course_status', '!=', 0)
                     ->when($request->filled('qualification'), function ($q) use ($request) {
@@ -623,6 +761,7 @@ class studentController extends Controller
                     });
             };
 
+
             $perPage = 40;
             $featuredLimit = 5;
 
@@ -631,13 +770,25 @@ class studentController extends Controller
                 ->select('stp_courses.*')
                 ->join('stp_featureds', function ($join) {
                     $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
+                        ->whereNotNull('stp_featureds.course_id')
+                        ->where('stp_featureds.featured_startTime', '<', now())
+                        ->where('stp_featureds.featured_endTime', '>', now())
                         ->where('stp_featureds.featured_type', 30)
                         ->where('stp_featureds.featured_status', 1);
                 })
                 ->where($filterConditions)
+                ->whereHas('school', function ($q) {
+                    $q->whereIn('school_status', ["1", "3"]);
+                })
                 ->inRandomOrder() // Randomize each time
                 ->take($featuredLimit)
-                ->get();
+                ->get()
+                ->unique('id');
+
+
+
+
+
 
             // Calculate offset and limit for the page
             $page = $request->get('page', 1);
@@ -647,18 +798,41 @@ class studentController extends Controller
             $nonFeaturedLimit = $perPage - $featuredCourses->count();
 
             // Query non-featured courses
+            // $nonFeaturedCourses = stp_course::query()
+            //     ->select('stp_courses.*')
+            //     ->leftJoin('stp_featureds', function ($join) {
+            //         $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
+            //             ->where('stp_featureds.featured_type', 30)
+            //             ->where('stp_featureds.featured_status', 1);
+            //     })
+            //     ->whereNull('stp_featureds.course_id')
+            //     ->where($filterConditions)
+            //     ->inRandomOrder()
+            //     ->skip($offset)
+            //     ->take($nonFeaturedLimit)
+            //     ->get();
             $nonFeaturedCourses = stp_course::query()
                 ->select('stp_courses.*')
-                ->leftJoin('stp_featureds', function ($join) {
-                    $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
-                        ->where('stp_featureds.featured_type', 30)
-                        ->where('stp_featureds.featured_status', 1);
+                ->whereDoesntHave('featured', function ($q) {
+                    $q->where('featured_type', 30)
+                        ->where('featured_status', 1)
+                        ->where('featured_startTime', '<', now())
+                        ->where('featured_endTime', '>', now());
                 })
-                ->whereNull('stp_featureds.course_id')
                 ->where($filterConditions)
+                ->whereHas('school', function ($q) {
+                    $q->whereIn('school_status', ["1", "3"]);
+                })
+                ->inRandomOrder()
                 ->skip($offset)
                 ->take($nonFeaturedLimit)
                 ->get();
+
+
+
+
+
+
 
             // Merge featured and non-featured results for the page
             $courses = $featuredCourses->concat($nonFeaturedCourses);
@@ -669,10 +843,15 @@ class studentController extends Controller
                 ->leftJoin('stp_featureds', function ($join) {
                     $join->on('stp_courses.id', '=', 'stp_featureds.course_id')
                         ->where('stp_featureds.featured_type', 30)
-                        ->where('stp_featureds.featured_status', 1);
+                        ->where('stp_featureds.featured_status', 1)
+                        ->where('featured_startTime', '<', now())
+                        ->where('featured_endTime', '>', now());
                 })
                 ->whereNull('stp_featureds.course_id')
                 ->where($filterConditions)
+                ->whereHas('school', function ($q) {
+                    $q->whereIn('school_status', ["1", "3"]);
+                })
                 ->count();
 
             // Paginate the combined result
@@ -687,7 +866,7 @@ class studentController extends Controller
             // Transform the courses as per requirements
             $transformedCourses = $paginator->through(function ($course) {
                 $featured = $course->featured->contains(function ($item) {
-                    return $item->featured_type == 30 && $item->featured_status == 1;
+                    return $item->featured_type == 30 && $item->featured_status == 1 && $item->featured_startTime < now() && $item->featured_endTime > now();
                 });
 
                 $intakeMonths = $course->intake->where('intake_status', 1)
@@ -716,8 +895,16 @@ class studentController extends Controller
                     'school_location' => $course->school->school_google_map_location,
                     'school_status' => $course->course_status
                 ];
-            });
-            return $transformedCourses;
+            })->values(); // Apply values() to reindex the data
+
+            // Reset the collection in the paginator
+            $paginator->setCollection(collect($transformedCourses));
+
+            // Return the paginated response in the desired format
+            return response()->json($paginator);
+
+            // return $transformedCourses;
+
 
             return response()->json([
                 'success' => true,
@@ -731,7 +918,6 @@ class studentController extends Controller
             ], 500);
         }
     }
-
 
 
     public function studentDetail()
@@ -778,6 +964,11 @@ class studentController extends Controller
                 'category' => 'required|integer'
             ]);
 
+            if ($request->category == 85) {
+                $category = 32;
+            } else {
+                $category = $request->category;
+            }
             $list = stp_subject::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('subject_name', 'like', '%' . $request->search . '%');
             })
@@ -785,7 +976,7 @@ class studentController extends Controller
                     $query->whereNotIn('id', $request->selectedSubject);
                 })
                 ->where('subject_status', 1)
-                ->where('subject_category', $request->category)
+                ->where('subject_category', $category)
                 ->get();
 
             $subjectList = [];
@@ -1896,12 +2087,17 @@ class studentController extends Controller
                 'category_id' => 'integer|nullable'
             ]);
 
+            if ($request->category_id == 85) {
+                $category = 32;
+            } else {
+                $category = $request->category_id;
+            }
             // Query the stp_subject table to get subjects with the matching category
             $subjectList = stp_subject::query()
                 ->where('subject_status', 1) // Assuming 1 means 'Active'
-                ->when($request->filled('category_id'), function ($query) use ($request) {
+                ->when($request->filled('category_id'), function ($query) use ($category) {
                     // Filtering the subjects by the selected category
-                    $query->where('subject_category', $request->category_id);
+                    $query->where('subject_category', $category);
                 })
                 ->paginate(10) // Paginating the result
                 ->through(function ($subject) {
@@ -2484,7 +2680,10 @@ class studentController extends Controller
             $featuredInstituteList = stp_featured::where('school_id', '!=', null)
                 ->where('featured_type', $featuredType)
                 ->where('featured_status', 1)
+                ->where('featured_startTime', '<', now())
+                ->where('featured_endTime', '>', now())
                 ->where('id', '!=', $request->schoolId)
+                ->inRandomOrder()
                 ->get()
                 ->map(function ($institute) {
                     return [
@@ -2493,7 +2692,9 @@ class studentController extends Controller
                         'school_logo' => $institute->school->school_logo,
 
                     ];
-                });
+                })
+                ->unique('school_id');
+
 
             return response()->json([
                 'success' => true,
@@ -2531,7 +2732,10 @@ class studentController extends Controller
             $featuredCoursesList = stp_featured::where('course_id', '!=', null)
                 ->where('featured_type', $featuredType)
                 ->where('featured_status', 1)
+                ->where('featured_startTime', '<', now())
+                ->where('featured_endTime', '>', now())
                 ->where('course_id', '!=', $request->courseId)
+                ->inRandomOrder()
                 ->get()
                 ->map(function ($featured) {
                     return [
@@ -2545,7 +2749,9 @@ class studentController extends Controller
                         'state' => $featured->courses->school->state->state_name ?? null,
                         'country' => $featured->courses->school->country->country_name ?? null,
                     ];
-                });
+                })
+                ->unique('course_id');
+
             return response()->json([
                 'success' => true,
                 'data' => $featuredCoursesList
@@ -2712,6 +2918,7 @@ class studentController extends Controller
         try {
             $authUser = Auth::user();
             $getTranscriptSubject = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_category', 32)
                 ->where('transcript_status', 1)
                 ->get()
                 ->map(function ($subject) {
@@ -2723,9 +2930,25 @@ class studentController extends Controller
                     ];
                 });
 
+            $getSPMTrial = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_category', 85)
+                ->where('transcript_status', 1)
+                ->get()
+                ->map(function ($subject) {
+                    return [
+                        'subject_id' => $subject->subject->id,
+                        'subject_name' => $subject->subject->subject_name,
+                        'subject_grade_id' => $subject->grade->id,
+                        'subject_grade' => $subject->grade->core_metaName,
+                    ];
+                });
+
+            $data['spm'] = $getTranscriptSubject;
+            $data['trial'] = $getSPMTrial;
+
             return response()->json([
                 'success' => true,
-                'data' => $getTranscriptSubject
+                'data' => $data
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -2788,8 +3011,8 @@ class studentController extends Controller
             ]);
             $authUser = Auth::user();
             //spm
-            if ($request->transcriptType == 32) {
-                $resetTranscript = stp_transcript::where('student_id', $authUser->id);
+            if ($request->transcriptType == 32 || $request->transcriptType == 85) {
+                $resetTranscript = stp_transcript::where('student_id', $authUser->id)->where('transcript_category', $request->transcriptType);
             } else {
                 $resetTranscript = stp_higher_transcript::where('student_id', $authUser->id)->where('category_id', $request->transcriptType);
                 //remove cgpa
@@ -2928,6 +3151,8 @@ class studentController extends Controller
     {
         try {
             $authUser = Auth::user();
+
+
             $categoryList = stp_core_meta::query()
                 ->where('core_metaStatus', 1) // Only active categories
                 ->where('core_metaType', 'transcript_category') // Only transcript categories
@@ -2938,15 +3163,18 @@ class studentController extends Controller
                         'transcript_category' => $category->core_metaName
                     ];
                 });
+
+
             $getTranscriptSubject = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_category', 32)
                 ->where('transcript_status', 1)
                 ->get()
                 ->map(function ($subject) {
                     return [
                         'subject_id' => $subject->subject->id,
                         'subject_name' => $subject->subject->subject_name,
-                        'subject_grade_id' => $subject->grade->id,
-                        'subject_grade' => $subject->grade->core_metaName,
+                        'subject_grade_id' => $subject->grade->id ?? null,
+                        'subject_grade' => $subject->grade->core_metaName ?? null,
                     ];
                 });
 
@@ -2972,8 +3200,49 @@ class studentController extends Controller
                 'document' => $spmMediaList
             ];
 
+
+
+
+            $getSpmTrial = stp_transcript::where('student_id', $authUser->id)
+                ->where('transcript_category', 85)
+                ->where('transcript_status', 1)
+                ->get()
+                ->map(function ($subject) {
+                    return [
+                        'subject_id' => $subject->subject->id,
+                        'subject_name' => $subject->subject->subject_name,
+                        'subject_grade_id' => $subject->grade->id,
+                        'subject_grade' => $subject->grade->core_metaName,
+                    ];
+                });
+
+            $spmTrialMedia = stp_student_media::query()
+                ->where('studentMedia_status', 1)
+                ->where('student_id', $authUser->id)
+                ->where('studentMedia_type', 85)
+                ->get() // Get all records instead of paginating
+                ->map(function ($spmMediaList) {
+                    $dateTime = new \DateTime($spmMediaList->created_at);
+                    $appliedDate = $dateTime->format('Y-m-d H:i:s');
+                    return [
+                        "id" => $spmMediaList->id,
+                        "studentMedia_name" => $spmMediaList->studentMedia_name,
+                        "studentMedia_location" => $spmMediaList->studentMedia_location,
+                        "category_id" => $spmMediaList->studentMedia_type,
+                        "created_at" => $appliedDate,
+                        "status" => $spmMediaList->studentMedia_status ? "Active" : "Inactive"
+                    ];
+                });
+            $getSpmTrial = [
+                'subjects' => $getSpmTrial, // Use 'subjects' as key
+                'document' => $spmTrialMedia
+            ];
+
+            $spm['spm'] = $getTranscriptSubject;
+            $spm['trial'] = $getSpmTrial;
+
             $getAllHigherTranscriptId = stp_core_meta::where('core_metaType', 'transcript_category')
-                ->where('id', '!=', 32)
+                ->whereNotIn('id', [32, 85])
                 ->get();
 
 
@@ -3074,7 +3343,7 @@ class studentController extends Controller
 
             $result = [
                 'categories' => $categoryList,
-                'transcripts' => $getTranscriptSubject,
+                'transcripts' => $spm,
                 'higherTranscripts' => $higherTranscriptList
 
             ];
@@ -3092,6 +3361,8 @@ class studentController extends Controller
         }
     }
 
+
+
     public function advertisementList(Request $request)
     {
         $request->validate([
@@ -3105,5 +3376,295 @@ class studentController extends Controller
             'success' => true,
             'data' => $advertsmentList
         ]);
+    }
+
+    public function personalityQuestionList(Request $request)
+    {
+        try {
+            $getQuestionList = stp_personalityQuestions::where('status', 1)
+                ->get()
+                ->map(function ($question) {
+                    return [
+                        'question' => $question->question,
+                        'riasec_type' => [
+                            'id' => $question->question_type->id,
+                            'type_name' => $question->question_type->type_name,
+                        ]
+                    ];
+                });
+            return response()->json([
+                'success' => true,
+                'data' => $getQuestionList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function submitTestResult(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+
+            $request->validate([
+                'scores' => 'required'
+            ]);
+            $newData = [
+                'student_id' => $authUser->id,
+                'score' => json_encode($request->scores)
+            ];
+
+            $finduserResult = stp_personalityTestResult::where('student_id', $authUser->id)->first();
+            if ($finduserResult !== null) {
+                $finduserResult->update($newData);
+            } else {
+                $addResult = stp_personalityTestResult::insert($newData);
+            }
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "successfully save the result"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getTestResult(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $getResult = stp_personalityTestResult::where('student_id', $authUser->id)->where('status', 1)->get()->first();
+            $result = [
+                "score" => json_decode($getResult->score, true),
+                "created_at" => $getResult->created_at
+            ];
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'sucess' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
+
+    public function addInterestedCourse(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            if (!$authUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User is not authenticated',
+                ], 401);
+            }
+
+            $request->validate([
+                'course_id' => 'required|integer',
+            ]);
+
+            $createInterestedCourse = stp_courseInterest::create([
+                'student_id' => $authUser->id,
+                'course_id' => $request->course_id,
+                'created_by' => $authUser->id,
+                'status' => 1,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully added the course to interest'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Internal Server Error',
+                    'error' => $e->getMessage(),
+                ]
+            );
+        }
+    }
+    public function removeInterestedCourse(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            if (!$authUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User is not authenticated',
+                ], 401);
+            }
+
+            // Validate the request inputs
+            $request->validate([
+                'course_id' => 'required|integer',
+                'type' => 'required|string'
+            ]);
+
+            // Determine the new status
+            $status = ($request->type == 'disable') ? 0 : 1;
+
+            // Find the interest record by course_id and the authenticated user's ID
+            $interest = stp_courseInterest::where('course_id', $request->course_id)
+                ->where('student_id', $authUser->id)
+                ->first();
+
+            // Check if the interest exists
+            if (!$interest) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course interest not found or does not belong to the authenticated user.',
+                ], 404);
+            }
+
+            // Update the interest status
+            $interest->update([
+                'status' => $status,
+                'updated_by' => $authUser->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully updated the interested course status.'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage() // Optionally include this for debugging
+            ], 500);
+        }
+    }
+
+    public function interestedCourseList(Request $request)
+    {
+        try {
+            // Base query with status = 1
+            $query = stp_courseInterest::where('status', 1);
+
+            // Apply filters if provided
+            if ($request->filled('student_id')) {
+                $query->where('student_id', $request->student_id);
+            }
+
+            if ($request->filled('course_id')) {
+                $query->where('course_id', $request->course_id);
+            }
+
+            if ($request->filled('school_id')) {
+                $query->whereHas('course', function ($q) use ($request) {
+                    $q->where('school_id', $request->school_id);
+                });
+            }
+
+            if ($request->filled('category_id')) {
+                $query->whereHas('course', function ($q) use ($request) {
+                    $q->where('category_id', $request->category_id);
+                });
+            }
+
+            if ($request->filled('month_year')) {
+                [$month, $year] = explode('/', $request->month_year);
+                $query->where(function ($q) use ($month, $year) {
+                    $q->where(function ($subQuery) use ($month, $year) {
+                        $subQuery->whereYear('created_at', $year)
+                            ->whereMonth('created_at', $month);
+                    })->orWhere(function ($subQuery) use ($month, $year) {
+                        $subQuery->whereYear('updated_at', $year)
+                            ->whereMonth('updated_at', $month);
+                    });
+                });
+            }
+
+            // Fetch and transform data
+            $interestedCourses = $query
+                ->with(['course.school', 'course.category'])
+                ->get()
+                ->map(function ($item) {
+                    $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
+                    return [
+                        'id' => $item->id,
+                        'student_id' => $item->student_id,
+                        'student_name' => $item->student->student_userName,
+                        'course_id' => $item->course_id,
+                        'course_name' => $item->course->course_name,
+                        'status' => $item->status,
+                        'school_id' => $item->course->school_id ?? null,
+                        'school_name' => $item->course->school->school_name,
+                        'school_email' => $item->course->school->school_email ?? null,
+                        'category_type' => $item->course->category->category_name ?? null,
+                        'latest_date' => $latestDate,
+                    ];
+                });
+
+            // Count total records after filtering
+            $total = $interestedCourses->count();
+
+            // Calculate total per category and sort by category type
+            $categoriesTotal = $interestedCourses
+                ->groupBy('category_type')
+                ->map(function ($group, $category) {
+                    return [
+                        'category_type' => $category,
+                        'total' => $group->count(),
+                    ];
+                })
+                ->values()
+                ->sortBy('category_type')
+                ->values()
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'data' => $interestedCourses,
+                'categories' => $categoriesTotal,
+                'total' => $total,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function riasecCourseCategory(Request $request)
+    {
+        try {
+            $request->validate([
+                'riasecType' => 'required|integer'
+            ]);
+
+            $getCourseCategory = stp_courses_category::where('riasecTypes', $request->riasecType)->get()->map(function ($courseCategory) {
+                return [
+                    'id' => $courseCategory->id,
+                    'category_name' => $courseCategory->category_name
+                ];
+            });
+            return response()->json([
+                'success' => true,
+                'data' => $getCourseCategory
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

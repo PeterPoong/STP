@@ -72,4 +72,9 @@ class stp_course extends Model
     {
         return $this->hasMany(stp_intake::class, 'course_id', 'id');
     }
+
+    public function courseInterest(): HasMany
+    {
+        return $this->hasMany(stp_courseInterest::class, 'course_id', 'id');
+    }
 }

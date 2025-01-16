@@ -13,7 +13,10 @@ use App\Mail\SendRejectEmail;
 use App\Mail\SendReminder;
 use App\Mail\SendEnquiryEmail;
 use App\Mail\ReplyEnquiryEmail;
+use App\Mail\SendInterestedCourseCategoryEmail;
+use App\Mail\AdminCourseCategoryInterested;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class ServiceFunction
 {
@@ -125,5 +128,15 @@ class ServiceFunction
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function sendInterestedCourseCategoryEmail($email, $schoolName, $data, $totalCourse)
+    {
+        Mail::to($email)->send(new SendInterestedCourseCategoryEmail($schoolName, $data, $totalCourse));
+    }
+
+    public function adminCourseCategoryInterested($category, $totalNumber, $schoolEmail, $schoolName)
+    {
+        Mail::to($schoolEmail)->send(new AdminCourseCategoryInterested($category, $totalNumber, $schoolName));
     }
 }

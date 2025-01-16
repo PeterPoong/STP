@@ -64,7 +64,11 @@ Route::prefix('student')->group(function () {
     Route::post('/advertisementList', [studentController::class, 'advertisementList']);
 
 
+
+
     //student portal
+    Route::middleware('auth:sanctum')->post('/checkTermsAgreement', [studentController::class, 'checkTermsAgreement']);
+    Route::middleware('auth:sanctum')->post('/agreeTerms', [studentController::class, 'agreeTerms']);
     Route::middleware('auth:sanctum')->post('/studentDetail', [studentController::class, 'studentDetail']);
     Route::middleware('auth:sanctum')->post('/editStudentDetail', [studentController::class, 'editStudent']);
     Route::middleware('auth:sanctum')->post('/updateProfilePic', [studentController::class, 'updateProfilePic']);
@@ -72,6 +76,11 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/addEditTranscript', [studentController::class, 'addEditTranscript']);
     Route::middleware('auth:sanctum')->post('/addEditHigherTranscript', [studentController::class, 'addEditHigherTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
+
+    //interested course
+    Route::middleware('auth:sanctum')->post('/addInterestedCourse', [studentController::class, 'addInterestedCourse']);
+    Route::middleware('auth:sanctum')->post('/removeInterestedCourse', [studentController::class, 'removeInterestedCourse']);
+    Route::middleware('auth:sanctum')->post('/interestedCourseList', [studentController::class, 'interestedCourseList']);
 
     Route::middleware('auth:sanctum')->post('/addProgramCgpa', [studentController::class, 'addProgramCgpa']);
     Route::middleware('auth:sanctum')->post('/editProgramCgpa', [studentController::class, 'editProgramCgpa']);
@@ -124,6 +133,11 @@ Route::prefix('student')->group(function () {
 
     Route::middleware('auth:sanctum')->post('/resetTranscript', [studentController::class, 'resetTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourseTranscript', [studentController::class, 'applyCourseTranscript']);
+
+    Route::middleware('auth:sanctum')->get('/personalityQuestionList', [studentController::class, 'personalityQuestionList']);
+    Route::middleware('auth:sanctum')->post('/submitTestResult', [studentController::class, 'submitTestResult']);
+    Route::middleware('auth:sanctum')->get('/getTestResult', [studentController::class, 'getTestResult']);
+    Route::middleware('auth:sanctum')->post('/riasecCourseCategory', [studentController::class, 'riasecCourseCategory']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -138,6 +152,11 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
     Route::post('/replyEnquiry', [EnquiryController::class, 'replyEnquiry']);
 
+    Route::post('/interestedCourseListAdmin', [AdminController::class, 'interestedCourseListAdmin']);
+
+
+    Route::get('/cronCorseCategoryInterested', [AdminController::class, 'cronCorseCategoryInterested'])->withoutMiddleware('auth:sanctum');
+    Route::post('/adminCourseCategoryInterested', [AdminController::class, 'adminCourseCategoryInterested'])->withoutMiddleware('auth:sanctum');
 
 
     Route::post('/schoolList', [AdminController::class, 'schoolList']);
@@ -163,7 +182,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/intakeList', [AdminController::class, 'intakeList']);
     Route::post('/courseTag', [AdminController::class, 'courseTag']);
     Route::post('/courseDetailApplicant', [AdminController::class, 'courseDetailApplicant']);
-
+    Route::post('/courseListFeatured', [AdminController::class, 'courseListFeatured']);
 
     Route::post('/addTag', [AdminController::class, 'addTag']);
     Route::post('/searchTag', [AdminController::class, 'searchTag']);
@@ -218,6 +237,34 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post("/addDataList", [AdminController::class, 'addDataList']);
     Route::post("/editData", [AdminController::class, 'editData']);
     Route::post("/editDataStatus", [AdminController::class, 'editDataStatus']);
+
+    //request featured
+    // Route::post('/featuredSchoolRequestList', [AdminController::class, 'featuredSchoolRequestList']);
+    // Route::post('/featuredCourseRequestList', [AdminController::class, 'featuredCourseRequestList']);
+    Route::post('/schoolFeaturedSchoolCourseRequestList', [AdminController::class, 'schoolFeaturedSchoolCourseRequestList']);
+    // Route::post('/featuredRequestDetail', [AdminController::class, 'featuredRequestDetail']);
+    Route::post('/updateRequestFeatured', [AdminController::class, 'updateRequestFeatured']);
+    Route::post('/adminApplyFeaturedCourseRequest', [AdminController::class, 'adminApplyFeaturedCourseRequest']);
+    Route::post('/adminApplyFeaturedSchoolRequest', [AdminController::class, 'adminApplyFeaturedSchoolRequest']);
+    Route::post('/adminFeaturedCourseAvailable', [AdminController::class, 'adminFeaturedCourseAvailable']);
+    Route::post('/featuredRequestList', [AdminController::class, 'featuredRequestList']);
+    Route::post('/addNewCourse', [AdminController::class, 'addNewCourse']);
+
+    Route::post('/adminFeaturedCourseList', [AdminController::class, 'adminFeaturedCourseList']);
+    //update featured
+    Route::post('/editFeaturedCourse', [AdminController::class, 'editFeaturedCourse']);
+    Route::post('/editFeaturedSchool', [AdminController::class, 'editFeaturedSchool']);
+    Route::post('/editRequest', [AdminController::class, 'editRequest']);
+    Route::post('/adminFeaturedTypeListRequest', [AdminController::class, 'adminFeaturedTypeListRequest']);
+
+    //personality test
+    Route::get('/riasecTypesList', [AdminController::class, 'riasecTypesList']);
+    Route::post('/addRiasecTypes', [AdminController::class, 'addRiasecTypes']);
+    Route::post('/updateRiasecTypes', [AdminController::class, 'updateRiasecTypes']);
+    //personality question 
+    Route::post('/addPersonalQuestion', [AdminController::class, 'addPersonalQuestion']);
+    Route::post('/updatePersonalQuestion', [AdminController::class, 'updatePersonalQuestion']);
+    Route::post('/personalityQuestionList', [AdminController::class, 'personalityQuestionList']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {
@@ -291,6 +338,24 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
 
     //location 
     Route::post('/getLocation', [SchoolController::class, 'getLocation']);
+
+    //request features
+    Route::post('requestCoursesFeatured', [SchoolController::class, 'requestCoursesFeatured']);
+    Route::post('requestFeaturedSchool', [SchoolController::class, 'requestFeaturedSchool']);
+    Route::post('applyFeaturedCourse', [SchoolController::class, 'applyFeaturedCourse']);
+
+    Route::post('courseRequestFeaturedList', [SchoolController::class, 'courseRequestFeaturedList']);
+    Route::post('schoolRequestFeaturedList', [SchoolController::class, 'schoolRequestFeaturedList']);
+    Route::post('schoolFeaturedRequestLists', [SchoolController::class, 'schoolFeaturedRequestLists']);
+
+
+    Route::post('featuredCourseAvailable', [SchoolController::class, 'featuredCourseAvailable']);
+    Route::post('editFeaturedCourseSetting', [SchoolController::class, 'editFeaturedCourseSetting']);
+    Route::post('editSchoolFeaturedSetting', [SchoolController::class, 'editSchoolFeaturedSetting']);
+    Route::get('schoolFeaturedType', [SchoolController::class, 'schoolFeaturedType']);
+    Route::post('schoolFeaturedPriceList', [SchoolController::class, 'schoolFeaturedPriceList']);
+
+    Route::get('testFeaturedRequest', [SchoolController::class, 'testFeaturedRequest']);
 });
 
 // Route::get('auth/facebook', [LoginController::class, 'redirectToFacebook'])->name('login.facebook');
@@ -303,6 +368,7 @@ Route::group(['middleware' => ['web']], function () {
 });
 Route::post('/decrypt-data', [SocialLoginController::class, 'decryptData']);
 Route::post('/facebook/deleteFacebookData', [SocialLoginController::class, 'deleteFacebookData']);
+Route::post('/social/updateContact', [SocialLoginController::class, 'updateContact']);
 
 
 

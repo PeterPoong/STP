@@ -18,6 +18,7 @@ class stp_featured extends Model
         'featured_endTime',
         'featured_type',
         'featured_status',
+        'request_id',
         'updated_by',
         'created_by'
     ];
@@ -34,5 +35,9 @@ class stp_featured extends Model
     public function featured(): BelongsTo
     {
         return $this->belongsTo(stp_core_meta::class, 'featured_type', 'id');
+    }
+    public function request(): BelongsTo
+    {
+        return $this->belongsTo(stp_featured_request::class, 'request_id', 'id');
     }
 }

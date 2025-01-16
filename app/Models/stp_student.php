@@ -28,7 +28,10 @@ class stp_student extends Model
         'facebook_id',
         'created_by',
         'updated_by',
-        'google_id'
+        'google_id',
+        'terms_agreed',
+        'terms_agreed_at',
+        'updated_by'
     ];
 
     public function role()
@@ -86,5 +89,15 @@ class stp_student extends Model
     public function otherCertificate(): HasMany
     {
         return $this->hasMany(stp_other_certificate::class, 'student_id', 'id');
+    }
+
+    public function interestCourses(): HasMany
+    {
+        return $this->hasMany(stp_courseInterest::class, 'student_id', 'id');
+    }
+
+    public function personalityResult(): HasOne
+    {
+        return $this->hasOne(stp_personalityTestResult::class, 'student_id', 'id');
     }
 }

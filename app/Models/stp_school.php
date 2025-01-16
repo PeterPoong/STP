@@ -91,4 +91,9 @@ class stp_school extends Model
     {
         return $this->belongsTo(stp_core_meta::class, 'account_type', 'id');
     }
+
+    public function requestFeatured(): HasMany
+    {
+        return $this->hasMany(stp_featured_request::class, 'school_id', 'id');
+    }
 }
