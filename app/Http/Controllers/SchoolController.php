@@ -2465,7 +2465,8 @@ class SchoolController extends Controller
             $request->validate([
                 'studentId' => 'required|integer'
             ]);
-            $getTranscriptSubject = stp_transcript::where('student_id', $request->studentId)
+            $getSPMTranscriptSubject = stp_transcript::where('student_id', $request->studentId)
+                ->where('transcript_category', 32)
                 ->where('transcript_status', 1)
                 ->get()
                 ->map(function ($subject) {
@@ -2477,9 +2478,30 @@ class SchoolController extends Controller
                     ];
                 });
 
+            $getSPMTrialTranscriptSubject = stp_transcript::where('student_id', $request->studentId)
+                ->where('transcript_category', 85)
+                ->where('transcript_status', 1)
+                ->get()
+                ->map(function ($subject) {
+                    return [
+                        'subject_id' => $subject->subject->id,
+                        'subject_name' => $subject->subject->subject_name,
+                        'subject_grade_id' => $subject->grade->id,
+                        'subject_grade' => $subject->grade->core_metaName,
+                    ];
+                });
+
+            $spmSubject['subject'] = $getSPMTranscriptSubject;
+            $spmTrialSubject['subject'] = $getSPMTrialTranscriptSubject;
+
+            $data = [
+                'spm' => $spmSubject,
+                'trial' => $spmTrialSubject
+            ];
+
             return response()->json([
                 'success' => true,
-                'data' => $getTranscriptSubject
+                'data' => $data
             ]);
         } catch (\Exception $e) {
             return response()->json([

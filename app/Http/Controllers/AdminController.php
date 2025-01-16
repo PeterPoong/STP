@@ -5482,6 +5482,7 @@ class AdminController extends Controller
 
             // Total count
             $total = $interestedCourses->count();
+            return $groupedByCategories;
             // return $groupedByCategories;
 
             foreach ($groupedByCategories['school'] as $school) {
@@ -5514,8 +5515,8 @@ class AdminController extends Controller
     {
         try {
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_courseInterest::count() : (int)$request->per_page)
-            : 10;
+                ? ($request->per_page === 'All' ? stp_courseInterest::count() : (int)$request->per_page)
+                : 10;
 
             $query = stp_courseInterest::where('status', 1);
 
@@ -5579,55 +5580,54 @@ class AdminController extends Controller
 
             // Group results by category type
             $groupedByCategories = collect($interestedCourses)
-            ->groupBy(function ($item) {
-                return $item->course->category->category_name ?? 'Uncategorized';
-            })
-            ->map(function ($group, $category) {
-                return [
-                    'categoryId' => $group->first()->course->category->id ?? null,
-                    'category_type' => $category,
-                    'category_total' => $group->count(),
-                    'schoolList' => $group->map(function ($item) {
-                        $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
-                        return [
-                            'schoolName' => $item->course->school->school_name,
-                            'courseName' => $item->course->course_name,
-                            'schoolEmail' => $item->course->school->school_email,
-                            'latestDate' => $latestDate,
-                        ];
-                    })->values()->toArray(),
-                ];
-            })
-            ->values();
+                ->groupBy(function ($item) {
+                    return $item->course->category->category_name ?? 'Uncategorized';
+                })
+                ->map(function ($group, $category) {
+                    return [
+                        'categoryId' => $group->first()->course->category->id ?? null,
+                        'category_type' => $category,
+                        'category_total' => $group->count(),
+                        'schoolList' => $group->map(function ($item) {
+                            $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
+                            return [
+                                'schoolName' => $item->course->school->school_name,
+                                'courseName' => $item->course->course_name,
+                                'schoolEmail' => $item->course->school->school_email,
+                                'latestDate' => $latestDate,
+                            ];
+                        })->values()->toArray(),
+                    ];
+                })
+                ->values();
 
-        // Paginate the grouped data
-        $page = $request->input('page', 1);
-        $paginated = new LengthAwarePaginator(
-            $groupedByCategories->forPage($page, $perPage)->values(),
-            $groupedByCategories->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+            // Paginate the grouped data
+            $page = $request->input('page', 1);
+            $paginated = new LengthAwarePaginator(
+                $groupedByCategories->forPage($page, $perPage)->values(),
+                $groupedByCategories->count(),
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
 
-        return response()->json([
-            'success' => true,
-            'categories' => $paginated->items(),
-            'pagination' => [
-                'current_page' => $paginated->currentPage(),
-                'last_page' => $paginated->lastPage(),
-                'per_page' => $paginated->perPage(),
-                'total' => $paginated->total(),
-            ],
-        ]);
-    } catch (\Exception $e) {
-        \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage(),
-        ]);
+            return response()->json([
+                'success' => true,
+                'categories' => $paginated->items(),
+                'pagination' => [
+                    'current_page' => $paginated->currentPage(),
+                    'last_page' => $paginated->lastPage(),
+                    'per_page' => $paginated->perPage(),
+                    'total' => $paginated->total(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
-}
-
 }

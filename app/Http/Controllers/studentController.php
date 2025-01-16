@@ -3552,86 +3552,17 @@ class studentController extends Controller
     public function interestedCourseList(Request $request)
     {
         try {
-            // Base query with status = 1
-            $query = stp_courseInterest::where('status', 1);
+            $authUser = Auth::user();
 
-            // Apply filters if provided
-            if ($request->filled('student_id')) {
-                $query->where('student_id', $request->student_id);
-            }
-
-            if ($request->filled('course_id')) {
-                $query->where('course_id', $request->course_id);
-            }
-
-            if ($request->filled('school_id')) {
-                $query->whereHas('course', function ($q) use ($request) {
-                    $q->where('school_id', $request->school_id);
-                });
-            }
-
-            if ($request->filled('category_id')) {
-                $query->whereHas('course', function ($q) use ($request) {
-                    $q->where('category_id', $request->category_id);
-                });
-            }
-
-            if ($request->filled('month_year')) {
-                [$month, $year] = explode('/', $request->month_year);
-                $query->where(function ($q) use ($month, $year) {
-                    $q->where(function ($subQuery) use ($month, $year) {
-                        $subQuery->whereYear('created_at', $year)
-                            ->whereMonth('created_at', $month);
-                    })->orWhere(function ($subQuery) use ($month, $year) {
-                        $subQuery->whereYear('updated_at', $year)
-                            ->whereMonth('updated_at', $month);
-                    });
-                });
-            }
-
-            // Fetch and transform data
-            $interestedCourses = $query
-                ->with(['course.school', 'course.category'])
-                ->get()
-                ->map(function ($item) {
-                    $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
-                    return [
-                        'id' => $item->id,
-                        'student_id' => $item->student_id,
-                        'student_name' => $item->student->student_userName,
-                        'course_id' => $item->course_id,
-                        'course_name' => $item->course->course_name,
-                        'status' => $item->status,
-                        'school_id' => $item->course->school_id ?? null,
-                        'school_name' => $item->course->school->school_name,
-                        'school_email' => $item->course->school->school_email ?? null,
-                        'category_type' => $item->course->category->category_name ?? null,
-                        'latest_date' => $latestDate,
-                    ];
-                });
-
-            // Count total records after filtering
-            $total = $interestedCourses->count();
-
-            // Calculate total per category and sort by category type
-            $categoriesTotal = $interestedCourses
-                ->groupBy('category_type')
-                ->map(function ($group, $category) {
-                    return [
-                        'category_type' => $category,
-                        'total' => $group->count(),
-                    ];
-                })
-                ->values()
-                ->sortBy('category_type')
-                ->values()
-                ->toArray();
-
+            $getStudentCourseList = stp_courseInterest::where('student_id', $authUser->id)->get()->map(function ($interestedCourse) {
+                return [
+                    'courseId' => $interestedCourse->course->id,
+                    'courseName' => $interestedCourse->course->course_name,
+                ];
+            });
             return response()->json([
                 'success' => true,
-                'data' => $interestedCourses,
-                'categories' => $categoriesTotal,
-                'total' => $total,
+                'data' => $getStudentCourseList
             ]);
         } catch (\Exception $e) {
             return response()->json([

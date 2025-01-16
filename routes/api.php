@@ -80,8 +80,11 @@ Route::prefix('student')->group(function () {
     //interested course
     Route::middleware('auth:sanctum')->post('/addInterestedCourse', [studentController::class, 'addInterestedCourse']);
     Route::middleware('auth:sanctum')->post('/removeInterestedCourse', [studentController::class, 'removeInterestedCourse']);
-    Route::middleware('auth:sanctum')->post('/interestedCourseList', [studentController::class, 'interestedCourseList']);
+    Route::middleware('auth:sanctum')->get('/interestedCourseList', [studentController::class, 'interestedCourseList']);
 
+
+
+    //cgpa
     Route::middleware('auth:sanctum')->post('/addProgramCgpa', [studentController::class, 'addProgramCgpa']);
     Route::middleware('auth:sanctum')->post('/editProgramCgpa', [studentController::class, 'editProgramCgpa']);
     Route::middleware('auth:sanctum')->post('/programCgpaList', [studentController::class, 'programCgpaList']);
@@ -156,7 +159,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
 
     Route::get('/cronCorseCategoryInterested', [AdminController::class, 'cronCorseCategoryInterested'])->withoutMiddleware('auth:sanctum');
-    Route::post('/adminCourseCategoryInterested', [AdminController::class, 'adminCourseCategoryInterested'])->withoutMiddleware('auth:sanctum');
+    Route::post('/adminCourseCategoryInterested', [AdminController::class, 'adminCourseCategoryInterested']);
 
 
     Route::post('/schoolList', [AdminController::class, 'schoolList']);
