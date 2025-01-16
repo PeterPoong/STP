@@ -5442,76 +5442,77 @@ class AdminController extends Controller
     public function adminCourseCategoryInterested(Request $request)
     {
         try {
-            $query = stp_courseInterest::where('status', 1);
-            // Apply categoryId filter if provided in the request body
-            if ($request->has('categoryId') && $request->input('categoryId')) {
-                $query->whereHas('course.category', function ($q) use ($request) {
-                    $q->where('id', $request->input('categoryId'));
-                });
+            $categoryId = $request->input('categoryId');
+
+            // Validate categoryId is provided
+            if (!$categoryId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Category ID is required.',
+                ], 400);
             }
-            // Get all results
-            $interestedCourses = $query
+
+            // Fetch schools with courses in the specified category
+            $schoolsWithCourses = stp_school::whereHas('courses', function ($query) use ($categoryId) {
+                $query->whereHas('category', function ($q) use ($categoryId) {
+                    $q->where('id', $categoryId);
+                });
+            })
                 ->with([
-                    'course.school:id,school_name,school_email',
-                    'course.category:id,category_name'
+                    'courses' => function ($query) use ($categoryId) {
+                        $query->whereHas('category', function ($q) use ($categoryId) {
+                            $q->where('id', $categoryId);
+                        });
+                    },
+                    'courses.category:id,category_name',
                 ])
                 ->get();
 
-            // Group results by category type
-            $groupedByCategories = $interestedCourses
-                ->groupBy(function ($item) {
-                    return $item->course->category->category_name ?? 'Uncategorized';
-                })
-                ->map(function ($group, $category) {
-                    return [
-                        'category' => $category,
-                        'categoryId' => $group->first()->course->category->id ?? null,
-                        'totalNumber' => $group->count(),
-                        'school' => $group->map(function ($item) {
-                            return [
-                                'schoolId' => $item->course->school->id,
-                                'schoolName' => $item->course->school->school_name,
-                                'schoolEmail' => $item->course->school->school_email,
-                            ];
-                        })->values()->toArray(),
-                    ];
-                })->first();
+            // Group schools by category
+            $groupedByCategory = $schoolsWithCourses->groupBy(function ($school) {
+                return $school->courses->first()->category->category_name ?? 'Uncategorized';
+            })->map(function ($group, $category) {
+                return [
+                    'category' => $category,
+                    'categoryId' => $group->first()->courses->first()->category->id ?? null,
+                    'totalNumber' => $group->count(),
+                    'schools' => $group->map(function ($school) {
+                        return [
+                            'schoolId' => $school->id,
+                            'schoolName' => $school->school_name,
+                            'schoolEmail' => $school->school_email,
+                        ];
+                    })->values()->toArray(),
+                ];
+            })->first();
 
-
-            if ($groupedByCategories == null) {
+            // If no schools found, return an empty response
+            if (!$groupedByCategory) {
                 return response()->json([
                     'success' => true,
                     'data' => [
-                        'message' => "Nothing to Send"
-                    ]
+                        'message' => 'No schools found for the specified category.',
+                    ],
                 ]);
             }
 
-
-            // Total count
-            $total = $interestedCourses->count();
-
-            // return $groupedByCategories;
-
-            foreach ($groupedByCategories['school'] as $school) {
-                $sendEmail = $this->serviceFunction->adminCourseCategoryInterested($groupedByCategories['category'], $groupedByCategories['totalNumber'], $school['schoolEmail'], $school['schoolName']);
-                // return $sendEmail;
+            // Send email to each school in the group
+            foreach ($groupedByCategory['schools'] as $school) {
+                $this->serviceFunction->adminCourseCategoryInterested(
+                    $groupedByCategory['category'],
+                    $groupedByCategory['totalNumber'],
+                    $school['schoolEmail'],
+                    $school['schoolName']
+                );
             }
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'message' => 'send email successfully'
-                ]
+                    'message' => 'Emails sent successfully.',
+                ],
             ]);
-
-
-
-            return response()->json(
-                $groupedByCategories,
-            );
         } catch (\Exception $e) {
-            // \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
@@ -5519,6 +5520,7 @@ class AdminController extends Controller
             ]);
         }
     }
+
     public function interestedCourseListAdmin(Request $request)
     {
         try {
