@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\stp_advertisementPrice;
 use Illuminate\Http\Request;
 use App\Models\stp_package;
 
@@ -26,6 +27,23 @@ class MarketingController extends Controller
                 'message' => 'Internal Server Error',
                 'errors' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function advertisementPricing(Request $request)
+    {
+        try {
+            $getAdvertisement = stp_advertisementPrice::where('status', 1)->get();
+            return response()->json([
+                'success' => true,
+                'data' => $getAdvertisement
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

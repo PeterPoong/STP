@@ -32,6 +32,7 @@ use App\Models\stp_personalityQuestions;
 use Illuminate\Support\Facades\Storage;
 use App\Models\stp_advertisement_banner;
 use App\Models\stp_personalityTestResult;
+use App\Models\stp_riasecResultImage;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 
@@ -3589,6 +3590,92 @@ class studentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $getCourseCategory
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function uplaodRiasecResultImage(Request $request)
+    {
+        try {
+            // Validation for multiple images and image types
+            $request->validate([
+                'images.*' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000',  // For multiple images
+                'imageTypes.*' => 'required|integer',  // For multiple image types
+            ]);
+
+            // Get the authenticated user
+            $authUser = Auth::user();
+            $data = [];
+
+            // Loop over the images and image types to store each set of data
+            foreach ($request->file('images') as $key => $image) {
+                $imageName = time() . '_' . $key . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('riasecImage', $imageName, 'public');
+
+                $existingData = stp_riasecResultImage::where('riasec_imageType', $request->input('imageTypes')[$key])
+                    ->where('student_id', $authUser->id)
+                    ->first(); // Use first() instead of get(), as you're only looking for one match
+
+                if ($existingData) {
+                    // If the data exists, delete the old image file
+                    $oldImagePath = $existingData->resultImage_location;
+
+                    if (Storage::disk('public')->exists($oldImagePath)) {
+                        Storage::disk('public')->delete($oldImagePath); // Delete the file from storage
+                    }
+
+                    $newUpdateData = [
+                        'resultImage_location' => $imagePath,
+                    ];
+                    $existingData->update($newUpdateData);
+                } else {
+                    $newData = [
+                        'resultImage_location' => $imagePath,
+                        'riasec_imageType' => $request->input('imageTypes')[$key],
+                        'student_id' => $authUser->id
+                    ];
+
+                    // Store each set of data
+                    $data[] = stp_riasecResultImage::create($newData);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'Successfully uploaded all images.',
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getRiasecResultImage(Request $request)
+    {
+        try {
+            $request->validate([
+                'imageType' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+
+            $getImage = stp_riasecResultImage::where('riasec_imageType', $request->imageType)
+                ->where('student_id', $authUser->id)
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'data' => $getImage
             ]);
         } catch (\Exception $e) {
             return response()->json([

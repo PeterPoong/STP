@@ -2540,8 +2540,6 @@ class SchoolController extends Controller
     public function schoolTranscriptDocumentList(Request $request)
     {
         try {
-
-
             $request->validate([
                 'studentId' => 'required|integer',
                 'categoryId' => 'integer|nullable'

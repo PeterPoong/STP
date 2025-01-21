@@ -137,7 +137,10 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/resetTranscript', [studentController::class, 'resetTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourseTranscript', [studentController::class, 'applyCourseTranscript']);
 
+    //personality test
     Route::middleware('auth:sanctum')->get('/personalityQuestionList', [studentController::class, 'personalityQuestionList']);
+    Route::middleware('auth:sanctum')->post('/uplaodRiasecResultImage', [studentController::class, 'uplaodRiasecResultImage']);
+    Route::middleware('auth:sanctum')->post('/getRiasecResultImage', [studentController::class, 'getRiasecResultImage']);
     Route::middleware('auth:sanctum')->post('/submitTestResult', [studentController::class, 'submitTestResult']);
     Route::middleware('auth:sanctum')->get('/getTestResult', [studentController::class, 'getTestResult']);
     Route::middleware('auth:sanctum')->post('/riasecCourseCategory', [studentController::class, 'riasecCourseCategory']);
@@ -379,6 +382,7 @@ Route::post('/social/updateContact', [SocialLoginController::class, 'updateConta
 //marketing 
 Route::prefix('marketing')->group(function () {
     Route::get('/packageList', [MarketingController::class, 'packageList']);
+    Route::get('/advertisementPricing', [MarketingController::class, 'advertisementPricing']);
 });
 
 Route::post('/importCountry', [serviceFunctionController::class, 'importCountry']);
