@@ -3665,12 +3665,13 @@ class studentController extends Controller
     {
         try {
             $request->validate([
-                'imageType' => 'required|integer'
+                'imageType' => 'required|integer',
+                'id' => 'required|integer'
             ]);
-            $authUser = Auth::user();
+
 
             $getImage = stp_riasecResultImage::where('riasec_imageType', $request->imageType)
-                ->where('student_id', $authUser->id)
+                ->where('student_id', $request->id)
                 ->first();
 
             return response()->json([
