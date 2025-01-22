@@ -185,6 +185,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCourseStatus', [AdminController::class, 'editCourseStatus']);
     Route::post('/editCoursesFeatured', [AdminController::class, 'editCoursesFeatured']);
     Route::post('/courseFeaturedList', [AdminController::class, 'courseFeaturedList']);
+    Route::post('/allFeaturedList', [AdminController::class, 'allFeaturedList']);
     Route::post('/universityFeaturedList', [AdminController::class, 'universityFeaturedList']);
     Route::post('/intakeList', [AdminController::class, 'intakeList']);
     Route::post('/courseTag', [AdminController::class, 'courseTag']);
@@ -268,10 +269,13 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::get('/riasecTypesList', [AdminController::class, 'riasecTypesList']);
     Route::post('/addRiasecTypes', [AdminController::class, 'addRiasecTypes']);
     Route::post('/updateRiasecTypes', [AdminController::class, 'updateRiasecTypes']);
+   
     //personality question 
     Route::post('/addPersonalQuestion', [AdminController::class, 'addPersonalQuestion']);
     Route::post('/updatePersonalQuestion', [AdminController::class, 'updatePersonalQuestion']);
+    Route::post('/questionDetail', [AdminController::class, 'questionDetail']);
     Route::post('/personalityQuestionList', [AdminController::class, 'personalityQuestionList']);
+    Route::post('/riasecDetail', [AdminController::class, 'riasecDetail']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {

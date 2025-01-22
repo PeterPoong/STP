@@ -2513,15 +2513,14 @@ class AdminController extends Controller
 
     {
         try {
-            // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_courses_category::count() : (int)$request->per_page)
                 : 10;
 
-            $categoryList = stp_courses_category::when($request->filled('search'), function ($query) use ($request) {
-                $query->where('category_name', 'like', '%' . $request->search . '%');
-            })
-
+            $categoryList = stp_courses_category::with('riasecTypes:id,type_name')
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('category_name', 'like', '%' . $request->search . '%');
+                })
                 ->paginate($perPage)
                 ->through(function ($category) {
                     switch ($category->category_status) {
@@ -2539,6 +2538,7 @@ class AdminController extends Controller
                         'id' =>  $category->id,
                         'name' =>  $category->category_name,
                         "course_hotPick" => $category->course_hotPick ?? 0,
+                        "riasec" => $category->riasecTypes,
                         "category_status" => $status
                     ];
                 });
@@ -2547,7 +2547,8 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ], 500);
         }
     }
@@ -3856,6 +3857,32 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function allFeaturedList(Request $request)
+    {
+        try {
+            $featuredList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [28, 29, 30, 31])
+                ->paginate(10)
+                ->through(function ($featured) {
+                    $status = ($featured->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $featured->core_metaName,
+                        "id" => $featured->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $featuredList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 
 
     public function bannerFeaturedList(Request $request)
@@ -5101,17 +5128,30 @@ class AdminController extends Controller
     public function riasecTypesList(Request $request)
     {
         try {
-            $typeList = stp_RIASECType::where('status', 1)->get();
-            return response()->json([
-                'success' => true,
-                'data' => $typeList
-            ]);
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_RIASECType::count() : (int)$request->per_page)
+                : 10;
+
+            $typeList = stp_RIASECType::query()
+                ->paginate($perPage)
+                ->through(function ($type) {
+                    return [
+                        'id' => $type->id,
+                        'type_name' => $type->type_name,
+                        'unique_description' => $type->unique_description,
+                        'strength' => $type->strength,
+                        'status' => $type->status
+                    ];
+                });
+
+            return response()->json($typeList);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
     public function addRiasecTypes(Request $request)
@@ -5219,7 +5259,38 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function riasecDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $riasec = stp_RIASECType::find($request->id);
 
+            if (!$riasec) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'RIASEC Type not found'
+                ]);
+            }
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $riasec->id,
+                    'updateRiasecType' => $riasec->type_name,
+                    'newDescription' => $riasec->unique_description,
+                    'newStrength' => $riasec->strength,
+
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ]);
+        }
+    }
     public function addPersonalQuestion(Request $request)
     {
         try {
@@ -5297,10 +5368,15 @@ class AdminController extends Controller
     {
         try {
             $request->validate([
-                'search' => 'string',
+                'search' => 'nullable|string',
                 'type' => 'integer',
                 'status' => 'integer'
             ]);
+
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_personalityQuestions::count() : (int)$request->per_page)
+                : 10;
 
             $questionList = stp_personalityQuestions::query()
                 ->when($request->has('search') && !empty($request->search), function ($query) use ($request) {
@@ -5312,20 +5388,59 @@ class AdminController extends Controller
                 ->when($request->has('status'), function ($query) use ($request) {
                     return $query->where('status', $request->status);
                 })
-                ->get();
+                ->paginate($perPage)
+                ->through(function ($question) {
+                    return [
+                        'id' => $question->id,
+                        'question' => $question->question,
+                        'riasec_type' => $question->question_type->type_name,
+                        'status' => $question->status,
+                        // Add any other fields you want to include in the response
+                    ];
+                });
 
-            return response()->json([
-                'success' => true,
-                'data' => $questionList
-            ]);
+            return response()->json($questionList);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function questionDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $question = stp_personalityQuestions::find($request->id);
+
+            if (!$question) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Question not found'
+                ]);
+            }
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $question->id,
+                    'newQuestion' => $question->question,
+                    'newType' => $question->riasec_type,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
             ]);
         }
     }
+
+
     public function cronCorseCategoryInterested(Request $request)
     {
         try {
