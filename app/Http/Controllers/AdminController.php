@@ -3857,6 +3857,32 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function allFeaturedList(Request $request)
+    {
+        try {
+            $featuredList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [28, 29, 30, 31])
+                ->paginate(10)
+                ->through(function ($featured) {
+                    $status = ($featured->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $featured->core_metaName,
+                        "id" => $featured->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $featuredList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 
 
     public function bannerFeaturedList(Request $request)

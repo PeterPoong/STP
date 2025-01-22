@@ -181,6 +181,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCourseStatus', [AdminController::class, 'editCourseStatus']);
     Route::post('/editCoursesFeatured', [AdminController::class, 'editCoursesFeatured']);
     Route::post('/courseFeaturedList', [AdminController::class, 'courseFeaturedList']);
+    Route::post('/allFeaturedList', [AdminController::class, 'allFeaturedList']);
     Route::post('/universityFeaturedList', [AdminController::class, 'universityFeaturedList']);
     Route::post('/intakeList', [AdminController::class, 'intakeList']);
     Route::post('/courseTag', [AdminController::class, 'courseTag']);
