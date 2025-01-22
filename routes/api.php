@@ -140,7 +140,8 @@ Route::prefix('student')->group(function () {
     //personality test
     Route::middleware('auth:sanctum')->get('/personalityQuestionList', [studentController::class, 'personalityQuestionList']);
     Route::middleware('auth:sanctum')->post('/uplaodRiasecResultImage', [studentController::class, 'uplaodRiasecResultImage']);
-    Route::middleware('auth:sanctum')->post('/getRiasecResultImage', [studentController::class, 'getRiasecResultImage']);
+    Route::post('/getRiasecResultImage', [studentController::class, 'getRiasecResultImage'])->withoutMiddleware('auth:sanctum');
+
     Route::middleware('auth:sanctum')->post('/submitTestResult', [studentController::class, 'submitTestResult']);
     Route::middleware('auth:sanctum')->get('/getTestResult', [studentController::class, 'getTestResult']);
     Route::middleware('auth:sanctum')->post('/riasecCourseCategory', [studentController::class, 'riasecCourseCategory']);
