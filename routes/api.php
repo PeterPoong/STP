@@ -269,7 +269,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::get('/riasecTypesList', [AdminController::class, 'riasecTypesList']);
     Route::post('/addRiasecTypes', [AdminController::class, 'addRiasecTypes']);
     Route::post('/updateRiasecTypes', [AdminController::class, 'updateRiasecTypes']);
-   
+
     //personality question 
     Route::post('/addPersonalQuestion', [AdminController::class, 'addPersonalQuestion']);
     Route::post('/updatePersonalQuestion', [AdminController::class, 'updatePersonalQuestion']);
@@ -388,6 +388,7 @@ Route::post('/social/updateContact', [SocialLoginController::class, 'updateConta
 Route::prefix('marketing')->group(function () {
     Route::get('/packageList', [MarketingController::class, 'packageList']);
     Route::get('/advertisementPricing', [MarketingController::class, 'advertisementPricing']);
+    Route::get('/featuredPricingList', [MarketingController::class, 'featuredPricingList']);
 });
 
 Route::post('/importCountry', [serviceFunctionController::class, 'importCountry']);
