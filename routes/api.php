@@ -15,9 +15,12 @@ use GuzzleHttp\Client;
 
 
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
+
 Route::post('/admin/register', [AuthController::class, 'adminRegister']);
 
 Route::post('/student/login', [AuthController::class, 'studentLogin']);
+Route::post('/student/studentInfoValidation', [AuthController::class, 'studentInfoValidation']);
+Route::post('/student/validateContactNum', [AuthController::class, 'validateContactNum']);
 Route::post('/student/register', [AuthController::class, 'studentRegister']);
 
 Route::post('/school/login', [AuthController::class, 'schoolLogin']);
@@ -213,7 +216,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/subjectDetail', [AdminController::class, 'subjectDetail']);
 
 
-    Route::post('/applicantDetailInfo', [AdminController::class, 'applicantDetailInfo']);
+    Route::post('/applicantDetailInfo', [AdminController::class, 'applicantDetailInfo'])->withoutMiddleware('auth:sanctum');
     Route::post('/editApplicantStatus', [AdminController::class, 'editApplicantStatus']);
     Route::post('/editApplicantForm', [AdminController::class, 'editApplicantForm']);
     Route::post('/applicantDetail', [AdminController::class, 'applicantDetail']);

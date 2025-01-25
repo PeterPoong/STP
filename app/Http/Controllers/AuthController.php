@@ -540,6 +540,100 @@ class AuthController extends Controller
         }
     }
 
+    public function studentInfoValidation(Request $request)
+    {
+        try {
+            $request->validate([
+                'studentEmail' => 'required|string',
+                'studentIc' => 'required|string',
+            ]);
+
+            // Check if email is already in use
+            $checkingUserEmail = stp_student::where('student_email', $request->studentEmail)
+                ->exists();
+
+            // Check if IC number is already in use and not null
+            $checkingUserIC = stp_student::where('student_icNumber', $request->studentIc)
+                ->whereNotNull('student_icNumber')
+                ->exists();
+
+            // Throw validation errors if the data exists
+            $errors = [];
+
+            if ($checkingUserEmail) {
+                $errors['email'] = ['Email has been used'];
+            }
+
+            if ($checkingUserIC) {
+                $errors['ic'] = ['IC has been used'];
+            }
+
+            // If there are errors, return them in the expected format
+            if (!empty($errors)) {
+                throw ValidationException::withMessages($errors);
+            }
+
+            return response()->json([
+                'success' => true
+            ]);
+        } catch (ValidationException $e) {
+            // Return the validation errors in the format frontend expects
+            return response()->json([
+                'success' => false,
+                'errors' => $e->errors() // This will return the validation errors in the correct format
+            ]);
+        } catch (\Exception $e) {
+            // Handle unexpected errors
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function validateContactNum(Request $request)
+    {
+
+        try {
+            $request->validate([
+                'country_code' => 'required',
+                'contact_number' => 'required|numeric|digits_between:1,15',
+            ]);
+
+
+            $checkingUser = stp_student::where('student_countryCode', $request->country_code)
+                ->where('student_contactNo', $request->contact_number)
+                ->whereNotNull('student_countryCode') // Ensure student_countryCode is not null
+                ->whereNotNull('student_contactNo')  // Ensure student_contactNo is not null
+                ->exists();
+
+
+
+            if ($checkingUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Internal Server Error",
+                    'error' => "Contact Already been used"
+                ]);
+                // throw ValidationException::withMessages(['Contact already been used']);
+            }
+
+
+
+            return response()->json([
+                'success' => true
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e
+            ]);
+        }
+    }
+
+
     public function testing()
     {
         return 'testing api';
