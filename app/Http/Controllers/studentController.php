@@ -786,11 +786,6 @@ class studentController extends Controller
                 ->get()
                 ->unique('id');
 
-
-
-
-
-
             // Calculate offset and limit for the page
             $page = $request->get('page', 1);
             $offset = ($page - 1) * $perPage;
@@ -828,12 +823,6 @@ class studentController extends Controller
                 ->skip($offset)
                 ->take($nonFeaturedLimit)
                 ->get();
-
-
-
-
-
-
 
             // Merge featured and non-featured results for the page
             $courses = $featuredCourses->concat($nonFeaturedCourses);
@@ -3556,9 +3545,35 @@ class studentController extends Controller
             $authUser = Auth::user();
 
             $getStudentCourseList = stp_courseInterest::where('student_id', $authUser->id)->get()->map(function ($interestedCourse) {
+                $featured = $interestedCourse->course->featured->contains(function ($item) {
+                    return $item->featured_type == 30 && $item->featured_status == 1 && $item->featured_startTime < now() && $item->featured_endTime > now();
+                });
+                $intakeMonths = $interestedCourse->course->intake->where('intake_status', 1)
+                    ->pluck('month.core_metaName')
+                    ->toArray();
+
                 return [
-                    'courseId' => $interestedCourse->course->id,
-                    'courseName' => $interestedCourse->course->course_name,
+                    'id'=> $interestedCourse->id,
+                    'course_id' => $interestedCourse->course->id,
+                    'school_id'=> $interestedCourse->course->school->id,
+                    'name' => $interestedCourse->course->course_name,
+                    'school_name'=> $interestedCourse->course->school->school_name,
+                    'email'=> $interestedCourse->course->school->school_email,
+                    'description'=> $interestedCourse->course->course_description,
+                    'cost'=> $interestedCourse->course->course_cost,
+                    'period'=> $interestedCourse->course->course_period,
+                    'featured'=> $featured,
+                    'intake' => $intakeMonths,
+                    'category_id'=> $interestedCourse->course->category_id,
+                    'qualification'=> $interestedCourse->course->qualification->qualification_name,
+                    'mode'=> $interestedCourse->course->studyMode->core_metaName,
+                    'logo' => $interestedCourse->course->course_logo ?? $interestedCourse->course->school->school_logo,
+                    'country'=> $interestedCourse->course->school->country->country_name ?? null,
+                    'state'=> $interestedCourse->course->school->state->state_name ?? null,
+                    'institute_category'=> $interestedCourse->course->school->institueCategory->core_metaName ?? null,
+                    'school_location'=> $interestedCourse->course->school->school_google_map_location ?? null,
+                    'school_status'=> $interestedCourse->course->school->school_status,
+                    'status'=> $interestedCourse->status
                 ];
             });
             return response()->json([
