@@ -2590,12 +2590,13 @@ class AdminController extends Controller
         }
     }
 
-    public function applicantDetailInfo(Request $request)   //Header and basic information for the applicant
+    public function applicantDetailInfo(Request $request)
     {
         try {
             // Get the authenticated user
             $authUser = Auth::user();
-
+    
+            // Validate the request inputs
             $request->validate([
                 'form_status' => 'integer|nullable',
                 'student_id' => 'integer|nullable',
@@ -2603,68 +2604,46 @@ class AdminController extends Controller
                 'qualification_id' => 'integer|nullable',
                 'search' => 'string|nullable'
             ]);
-
-            // Get the per_page value from the request, default to 10 if not provided or empty
+    
+            // Get the per_page value, default to 10 if not provided
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_submited_form::count() : (int)$request->per_page)
                 : 10;
-
-            $studentList = stp_student_detail::when($request->filled('search'), function ($query) use ($request) {
-                $query->where('student_detailFirstName', 'like', '%' . $request->search . '%');
-            });
-
-            $applicantInfo = stp_submited_form::query()
-                ->when($request->filled('student_id'), function ($query) use ($request) {
-                    $query->where('student_id', $request->student_id);
-                })
-                ->when($request->filled('courses_id'), function ($query) use ($request) {
-                    $query->where('courses_id', $request->courses_id);
-                })
-                ->when($request->filled('form_status'), function ($query) use ($request) {
-                    $query->where('form_status', $request->form_status);
-                })
-                ->when($request->filled('search'), function ($query) use ($request) {
-                    $search = $request->search;
-                    $query->whereHas('student.detail', function ($query) use ($search) {
-                        $query->where('student_detailFirstName', 'like', '%' . $search . '%')
-                            ->orWhere('student_detailLastName', 'like', '%' . $search . '%');
-                    });
-                })
+    
+            // Fetch the applicant information with relationships
+            $applicantInfo = stp_submited_form::with(['student.detail', 'course.school'])
                 ->paginate($perPage)
                 ->through(function ($applicant) {
-                    switch ($applicant->form_status) {
-                        case 0:
-                            $status = "Disable";
-                            break;
-                        case 1:
-                            $status = "Active";
-                            break;
-                        case 2:
-                            $status = "Pending";
-                            break;
-                        case 3:
-                            $status = "Rejected";
-                            break;
-                        case 4:
-                            $status = "Accepted";
-                            break;
-                        default:
-                            $status = null;
-                    }
+                    $student = $applicant->student;
+                    $studentDetail = $student?->detail;
+                
                     return [
                         "id" => $applicant->id ?? 'N/A',
                         "course_name" => $applicant->course->course_name ?? 'N/A',
-                        "institution" => $applicant->course->school->school_name,
-                        "form_status" => $status,
-                        "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
-                        "country_code" => $applicant->student->student_countryCode ?? 'N/A',
-                        "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
-                        'student_id' => $applicant->student->id, // Add student_id to the result
+                        "institution" => $applicant->course->school->school_name ?? 'N/A',
+                        "form_status" => match ($applicant->form_status) {
+                            0 => "Disable",
+                            1 => "Active",
+                            2 => "Pending",
+                            3 => "Rejected",
+                            4 => "Accepted",
+                            default => null,
+                        },
+                        "student_name" => $studentDetail
+                                ? "{$studentDetail->student_detailFirstName} {$studentDetail->student_detailLastName}"
+                                : ($student?->student_userName ?? 'N/A'),
+                        "country_code" => $student?->student_countryCode ?? '',
+                        "contact_number" => $student?->student_contactNo ?? '',
+                        "student_id" => $student->id ?? 'No student ID return',
                     ];
                 });
-
+                
+    
+            // Return the paginated response
             return response()->json($applicantInfo);
+    
         } catch (\Exception $e) {
+            // Handle exceptions and return error response
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
@@ -2672,6 +2651,7 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    
 
     public function applicantDetail(Request $request)
     {
