@@ -15,9 +15,12 @@ use GuzzleHttp\Client;
 
 
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
+
 Route::post('/admin/register', [AuthController::class, 'adminRegister']);
 
 Route::post('/student/login', [AuthController::class, 'studentLogin']);
+Route::post('/student/studentInfoValidation', [AuthController::class, 'studentInfoValidation']);
+Route::post('/student/validateContactNum', [AuthController::class, 'validateContactNum']);
 Route::post('/student/register', [AuthController::class, 'studentRegister']);
 
 Route::post('/school/login', [AuthController::class, 'schoolLogin']);
@@ -80,8 +83,11 @@ Route::prefix('student')->group(function () {
     //interested course
     Route::middleware('auth:sanctum')->post('/addInterestedCourse', [studentController::class, 'addInterestedCourse']);
     Route::middleware('auth:sanctum')->post('/removeInterestedCourse', [studentController::class, 'removeInterestedCourse']);
-    Route::middleware('auth:sanctum')->post('/interestedCourseList', [studentController::class, 'interestedCourseList']);
+    Route::middleware('auth:sanctum')->get('/interestedCourseList', [studentController::class, 'interestedCourseList']);
 
+
+
+    //cgpa
     Route::middleware('auth:sanctum')->post('/addProgramCgpa', [studentController::class, 'addProgramCgpa']);
     Route::middleware('auth:sanctum')->post('/editProgramCgpa', [studentController::class, 'editProgramCgpa']);
     Route::middleware('auth:sanctum')->post('/programCgpaList', [studentController::class, 'programCgpaList']);
@@ -134,7 +140,11 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/resetTranscript', [studentController::class, 'resetTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourseTranscript', [studentController::class, 'applyCourseTranscript']);
 
+    //personality test
     Route::middleware('auth:sanctum')->get('/personalityQuestionList', [studentController::class, 'personalityQuestionList']);
+    Route::middleware('auth:sanctum')->post('/uplaodRiasecResultImage', [studentController::class, 'uplaodRiasecResultImage']);
+    Route::post('/getRiasecResultImage', [studentController::class, 'getRiasecResultImage'])->withoutMiddleware('auth:sanctum');
+
     Route::middleware('auth:sanctum')->post('/submitTestResult', [studentController::class, 'submitTestResult']);
     Route::middleware('auth:sanctum')->get('/getTestResult', [studentController::class, 'getTestResult']);
     Route::middleware('auth:sanctum')->post('/riasecCourseCategory', [studentController::class, 'riasecCourseCategory']);
@@ -178,6 +188,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/editCourseStatus', [AdminController::class, 'editCourseStatus']);
     Route::post('/editCoursesFeatured', [AdminController::class, 'editCoursesFeatured']);
     Route::post('/courseFeaturedList', [AdminController::class, 'courseFeaturedList']);
+    Route::post('/allFeaturedList', [AdminController::class, 'allFeaturedList']);
     Route::post('/universityFeaturedList', [AdminController::class, 'universityFeaturedList']);
     Route::post('/intakeList', [AdminController::class, 'intakeList']);
     Route::post('/courseTag', [AdminController::class, 'courseTag']);
@@ -205,7 +216,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/subjectDetail', [AdminController::class, 'subjectDetail']);
 
 
-    Route::post('/applicantDetailInfo', [AdminController::class, 'applicantDetailInfo']);
+    Route::post('/applicantDetailInfo', [AdminController::class, 'applicantDetailInfo'])->withoutMiddleware('auth:sanctum');
     Route::post('/editApplicantStatus', [AdminController::class, 'editApplicantStatus']);
     Route::post('/editApplicantForm', [AdminController::class, 'editApplicantForm']);
     Route::post('/applicantDetail', [AdminController::class, 'applicantDetail']);
@@ -261,10 +272,13 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::get('/riasecTypesList', [AdminController::class, 'riasecTypesList']);
     Route::post('/addRiasecTypes', [AdminController::class, 'addRiasecTypes']);
     Route::post('/updateRiasecTypes', [AdminController::class, 'updateRiasecTypes']);
+
     //personality question 
     Route::post('/addPersonalQuestion', [AdminController::class, 'addPersonalQuestion']);
     Route::post('/updatePersonalQuestion', [AdminController::class, 'updatePersonalQuestion']);
+    Route::post('/questionDetail', [AdminController::class, 'questionDetail']);
     Route::post('/personalityQuestionList', [AdminController::class, 'personalityQuestionList']);
+    Route::post('/riasecDetail', [AdminController::class, 'riasecDetail']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {
@@ -320,6 +334,9 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     //qualification statistic
     Route::post('/qualificationStatisticPieChart', [SchoolController::class, 'qualificationStatisticPieChart']);
     Route::post('/qualificationStatisticBarChart', [SchoolController::class, 'qualificationStatisticBarChart']);
+    //interested statistic
+    Route::post('/interestedStatisticPieChart', [SchoolController::class, 'interestedStatisticPieChart']);
+    Route::post('/interestedStatisticBarChart', [SchoolController::class, 'interestedStatisticBarChart']);
 
     //applicant 
     Route::post('/applicantDetail', [SchoolController::class, 'applicantDetail']);
@@ -376,6 +393,8 @@ Route::post('/social/updateContact', [SocialLoginController::class, 'updateConta
 //marketing 
 Route::prefix('marketing')->group(function () {
     Route::get('/packageList', [MarketingController::class, 'packageList']);
+    Route::get('/advertisementPricing', [MarketingController::class, 'advertisementPricing']);
+    Route::get('/featuredPricingList', [MarketingController::class, 'featuredPricingList']);
 });
 
 Route::post('/importCountry', [serviceFunctionController::class, 'importCountry']);

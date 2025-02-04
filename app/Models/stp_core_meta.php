@@ -149,4 +149,9 @@ class stp_core_meta extends Model
     {
         return $this->hasMany(stp_featured_price::class, 'featured_id', 'id');
     }
+
+    public function riasecResultImageType(): HasMany
+    {
+        return $this->hasMany(stp_riasecResultImage::class, 'riasec_imageType', 'id');
+    }
 }

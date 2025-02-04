@@ -32,6 +32,7 @@ use App\Http\Controllers\serviceFunctionController;
 use App\Models\stp_cgpa;
 use App\Models\stp_cocurriculum;
 use App\Models\stp_core_meta;
+use App\Models\stp_courseInterest;
 use App\Models\stp_featured_price;
 use App\Models\stp_featured_request;
 use App\Models\stp_higher_transcript;
@@ -1604,6 +1605,7 @@ class SchoolController extends Controller
 
 
 
+
             $countryCounts = [];
 
             foreach ($applicants as $applicant) {
@@ -1619,6 +1621,8 @@ class SchoolController extends Controller
                         'accept' => 0,
                     ];
                 }
+
+
 
                 // Increment based on form_status
                 switch ($applicant->form_status) {
@@ -1640,6 +1644,8 @@ class SchoolController extends Controller
                 }
             }
 
+            // return  $countryCounts;
+
             // $result = [["Country", "Pending", "Accept", "Reject"]];
             $result = [];
 
@@ -1653,6 +1659,8 @@ class SchoolController extends Controller
                     $counts['accept'],
                 ];
             }
+
+
 
             return response()->json([
                 'success' => true,
@@ -2249,6 +2257,152 @@ class SchoolController extends Controller
         }
     }
 
+    public function interestedStatisticPieChart(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $getInterestedCourse = stp_courseInterest::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
+                ->get();
+            $courseCategoryCount = [];
+            foreach ($getInterestedCourse as $interestedCourse) {
+                $courseCategory = $interestedCourse->course->category['category_name'];
+                if (isset($courseCategoryCount[$courseCategory])) {
+                    $courseCategoryCount[$courseCategory]++;
+                } else {
+                    $courseCategoryCount[$courseCategory] = 1;
+                }
+            }
+            $result = [];
+            foreach ($courseCategoryCount as $categoryName => $count) {
+                $result[] = [$categoryName, $count];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => 'fail',
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function interestedStatisticBarChart(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $interestedCourseCategory = stp_courseInterest::whereHas('course', function ($query) use ($authUser) {
+                $query->where('school_id', $authUser->id);
+            })
+                ->when($request->filled('filterDuration'), function ($query) use ($request) {
+                    switch ($request->filterDuration) {
+                        case "today":
+                            $query->whereDate('created_at', Carbon::today());
+                            break;
+                        case "yesterday":
+                            $query->whereDate('created_at', Carbon::yesterday());
+                            break;
+                        case "this_week":
+                            $query->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+                            break;
+                        case "previous_week":
+                            $query->whereBetween('created_at', [
+                                Carbon::now()->subWeek()->startOfWeek(),
+                                Carbon::now()->subWeek()->endOfWeek()
+                            ]);
+                            break;
+                        case "this_month":
+                            $query->whereMonth('created_at', Carbon::now()->month)
+                                ->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_month":
+                            $startOfPreviousMonth = Carbon::now()->subMonth()->startOfMonth();
+                            $endOfPreviousMonth = Carbon::now()->subMonth()->endOfMonth();
+                            $query->whereBetween('created_at', [$startOfPreviousMonth, $endOfPreviousMonth]);
+                            break;
+                        case "current_year":
+                            $query->whereYear('created_at', Carbon::now()->year);
+                            break;
+                        case "previous_year":
+                            $query->whereYear('created_at', Carbon::now()->subYear()->year);
+                            break;
+
+                        default:
+                            // Handle other cases or defaults
+                            break;
+                    }
+                })
+                ->get();
+            $courseCategoryCount = [];
+            foreach ($interestedCourseCategory as $courseCategory) {
+                $courseCategory = $courseCategory->course->category['category_name'];
+                if (isset($courseCategoryCount[$courseCategory])) {
+                    $courseCategoryCount[$courseCategory]++;
+                } else {
+                    $courseCategoryCount[$courseCategory] = 1;
+                }
+            }
+            $result = [];
+            foreach ($courseCategoryCount as $categoryName => $count) {
+                $result[] = [$categoryName, $count];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => "false",
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     public function studentDetail(Request $request)
     {
         try {
@@ -2465,7 +2619,8 @@ class SchoolController extends Controller
             $request->validate([
                 'studentId' => 'required|integer'
             ]);
-            $getTranscriptSubject = stp_transcript::where('student_id', $request->studentId)
+            $getSPMTranscriptSubject = stp_transcript::where('student_id', $request->studentId)
+                ->where('transcript_category', 32)
                 ->where('transcript_status', 1)
                 ->get()
                 ->map(function ($subject) {
@@ -2477,9 +2632,30 @@ class SchoolController extends Controller
                     ];
                 });
 
+            $getSPMTrialTranscriptSubject = stp_transcript::where('student_id', $request->studentId)
+                ->where('transcript_category', 85)
+                ->where('transcript_status', 1)
+                ->get()
+                ->map(function ($subject) {
+                    return [
+                        'subject_id' => $subject->subject->id,
+                        'subject_name' => $subject->subject->subject_name,
+                        'subject_grade_id' => $subject->grade->id,
+                        'subject_grade' => $subject->grade->core_metaName,
+                    ];
+                });
+
+            $spmSubject['subject'] = $getSPMTranscriptSubject;
+            $spmTrialSubject['subject'] = $getSPMTrialTranscriptSubject;
+
+            $data = [
+                'spm' => $spmSubject,
+                'trial' => $spmTrialSubject
+            ];
+
             return response()->json([
                 'success' => true,
-                'data' => $getTranscriptSubject
+                'data' => $data
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -2518,8 +2694,6 @@ class SchoolController extends Controller
     public function schoolTranscriptDocumentList(Request $request)
     {
         try {
-
-
             $request->validate([
                 'studentId' => 'required|integer',
                 'categoryId' => 'integer|nullable'

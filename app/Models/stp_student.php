@@ -100,4 +100,9 @@ class stp_student extends Model
     {
         return $this->hasOne(stp_personalityTestResult::class, 'student_id', 'id');
     }
+
+    public function riasecResultImage(): HasMany
+    {
+        return $this->hasMany(stp_riasecResultImage::class, 'student_id', 'id');
+    }
 }

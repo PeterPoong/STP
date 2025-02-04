@@ -32,6 +32,7 @@ use App\Models\stp_personalityQuestions;
 use Illuminate\Support\Facades\Storage;
 use App\Models\stp_advertisement_banner;
 use App\Models\stp_personalityTestResult;
+use App\Models\stp_riasecResultImage;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 
@@ -785,11 +786,6 @@ class studentController extends Controller
                 ->get()
                 ->unique('id');
 
-
-
-
-
-
             // Calculate offset and limit for the page
             $page = $request->get('page', 1);
             $offset = ($page - 1) * $perPage;
@@ -827,12 +823,6 @@ class studentController extends Controller
                 ->skip($offset)
                 ->take($nonFeaturedLimit)
                 ->get();
-
-
-
-
-
-
 
             // Merge featured and non-featured results for the page
             $courses = $featuredCourses->concat($nonFeaturedCourses);
@@ -3552,86 +3542,43 @@ class studentController extends Controller
     public function interestedCourseList(Request $request)
     {
         try {
-            // Base query with status = 1
-            $query = stp_courseInterest::where('status', 1);
+            $authUser = Auth::user();
 
-            // Apply filters if provided
-            if ($request->filled('student_id')) {
-                $query->where('student_id', $request->student_id);
-            }
-
-            if ($request->filled('course_id')) {
-                $query->where('course_id', $request->course_id);
-            }
-
-            if ($request->filled('school_id')) {
-                $query->whereHas('course', function ($q) use ($request) {
-                    $q->where('school_id', $request->school_id);
+            $getStudentCourseList = stp_courseInterest::where('student_id', $authUser->id)->get()->map(function ($interestedCourse) {
+                $featured = $interestedCourse->course->featured->contains(function ($item) {
+                    return $item->featured_type == 30 && $item->featured_status == 1 && $item->featured_startTime < now() && $item->featured_endTime > now();
                 });
-            }
+                $intakeMonths = $interestedCourse->course->intake->where('intake_status', 1)
+                    ->pluck('month.core_metaName')
+                    ->toArray();
 
-            if ($request->filled('category_id')) {
-                $query->whereHas('course', function ($q) use ($request) {
-                    $q->where('category_id', $request->category_id);
-                });
-            }
-
-            if ($request->filled('month_year')) {
-                [$month, $year] = explode('/', $request->month_year);
-                $query->where(function ($q) use ($month, $year) {
-                    $q->where(function ($subQuery) use ($month, $year) {
-                        $subQuery->whereYear('created_at', $year)
-                            ->whereMonth('created_at', $month);
-                    })->orWhere(function ($subQuery) use ($month, $year) {
-                        $subQuery->whereYear('updated_at', $year)
-                            ->whereMonth('updated_at', $month);
-                    });
-                });
-            }
-
-            // Fetch and transform data
-            $interestedCourses = $query
-                ->with(['course.school', 'course.category'])
-                ->get()
-                ->map(function ($item) {
-                    $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
-                    return [
-                        'id' => $item->id,
-                        'student_id' => $item->student_id,
-                        'student_name' => $item->student->student_userName,
-                        'course_id' => $item->course_id,
-                        'course_name' => $item->course->course_name,
-                        'status' => $item->status,
-                        'school_id' => $item->course->school_id ?? null,
-                        'school_name' => $item->course->school->school_name,
-                        'school_email' => $item->course->school->school_email ?? null,
-                        'category_type' => $item->course->category->category_name ?? null,
-                        'latest_date' => $latestDate,
-                    ];
-                });
-
-            // Count total records after filtering
-            $total = $interestedCourses->count();
-
-            // Calculate total per category and sort by category type
-            $categoriesTotal = $interestedCourses
-                ->groupBy('category_type')
-                ->map(function ($group, $category) {
-                    return [
-                        'category_type' => $category,
-                        'total' => $group->count(),
-                    ];
-                })
-                ->values()
-                ->sortBy('category_type')
-                ->values()
-                ->toArray();
-
+                return [
+                    'id'=> $interestedCourse->id,
+                    'course_id' => $interestedCourse->course->id,
+                    'school_id'=> $interestedCourse->course->school->id,
+                    'name' => $interestedCourse->course->course_name,
+                    'school_name'=> $interestedCourse->course->school->school_name,
+                    'email'=> $interestedCourse->course->school->school_email,
+                    'description'=> $interestedCourse->course->course_description,
+                    'cost'=> $interestedCourse->course->course_cost,
+                    'period'=> $interestedCourse->course->course_period,
+                    'featured'=> $featured,
+                    'intake' => $intakeMonths,
+                    'category_id'=> $interestedCourse->course->category_id,
+                    'qualification'=> $interestedCourse->course->qualification->qualification_name,
+                    'mode'=> $interestedCourse->course->studyMode->core_metaName,
+                    'logo' => $interestedCourse->course->course_logo ?? $interestedCourse->course->school->school_logo,
+                    'country'=> $interestedCourse->course->school->country->country_name ?? null,
+                    'state'=> $interestedCourse->course->school->state->state_name ?? null,
+                    'institute_category'=> $interestedCourse->course->school->institueCategory->core_metaName ?? null,
+                    'school_location'=> $interestedCourse->course->school->school_google_map_location ?? null,
+                    'school_status'=> $interestedCourse->course->school->school_status,
+                    'status'=> $interestedCourse->status
+                ];
+            });
             return response()->json([
                 'success' => true,
-                'data' => $interestedCourses,
-                'categories' => $categoriesTotal,
-                'total' => $total,
+                'data' => $getStudentCourseList
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -3658,6 +3605,93 @@ class studentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $getCourseCategory
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function uplaodRiasecResultImage(Request $request)
+    {
+        try {
+            // Validation for multiple images and image types
+            $request->validate([
+                'images.*' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:10000',  // For multiple images
+                'imageTypes.*' => 'required|integer',  // For multiple image types
+            ]);
+
+            // Get the authenticated user
+            $authUser = Auth::user();
+            $data = [];
+
+            // Loop over the images and image types to store each set of data
+            foreach ($request->file('images') as $key => $image) {
+                $imageName = time() . '_' . $key . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('riasecImage', $imageName, 'public');
+
+                $existingData = stp_riasecResultImage::where('riasec_imageType', $request->input('imageTypes')[$key])
+                    ->where('student_id', $authUser->id)
+                    ->first(); // Use first() instead of get(), as you're only looking for one match
+
+                if ($existingData) {
+                    // If the data exists, delete the old image file
+                    $oldImagePath = $existingData->resultImage_location;
+
+                    if (Storage::disk('public')->exists($oldImagePath)) {
+                        Storage::disk('public')->delete($oldImagePath); // Delete the file from storage
+                    }
+
+                    $newUpdateData = [
+                        'resultImage_location' => $imagePath,
+                    ];
+                    $existingData->update($newUpdateData);
+                } else {
+                    $newData = [
+                        'resultImage_location' => $imagePath,
+                        'riasec_imageType' => $request->input('imageTypes')[$key],
+                        'student_id' => $authUser->id
+                    ];
+
+                    // Store each set of data
+                    $data[] = stp_riasecResultImage::create($newData);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'Successfully uploaded all images.',
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getRiasecResultImage(Request $request)
+    {
+        try {
+            $request->validate([
+                'imageType' => 'required|integer',
+                'id' => 'required|integer'
+            ]);
+
+
+            $getImage = stp_riasecResultImage::where('riasec_imageType', $request->imageType)
+                ->where('student_id', $request->id)
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'data' => $getImage
             ]);
         } catch (\Exception $e) {
             return response()->json([

@@ -2513,15 +2513,14 @@ class AdminController extends Controller
 
     {
         try {
-            // Get the per_page value from the request, default to 10 if not provided or empty
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_courses_category::count() : (int)$request->per_page)
                 : 10;
 
-            $categoryList = stp_courses_category::when($request->filled('search'), function ($query) use ($request) {
-                $query->where('category_name', 'like', '%' . $request->search . '%');
-            })
-
+            $categoryList = stp_courses_category::with('riasecTypes:id,type_name')
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('category_name', 'like', '%' . $request->search . '%');
+                })
                 ->paginate($perPage)
                 ->through(function ($category) {
                     switch ($category->category_status) {
@@ -2539,6 +2538,7 @@ class AdminController extends Controller
                         'id' =>  $category->id,
                         'name' =>  $category->category_name,
                         "course_hotPick" => $category->course_hotPick ?? 0,
+                        "riasec" => $category->riasecTypes,
                         "category_status" => $status
                     ];
                 });
@@ -2547,7 +2547,8 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ], 500);
         }
     }
@@ -2589,12 +2590,13 @@ class AdminController extends Controller
         }
     }
 
-    public function applicantDetailInfo(Request $request)   //Header and basic information for the applicant
+    public function applicantDetailInfo(Request $request)
     {
         try {
             // Get the authenticated user
             $authUser = Auth::user();
-
+    
+            // Validate the request inputs
             $request->validate([
                 'form_status' => 'integer|nullable',
                 'student_id' => 'integer|nullable',
@@ -2602,68 +2604,46 @@ class AdminController extends Controller
                 'qualification_id' => 'integer|nullable',
                 'search' => 'string|nullable'
             ]);
-
-            // Get the per_page value from the request, default to 10 if not provided or empty
+    
+            // Get the per_page value, default to 10 if not provided
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_submited_form::count() : (int)$request->per_page)
                 : 10;
-
-            $studentList = stp_student_detail::when($request->filled('search'), function ($query) use ($request) {
-                $query->where('student_detailFirstName', 'like', '%' . $request->search . '%');
-            });
-
-            $applicantInfo = stp_submited_form::query()
-                ->when($request->filled('student_id'), function ($query) use ($request) {
-                    $query->where('student_id', $request->student_id);
-                })
-                ->when($request->filled('courses_id'), function ($query) use ($request) {
-                    $query->where('courses_id', $request->courses_id);
-                })
-                ->when($request->filled('form_status'), function ($query) use ($request) {
-                    $query->where('form_status', $request->form_status);
-                })
-                ->when($request->filled('search'), function ($query) use ($request) {
-                    $search = $request->search;
-                    $query->whereHas('student.detail', function ($query) use ($search) {
-                        $query->where('student_detailFirstName', 'like', '%' . $search . '%')
-                            ->orWhere('student_detailLastName', 'like', '%' . $search . '%');
-                    });
-                })
+    
+            // Fetch the applicant information with relationships
+            $applicantInfo = stp_submited_form::with(['student.detail', 'course.school'])
                 ->paginate($perPage)
                 ->through(function ($applicant) {
-                    switch ($applicant->form_status) {
-                        case 0:
-                            $status = "Disable";
-                            break;
-                        case 1:
-                            $status = "Active";
-                            break;
-                        case 2:
-                            $status = "Pending";
-                            break;
-                        case 3:
-                            $status = "Rejected";
-                            break;
-                        case 4:
-                            $status = "Accepted";
-                            break;
-                        default:
-                            $status = null;
-                    }
+                    $student = $applicant->student;
+                    $studentDetail = $student?->detail;
+                
                     return [
                         "id" => $applicant->id ?? 'N/A',
                         "course_name" => $applicant->course->course_name ?? 'N/A',
-                        "institution" => $applicant->course->school->school_name,
-                        "form_status" => $status,
-                        "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
-                        "country_code" => $applicant->student->student_countryCode ?? 'N/A',
-                        "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
-                        'student_id' => $applicant->student->id, // Add student_id to the result
+                        "institution" => $applicant->course->school->school_name ?? 'N/A',
+                        "form_status" => match ($applicant->form_status) {
+                            0 => "Disable",
+                            1 => "Active",
+                            2 => "Pending",
+                            3 => "Rejected",
+                            4 => "Accepted",
+                            default => null,
+                        },
+                        "student_name" => $studentDetail
+                                ? "{$studentDetail->student_detailFirstName} {$studentDetail->student_detailLastName}"
+                                : ($student?->student_userName ?? 'N/A'),
+                        "country_code" => $student?->student_countryCode ?? '',
+                        "contact_number" => $student?->student_contactNo ?? '',
+                        "student_id" => $student->id ?? 'No student ID return',
                     ];
                 });
-
+                
+    
+            // Return the paginated response
             return response()->json($applicantInfo);
+    
         } catch (\Exception $e) {
+            // Handle exceptions and return error response
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
@@ -2671,6 +2651,7 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    
 
     public function applicantDetail(Request $request)
     {
@@ -3856,6 +3837,32 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function allFeaturedList(Request $request)
+    {
+        try {
+            $featuredList = stp_core_meta::query()
+                ->where('core_metaStatus', 1)
+                ->whereIn('id', [28, 29, 30, 31])
+                ->paginate(10)
+                ->through(function ($featured) {
+                    $status = ($featured->status == 1) ? "Active" : "Inactive";
+                    return [
+                        "name" => $featured->core_metaName,
+                        "id" => $featured->id,
+                        "status" => "Active"
+                    ];
+                });
+
+            return $featuredList;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 
 
     public function bannerFeaturedList(Request $request)
@@ -5101,17 +5108,30 @@ class AdminController extends Controller
     public function riasecTypesList(Request $request)
     {
         try {
-            $typeList = stp_RIASECType::where('status', 1)->get();
-            return response()->json([
-                'success' => true,
-                'data' => $typeList
-            ]);
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_RIASECType::count() : (int)$request->per_page)
+                : 10;
+
+            $typeList = stp_RIASECType::query()
+                ->paginate($perPage)
+                ->through(function ($type) {
+                    return [
+                        'id' => $type->id,
+                        'type_name' => $type->type_name,
+                        'unique_description' => $type->unique_description,
+                        'strength' => $type->strength,
+                        'status' => $type->status
+                    ];
+                });
+
+            return response()->json($typeList);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
     public function addRiasecTypes(Request $request)
@@ -5219,7 +5239,38 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function riasecDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $riasec = stp_RIASECType::find($request->id);
 
+            if (!$riasec) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'RIASEC Type not found'
+                ]);
+            }
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $riasec->id,
+                    'updateRiasecType' => $riasec->type_name,
+                    'newDescription' => $riasec->unique_description,
+                    'newStrength' => $riasec->strength,
+
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
+            ]);
+        }
+    }
     public function addPersonalQuestion(Request $request)
     {
         try {
@@ -5297,10 +5348,15 @@ class AdminController extends Controller
     {
         try {
             $request->validate([
-                'search' => 'string',
+                'search' => 'nullable|string',
                 'type' => 'integer',
                 'status' => 'integer'
             ]);
+
+            // Get the per_page value from the request, default to 10 if not provided or empty
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_personalityQuestions::count() : (int)$request->per_page)
+                : 10;
 
             $questionList = stp_personalityQuestions::query()
                 ->when($request->has('search') && !empty($request->search), function ($query) use ($request) {
@@ -5312,20 +5368,59 @@ class AdminController extends Controller
                 ->when($request->has('status'), function ($query) use ($request) {
                     return $query->where('status', $request->status);
                 })
-                ->get();
+                ->paginate($perPage)
+                ->through(function ($question) {
+                    return [
+                        'id' => $question->id,
+                        'question' => $question->question,
+                        'riasec_type' => $question->question_type->type_name,
+                        'status' => $question->status,
+                        // Add any other fields you want to include in the response
+                    ];
+                });
 
-            return response()->json([
-                'success' => true,
-                'data' => $questionList
-            ]);
+            return response()->json($questionList);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => "Internal Server Error",
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function questionDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required|integer'
+            ]);
+            $question = stp_personalityQuestions::find($request->id);
+
+            if (!$question) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Question not found'
+                ]);
+            }
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $question->id,
+                    'newQuestion' => $question->question,
+                    'newType' => $question->riasec_type,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'errors' => $e->getMessage()
             ]);
         }
     }
+
+
     public function cronCorseCategoryInterested(Request $request)
     {
         try {
@@ -5442,67 +5537,77 @@ class AdminController extends Controller
     public function adminCourseCategoryInterested(Request $request)
     {
         try {
-            $query = stp_courseInterest::where('status', 1);
-            // Apply categoryId filter if provided in the request body
-            if ($request->has('categoryId') && $request->input('categoryId')) {
-                $query->whereHas('course.category', function ($q) use ($request) {
-                    $q->where('id', $request->input('categoryId'));
-                });
+            $categoryId = $request->input('categoryId');
+
+            // Validate categoryId is provided
+            if (!$categoryId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Category ID is required.',
+                ], 400);
             }
-            // Get all results
-            $interestedCourses = $query
+
+            // Fetch schools with courses in the specified category
+            $schoolsWithCourses = stp_school::whereHas('courses', function ($query) use ($categoryId) {
+                $query->whereHas('category', function ($q) use ($categoryId) {
+                    $q->where('id', $categoryId);
+                });
+            })
                 ->with([
-                    'course.school:id,school_name,school_email',
-                    'course.category:id,category_name'
+                    'courses' => function ($query) use ($categoryId) {
+                        $query->whereHas('category', function ($q) use ($categoryId) {
+                            $q->where('id', $categoryId);
+                        });
+                    },
+                    'courses.category:id,category_name',
                 ])
                 ->get();
 
-            // Group results by category type
-            $groupedByCategories = $interestedCourses
-                ->groupBy(function ($item) {
-                    return $item->course->category->category_name ?? 'Uncategorized';
-                })
-                ->map(function ($group, $category) {
-                    return [
-                        'category' => $category,
-                        'categoryId' => $group->first()->course->category->id ?? null,
-                        'totalNumber' => $group->count(),
-                        'school' => $group->map(function ($item) {
-                            return [
-                                'schoolId' => $item->course->school->id,
-                                'schoolName' => $item->course->school->school_name,
-                                'schoolEmail' => $item->course->school->school_email,
-                            ];
-                        })->values()->toArray(),
-                    ];
-                })->first();
+            // Group schools by category
+            $groupedByCategory = $schoolsWithCourses->groupBy(function ($school) {
+                return $school->courses->first()->category->category_name ?? 'Uncategorized';
+            })->map(function ($group, $category) {
+                return [
+                    'category' => $category,
+                    'categoryId' => $group->first()->courses->first()->category->id ?? null,
+                    'totalNumber' => $group->count(),
+                    'schools' => $group->map(function ($school) {
+                        return [
+                            'schoolId' => $school->id,
+                            'schoolName' => $school->school_name,
+                            'schoolEmail' => $school->school_email,
+                        ];
+                    })->values()->toArray(),
+                ];
+            })->first();
 
+            // If no schools found, return an empty response
+            if (!$groupedByCategory) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'message' => 'No schools found for the specified category.',
+                    ],
+                ]);
+            }
 
-
-
-            // Total count
-            $total = $interestedCourses->count();
-            // return $groupedByCategories;
-
-            foreach ($groupedByCategories['school'] as $school) {
-                $sendEmail = $this->serviceFunction->adminCourseCategoryInterested($groupedByCategories['category'], $groupedByCategories['totalNumber'], $school['schoolEmail'], $school['schoolName']);
-                // return $sendEmail;
+            // Send email to each school in the group
+            foreach ($groupedByCategory['schools'] as $school) {
+                $this->serviceFunction->adminCourseCategoryInterested(
+                    $groupedByCategory['category'],
+                    $groupedByCategory['totalNumber'],
+                    $school['schoolEmail'],
+                    $school['schoolName']
+                );
             }
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'message' => 'send email successfully'
-                ]
+                    'message' => 'Emails sent successfully.',
+                ],
             ]);
-
-
-
-            return response()->json(
-                $groupedByCategories,
-            );
         } catch (\Exception $e) {
-            // \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
@@ -5510,12 +5615,13 @@ class AdminController extends Controller
             ]);
         }
     }
+
     public function interestedCourseListAdmin(Request $request)
     {
         try {
             $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? stp_courseInterest::count() : (int)$request->per_page)
-            : 10;
+                ? ($request->per_page === 'All' ? stp_courseInterest::count() : (int)$request->per_page)
+                : 10;
 
             $query = stp_courseInterest::where('status', 1);
 
@@ -5579,55 +5685,54 @@ class AdminController extends Controller
 
             // Group results by category type
             $groupedByCategories = collect($interestedCourses)
-            ->groupBy(function ($item) {
-                return $item->course->category->category_name ?? 'Uncategorized';
-            })
-            ->map(function ($group, $category) {
-                return [
-                    'categoryId' => $group->first()->course->category->id ?? null,
-                    'category_type' => $category,
-                    'category_total' => $group->count(),
-                    'schoolList' => $group->map(function ($item) {
-                        $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
-                        return [
-                            'schoolName' => $item->course->school->school_name,
-                            'courseName' => $item->course->course_name,
-                            'schoolEmail' => $item->course->school->school_email,
-                            'latestDate' => $latestDate,
-                        ];
-                    })->values()->toArray(),
-                ];
-            })
-            ->values();
+                ->groupBy(function ($item) {
+                    return $item->course->category->category_name ?? 'Uncategorized';
+                })
+                ->map(function ($group, $category) {
+                    return [
+                        'categoryId' => $group->first()->course->category->id ?? null,
+                        'category_type' => $category,
+                        'category_total' => $group->count(),
+                        'schoolList' => $group->map(function ($item) {
+                            $latestDate = $item->updated_at > $item->created_at ? $item->updated_at : $item->created_at;
+                            return [
+                                'schoolName' => $item->course->school->school_name,
+                                'courseName' => $item->course->course_name,
+                                'schoolEmail' => $item->course->school->school_email,
+                                'latestDate' => $latestDate,
+                            ];
+                        })->values()->toArray(),
+                    ];
+                })
+                ->values();
 
-        // Paginate the grouped data
-        $page = $request->input('page', 1);
-        $paginated = new LengthAwarePaginator(
-            $groupedByCategories->forPage($page, $perPage)->values(),
-            $groupedByCategories->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+            // Paginate the grouped data
+            $page = $request->input('page', 1);
+            $paginated = new LengthAwarePaginator(
+                $groupedByCategories->forPage($page, $perPage)->values(),
+                $groupedByCategories->count(),
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
 
-        return response()->json([
-            'success' => true,
-            'categories' => $paginated->items(),
-            'pagination' => [
-                'current_page' => $paginated->currentPage(),
-                'last_page' => $paginated->lastPage(),
-                'per_page' => $paginated->perPage(),
-                'total' => $paginated->total(),
-            ],
-        ]);
-    } catch (\Exception $e) {
-        \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Internal Server Error',
-            'error' => $e->getMessage(),
-        ]);
+            return response()->json([
+                'success' => true,
+                'categories' => $paginated->items(),
+                'pagination' => [
+                    'current_page' => $paginated->currentPage(),
+                    'last_page' => $paginated->lastPage(),
+                    'per_page' => $paginated->perPage(),
+                    'total' => $paginated->total(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in interestedCourseListAdmin: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
-}
-
 }
