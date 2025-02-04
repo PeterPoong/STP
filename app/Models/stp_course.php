@@ -17,6 +17,7 @@ class stp_course extends Model
         'course_description',
         'course_requirement',
         'course_cost',
+        'international_cost',
         'course_period',
         'course_intake',
         'category_id',

@@ -1237,17 +1237,17 @@ class AdminController extends Controller
     public function addCourse(Request $request)
     {
         try {
+            
             $request->validate([
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'string|max:5000',
                 'requirement' => 'string|max:5000',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
+                'international_cost' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
                 'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
-                'courseFeatured' => 'nullable|array',
-                'courseFeatured.*' => 'integer',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
@@ -1273,6 +1273,7 @@ class AdminController extends Controller
                 'course_description' => $request->description ?? null,
                 'course_requirement' => $request->requirement ?? null,
                 'course_cost' => $request->cost,
+                'international_cost'=> $request->international_cost ?? null,
                 'course_period' => $request->period,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
@@ -1293,14 +1294,14 @@ class AdminController extends Controller
                 ]);
             }
 
-            foreach ($request->courseFeatured as $courseFeatured) {
-                stp_featured::create([
-                    'course_id' => $course->id,
-                    'featured_type' => $courseFeatured,
-                    'featured_status' => 1,
-                    'created_at' => now()
-                ]);
-            }
+            // foreach ($request->courseFeatured as $courseFeatured) {
+            //     stp_featured::create([
+            //         'course_id' => $course->id,
+            //         'featured_type' => $courseFeatured,
+            //         'featured_status' => 1,
+            //         'created_at' => now()
+            //     ]);
+            // }
 
             return response()->json([
                 'success' => true,
@@ -1489,6 +1490,7 @@ class AdminController extends Controller
                 'description' => $courseList->course_description,
                 'requirement' => $courseList->course_requirement,
                 'cost' => $courseList->course_cost,
+                'international_cost'=> $courseList->international_cost,
                 'period' => $courseList->course_period,
                 'intake' => $intakeList, // Updated to include filtered intakes
                 'courseFeatured' => $featuredList, // Updated to include filtered featured items
@@ -1548,6 +1550,7 @@ class AdminController extends Controller
                 'description' => 'nullable|string|max:5000',
                 'requirement' => 'nullable|string|',
                 'cost' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
+                'international_cost' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'nullable|string|max:255',
                 'intake' => 'nullable|array',
                 'intake.*' => 'nullable|integer|between:41,52',
@@ -1593,6 +1596,7 @@ class AdminController extends Controller
                 'course_description' => $request->description ?? null,
                 'course_requirement' => $request->requirement,
                 'course_cost' => $request->cost,
+                'international_cost'=> $request->international_cost ?? null,
                 'course_period' => $request->period,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,

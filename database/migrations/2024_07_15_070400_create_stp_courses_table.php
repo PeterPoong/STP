@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('course_description');
             $table->string('course_requirement');
             $table->decimal('course_cost');
+            $table->decimal('international_cost')->nullable();
             $table->string('course_period');
             $table->string('course_intake')->nullable();
             $table->foreignId('category_id')->nullable()->constrained('stp_courses_categories')->onDelete('set null');
