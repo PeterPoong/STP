@@ -516,12 +516,15 @@ class serviceFunctionController extends Controller
 
         // Encode the place name to ensure it's URL safe
         $encodedPlace = urlencode($placeName);
-
         // Generate the Google Maps link
         $googleMapsLink = "https://www.google.com/maps/search/?api=1&query={$encodedPlace}";
 
+        $embedUrl = "https://www.google.com/maps?q={$placeName}&output=embed";
+        // Generate the iframe HTML
+        $iframeCode = "<iframe src='{$embedUrl}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy'></iframe>";
+
         // Generate the iframe embed code
-        $iframeCode = "<iframe src='https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q={$encodedPlace}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy' referrerpolicy='no-referrer-when-downgrade'></iframe>";
+        // $iframeCode = "<iframe src='https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q={$encodedPlace}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy' referrerpolicy='no-referrer-when-downgrade'></iframe>";
 
         // Return both the link and iframe in JSON response
         return response()->json([
