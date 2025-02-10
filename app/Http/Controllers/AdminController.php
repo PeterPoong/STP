@@ -508,6 +508,9 @@ class AdminController extends Controller
                 ->when($request->filled('state'), function ($query) use ($request) {
                     $query->orWhere('state_id', $request->state);
                 })
+                ->when($request->filled('stat'), function ($query) use ($request) {
+                    $query->where('school_status', $request->stat);
+                })
                 ->when($request->filled('city'), function ($query) use ($request) {
                     $query->orWhere('city_id', $request->city);
                 })
