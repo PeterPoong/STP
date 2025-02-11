@@ -628,6 +628,7 @@ class SchoolController extends Controller
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->countryCode,
+                'school_contactNo'=>$request->contact,
                 'school_fullDesc' => $request->school_fullDesc,
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
