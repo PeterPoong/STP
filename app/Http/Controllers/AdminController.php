@@ -1408,6 +1408,9 @@ class AdminController extends Controller
                 ->when($request->filled('school_id'), function ($query) use ($request) {
                     $query->where('school_id', $request->school_id);
                 })
+                ->when($request->filled('category_id'), function ($query) use ($request) {
+                    $query->where('category_id', $request->category_id);
+                })
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
                 })
