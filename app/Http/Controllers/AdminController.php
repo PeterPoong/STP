@@ -758,7 +758,7 @@ class AdminController extends Controller
                 'country_code' => 'nullable',
                 'contact_number' => 'nullable|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255|email',
-                'school_fullDesc' => 'nullable|string|max:5000',
+                'school_fullDesc' => 'nullable|string|max:10000',
                 'school_shortDesc' => 'nullable|string|max:255',
                 'school_location' => 'nullable|string',
                 'school_google_map_location' => 'nullable|string',
@@ -2621,12 +2621,34 @@ class AdminController extends Controller
                 : 10;
     
             // Fetch the applicant information with relationships
-            $applicantInfo = stp_submited_form::with(['student.detail', 'course.school'])
-                ->paginate($perPage)
+            $query = stp_submited_form::with(['student.detail', 'course.school']);
+    
+            // Apply the form_status filter if provided
+            if ($request->filled('stat')) {
+                $query->where('form_status', $request->stat);
+            }
+    
+            if ($request->filled('qualification_id')) {
+                $query->where('qualification_id', $request->qualification_id);
+            }
+    
+            if ($request->filled('search')) {
+                $searchTerm = $request->search;
+                $query->whereHas('student', function ($studentQuery) use ($searchTerm) {
+                    $studentQuery->where('student_userName', 'like', "%$searchTerm%")
+                        ->orWhere('student_email', 'like', "%$searchTerm%");
+                });
+            }
+    
+            // Sort by latest date first
+            $query->orderBy('created_at', 'desc');
+    
+            // Fetch the filtered applicants with pagination
+            $applicantInfo = $query->paginate($perPage)
                 ->through(function ($applicant) {
                     $student = $applicant->student;
                     $studentDetail = $student?->detail;
-                
+    
                     return [
                         "id" => $applicant->id ?? 'N/A',
                         "course_name" => $applicant->course->course_name ?? 'N/A',
@@ -2645,9 +2667,9 @@ class AdminController extends Controller
                         "country_code" => $student?->student_countryCode ?? '',
                         "contact_number" => $student?->student_contactNo ?? '',
                         "student_id" => $student->id ?? 'No student ID return',
+                        "created_date" => $applicant->created_at->format("d/M/y"),
                     ];
                 });
-                
     
             // Return the paginated response
             return response()->json($applicantInfo);
@@ -2662,8 +2684,7 @@ class AdminController extends Controller
         }
     }
     
-
-    public function applicantDetail(Request $request)
+        public function applicantDetail(Request $request)
     {
         try {
             $request->validate([
