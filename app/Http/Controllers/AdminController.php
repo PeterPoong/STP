@@ -912,12 +912,11 @@ class AdminController extends Controller
             }
 
             // Update school details
-            $school->update([
+            $updateData = [
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->country_code,
                 'school_contactNo' => $request->contact_number,
-                'school_password' => Hash::make($request->password),
                 'school_fullDesc' => $request->school_fullDesc,
                 'country_id' => $request->country,
                 'state_id' => $request->state,
@@ -934,7 +933,14 @@ class AdminController extends Controller
                 'person_inChargeName' => $request->person_in_charge_name,
                 'account_type' => $request->account,
                 'updated_by' => $authUser->id
-            ]);
+            ];
+
+            // Only update password if it's provided
+            if ($request->filled('password')) {
+                $updateData['school_password'] = Hash::make($request->password);
+            }
+
+            $school->update($updateData);
 
             return response()->json([
                 'success' => true,
@@ -2399,6 +2405,10 @@ class AdminController extends Controller
 
             $subjectList = stp_subject::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('subject_name', 'like', '%' . $request->search . '%');
+            })->when($request->filled('stat'), function ($query) use ($request) {
+                $query->where('subject_status', $request->stat);
+            })->when($request->filled('category'), function ($query) use ($request) {
+                $query->where('subject_category', $request->category);
             })
 
                 ->paginate($perPage)
@@ -2530,6 +2540,8 @@ class AdminController extends Controller
             $categoryList = stp_courses_category::with('riasecTypes:id,type_name')
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('category_name', 'like', '%' . $request->search . '%');
+                })->when($request->filled('stat'), function ($query) use ($request) {
+                    $query->where('category_status', $request->stat);
                 })
                 ->paginate($perPage)
                 ->through(function ($category) {
@@ -3404,6 +3416,8 @@ class AdminController extends Controller
 
             $adminList = User::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('name', 'like', '%' . $request->search . '%');
+            })->when($request->filled('stat'), function ($query) use ($request) {
+                $query->where('status', $request->stat);
             })
 
                 ->paginate($perPage)
