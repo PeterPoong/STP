@@ -3562,10 +3562,13 @@ class AdminController extends Controller
             if ($request->filled('search')) {
                 $query->where('banner_name', 'like', '%' . $request->search . '%');
             }
-
             // Filter by ID if provided
             if ($request->filled('id')) {
                 $query->where('id', $request->id);
+            }
+            // Filter by status if provided
+            if ($request->filled('stat')) {
+                $query->where('banner_status', $request->stat);
             }
 
             // Paginate the results
