@@ -2984,11 +2984,13 @@ class AdminController extends Controller
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_package::count() : (int)$request->per_page)
                 : 10;
-
+        
             // Check if the 'id' parameter is provided to get a specific package
             if ($request->filled('id')) {
                 $package = stp_package::find($request->id);
-
+                if ($request->filled('stat')) {
+                    $package->where('package_status', $request->stat);
+                }
                 if (!$package) {
                     return response()->json([
                         'success' => false,
@@ -3015,6 +3017,9 @@ class AdminController extends Controller
                 })
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('package_name', 'like', '%' . $request->search . '%');
+                })
+                ->when($request->filled('stat'), function ($query) use ($request) {  // Add status filter
+                    $query->where('package_status', $request->stat);
                 })
                 ->paginate($perPage)
                 ->through(function ($package) {
