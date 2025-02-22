@@ -4745,17 +4745,13 @@ class AdminController extends Controller
                 ->when($request->filled('featured_type'), function ($query) use ($request) {
                     $query->where('featured_type', $request->featured_type);
                 })
-                ->when($request->filled('status'), function ($query) use ($request) {
-                    $query->where('request_status', $request->status);
+                ->when($request->filled('stat'), function ($query) use ($request) {
+                    $query->where('request_status', $request->stat);
                 })
                 ->when($request->filled('request_type'), function ($query) use ($request) {
                     $query->where('request_type', $request->request_type);
                 })
                 ->paginate($perPage); // Use paginate instead of get()
-
-
-
-
 
             // Transform the paginated results
             $featuredList->getCollection()->transform(function ($item) {
