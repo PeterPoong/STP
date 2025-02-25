@@ -516,12 +516,12 @@ class studentController extends Controller
                 }
             }
 
-            $schoolCover = stp_school_media::where('school_id', $request->id)
+            $schoolCover = stp_school_media::where('school_id', $school->id)
                 ->where('schoolMedia_type', 66)
                 ->where('schoolMedia_status', 1)
                 ->first();
 
-            $schoolPhoto = stp_school_media::where('school_id', $request->id)
+            $schoolPhoto = stp_school_media::where('school_id', $school->id)
                 ->where('schoolMedia_type', 67)
                 ->where('schoolMedia_status', 1)
                 ->get();
