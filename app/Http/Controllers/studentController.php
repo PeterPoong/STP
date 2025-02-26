@@ -877,7 +877,7 @@ class studentController extends Controller
                     'description' => $course->course_description,
                     'requirement' => $course->course_requirement,
                     'cost' => number_format($course->course_cost),
-                    'international_cost'=> number_format($course->international_cost),
+                    'international_cost' => number_format($course->international_cost),
                     'featured' => $featured,
                     'period' => $course->course_period,
                     'intake' => $intakeMonths,
@@ -3050,24 +3050,8 @@ class studentController extends Controller
                 'countryID' => 'required|integer'
             ]);
 
-            $categoryList = stp_courses_category::where('category_status', 1)->get();
-            $qualificationList = stp_qualification::where('qualification_status', 1)
-                ->get()
-                ->map(function ($qualiList) {
-                    return [
-                        'id' => $qualiList->id,
-                        'qualification_name' => $qualiList->qualification_name
-                    ];
-                });
-            $studyModeListing = stp_core_meta::where('core_metaType', 'study_mode')
-                ->where('core_metaStatus', 1)
-                ->get()
-                ->map(function ($studyMode) {
-                    return [
-                        'id' => $studyMode->id,
-                        'studyMode_name' => $studyMode->core_metaName
-                    ];
-                });
+            // Eager load related models to reduce queries
+            $country = stp_country::with('state')->find($request->countryID);
             $categoryList = stp_courses_category::where('category_status', 1)
                 ->orderBy('category_name', 'asc')
                 ->get()
@@ -3077,6 +3061,26 @@ class studentController extends Controller
                         'category_name' => $categories->category_name
                     ];
                 });
+
+            $qualificationList = stp_qualification::where('qualification_status', 1)
+                ->get()
+                ->map(function ($qualiList) {
+                    return [
+                        'id' => $qualiList->id,
+                        'qualification_name' => $qualiList->qualification_name
+                    ];
+                });
+
+            $studyModeListing = stp_core_meta::where('core_metaType', 'study_mode')
+                ->where('core_metaStatus', 1)
+                ->get()
+                ->map(function ($studyMode) {
+                    return [
+                        'id' => $studyMode->id,
+                        'studyMode_name' => $studyMode->core_metaName
+                    ];
+                });
+
             $maxCost = stp_course::where('course_status', 1)
                 ->max('course_cost');
 
@@ -3094,6 +3098,7 @@ class studentController extends Controller
                 'November' => 11,
                 'December' => 12
             ];
+
             $intakeList = stp_intake::get()
                 ->map(function ($intake) {
                     return [
@@ -3103,17 +3108,12 @@ class studentController extends Controller
                 })
                 ->unique('month')
                 ->sortBy(function ($intake) use ($monthsOrder) {
-                    // Sort by the corresponding month number
                     return $monthsOrder[$intake['month']] ?? 13; // Default to 13 if month is not found
                 })
-                ->values(); // Reindex the array'
+                ->values();
 
-            $institueList = stp_core_meta::where('core_metaType', 'institute')->get();
-            $country = stp_country::find($request->countryID);
-
-            $states = $country->state;
             // Create the state list and sort it by state_name in ascending order
-            $stateList = collect($states)->map(function ($state) {
+            $stateList = collect($country->state)->map(function ($state) {
                 return [
                     'id' => $state->id,
                     'state_name' => $state->state_name
@@ -3124,10 +3124,9 @@ class studentController extends Controller
                 'categoryList' => $categoryList,
                 'qualificationList' => $qualificationList,
                 'studyModeListing' => $studyModeListing,
-                'categoryList' => $categoryList,
                 'maxAmount' => $maxCost,
                 'intakeList' => $intakeList,
-                'institueList' => $institueList,
+                'institueList' => stp_core_meta::where('core_metaType', 'institute')->get(),
                 'state' => $stateList
             ];
 
@@ -3560,29 +3559,29 @@ class studentController extends Controller
                     ->toArray();
 
                 return [
-                    'id'=> $interestedCourse->id,
+                    'id' => $interestedCourse->id,
                     'course_id' => $interestedCourse->course->id,
-                    'school_id'=> $interestedCourse->course->school->id,
+                    'school_id' => $interestedCourse->course->school->id,
                     'name' => $interestedCourse->course->course_name,
-                    'school_name'=> $interestedCourse->course->school->school_name,
-                    'email'=> $interestedCourse->course->school->school_email,
-                    'description'=> $interestedCourse->course->course_description,
-                    'cost'=> number_format($interestedCourse->course->course_cost),
-                    'international_cost'=> number_format($interestedCourse->course->international_cost),
-                    'period'=> $interestedCourse->course->course_period,
-                    'featured'=> $featured,
+                    'school_name' => $interestedCourse->course->school->school_name,
+                    'email' => $interestedCourse->course->school->school_email,
+                    'description' => $interestedCourse->course->course_description,
+                    'cost' => number_format($interestedCourse->course->course_cost),
+                    'international_cost' => number_format($interestedCourse->course->international_cost),
+                    'period' => $interestedCourse->course->course_period,
+                    'featured' => $featured,
                     'intake' => $intakeMonths,
-                    'category_id'=> $interestedCourse->course->category_id,
-                    'qualification'=> $interestedCourse->course->qualification->qualification_name,
-                    'mode'=> $interestedCourse->course->studyMode->core_metaName,
+                    'category_id' => $interestedCourse->course->category_id,
+                    'qualification' => $interestedCourse->course->qualification->qualification_name,
+                    'mode' => $interestedCourse->course->studyMode->core_metaName,
                     'logo' => $interestedCourse->course->course_logo ?? $interestedCourse->course->school->school_logo,
-                    'country'=> $interestedCourse->course->school->country->country_name ?? null,
-                    'country_code'=> $interestedCourse->course->school->country->country_code ?? null,
-                    'state'=> $interestedCourse->course->school->state->state_name ?? null,
-                    'institute_category'=> $interestedCourse->course->school->institueCategory->core_metaName ?? null,
-                    'school_location'=> $interestedCourse->course->school->school_google_map_location ?? null,
-                    'school_status'=> $interestedCourse->course->school->school_status,
-                    'status'=> $interestedCourse->status
+                    'country' => $interestedCourse->course->school->country->country_name ?? null,
+                    'country_code' => $interestedCourse->course->school->country->country_code ?? null,
+                    'state' => $interestedCourse->course->school->state->state_name ?? null,
+                    'institute_category' => $interestedCourse->course->school->institueCategory->core_metaName ?? null,
+                    'school_location' => $interestedCourse->course->school->school_google_map_location ?? null,
+                    'school_status' => $interestedCourse->course->school->school_status,
+                    'status' => $interestedCourse->status
                 ];
             });
             return response()->json([
