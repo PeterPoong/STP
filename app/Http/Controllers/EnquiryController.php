@@ -119,13 +119,18 @@ class EnquiryController extends Controller
                 : 10;
 
             $request->validate([
-                'subject' => 'integer'
+                'subject' => 'nullable|integer',
+                'stat' => 'nullable|integer'
             ]);
 
-            $enquiryList = stp_enquiry::when($request->subject, function ($query, $subject) {
-                return $query->where('enquiry_subject', $subject);
+            $enquiryList = stp_enquiry::when($request->filled('subject'), function ($query) use ($request) {
+                return $query->where('enquiry_subject', $request->subject);
+            })->when($request->filled('stat'), function ($query) use ($request) {
+                return $query->where('enquiry_status', $request->stat);
+            }, function ($query) {
+                // Only apply the whereIn constraint if no specific stat is provided
+                return $query->whereIn('enquiry_status', [1, 2]);
             })
-                ->whereIn('enquiry_status', [1, 2])
                 ->paginate($perPage)
                 ->through(function ($enquiry) {
                     return [

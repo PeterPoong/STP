@@ -508,6 +508,9 @@ class AdminController extends Controller
                 ->when($request->filled('state'), function ($query) use ($request) {
                     $query->orWhere('state_id', $request->state);
                 })
+                ->when($request->filled('stat'), function ($query) use ($request) {
+                    $query->where('school_status', $request->stat);
+                })
                 ->when($request->filled('city'), function ($query) use ($request) {
                     $query->orWhere('city_id', $request->city);
                 })
@@ -755,7 +758,7 @@ class AdminController extends Controller
                 'country_code' => 'nullable',
                 'contact_number' => 'nullable|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255|email',
-                'school_fullDesc' => 'nullable|string|max:5000',
+                'school_fullDesc' => 'nullable|string|max:10000',
                 'school_shortDesc' => 'nullable|string|max:255',
                 'school_location' => 'nullable|string',
                 'school_google_map_location' => 'nullable|string',
@@ -909,12 +912,11 @@ class AdminController extends Controller
             }
 
             // Update school details
-            $school->update([
+            $updateData = [
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->country_code,
                 'school_contactNo' => $request->contact_number,
-                'school_password' => Hash::make($request->password),
                 'school_fullDesc' => $request->school_fullDesc,
                 'country_id' => $request->country,
                 'state_id' => $request->state,
@@ -931,7 +933,14 @@ class AdminController extends Controller
                 'person_inChargeName' => $request->person_in_charge_name,
                 'account_type' => $request->account,
                 'updated_by' => $authUser->id
-            ]);
+            ];
+
+            // Only update password if it's provided
+            if ($request->filled('password')) {
+                $updateData['school_password'] = Hash::make($request->password);
+            }
+
+            $school->update($updateData);
 
             return response()->json([
                 'success' => true,
@@ -1237,17 +1246,17 @@ class AdminController extends Controller
     public function addCourse(Request $request)
     {
         try {
+            
             $request->validate([
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
                 'description' => 'string|max:5000',
                 'requirement' => 'string|max:5000',
                 'cost' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
+                'international_cost' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
                 'intake.*' => 'integer|between:41,52', // Validate each element in the intake array
-                'courseFeatured' => 'nullable|array',
-                'courseFeatured.*' => 'integer',
                 'category' => 'required|integer',
                 'qualification' => 'required|integer',
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
@@ -1273,6 +1282,7 @@ class AdminController extends Controller
                 'course_description' => $request->description ?? null,
                 'course_requirement' => $request->requirement ?? null,
                 'course_cost' => $request->cost,
+                'international_cost'=> $request->international_cost ?? null,
                 'course_period' => $request->period,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
@@ -1293,14 +1303,14 @@ class AdminController extends Controller
                 ]);
             }
 
-            foreach ($request->courseFeatured as $courseFeatured) {
-                stp_featured::create([
-                    'course_id' => $course->id,
-                    'featured_type' => $courseFeatured,
-                    'featured_status' => 1,
-                    'created_at' => now()
-                ]);
-            }
+            // foreach ($request->courseFeatured as $courseFeatured) {
+            //     stp_featured::create([
+            //         'course_id' => $course->id,
+            //         'featured_type' => $courseFeatured,
+            //         'featured_status' => 1,
+            //         'created_at' => now()
+            //     ]);
+            // }
 
             return response()->json([
                 'success' => true,
@@ -1404,6 +1414,9 @@ class AdminController extends Controller
                 ->when($request->filled('school_id'), function ($query) use ($request) {
                     $query->where('school_id', $request->school_id);
                 })
+                ->when($request->filled('category_id'), function ($query) use ($request) {
+                    $query->where('category_id', $request->category_id);
+                })
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
                 })
@@ -1489,6 +1502,7 @@ class AdminController extends Controller
                 'description' => $courseList->course_description,
                 'requirement' => $courseList->course_requirement,
                 'cost' => $courseList->course_cost,
+                'international_cost'=> $courseList->international_cost,
                 'period' => $courseList->course_period,
                 'intake' => $intakeList, // Updated to include filtered intakes
                 'courseFeatured' => $featuredList, // Updated to include filtered featured items
@@ -1548,6 +1562,7 @@ class AdminController extends Controller
                 'description' => 'nullable|string|max:5000',
                 'requirement' => 'nullable|string|',
                 'cost' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
+                'international_cost' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'period' => 'nullable|string|max:255',
                 'intake' => 'nullable|array',
                 'intake.*' => 'nullable|integer|between:41,52',
@@ -1593,6 +1608,7 @@ class AdminController extends Controller
                 'course_description' => $request->description ?? null,
                 'course_requirement' => $request->requirement,
                 'course_cost' => $request->cost,
+                'international_cost'=> $request->international_cost ?? null,
                 'course_period' => $request->period,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
@@ -2389,6 +2405,10 @@ class AdminController extends Controller
 
             $subjectList = stp_subject::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('subject_name', 'like', '%' . $request->search . '%');
+            })->when($request->filled('stat'), function ($query) use ($request) {
+                $query->where('subject_status', $request->stat);
+            })->when($request->filled('category'), function ($query) use ($request) {
+                $query->where('subject_category', $request->category);
             })
 
                 ->paginate($perPage)
@@ -2520,6 +2540,8 @@ class AdminController extends Controller
             $categoryList = stp_courses_category::with('riasecTypes:id,type_name')
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('category_name', 'like', '%' . $request->search . '%');
+                })->when($request->filled('stat'), function ($query) use ($request) {
+                    $query->where('category_status', $request->stat);
                 })
                 ->paginate($perPage)
                 ->through(function ($category) {
@@ -2611,12 +2633,34 @@ class AdminController extends Controller
                 : 10;
     
             // Fetch the applicant information with relationships
-            $applicantInfo = stp_submited_form::with(['student.detail', 'course.school'])
-                ->paginate($perPage)
+            $query = stp_submited_form::with(['student.detail', 'course.school']);
+    
+            // Apply the form_status filter if provided
+            if ($request->filled('stat')) {
+                $query->where('form_status', $request->stat);
+            }
+    
+            if ($request->filled('qualification_id')) {
+                $query->where('qualification_id', $request->qualification_id);
+            }
+    
+            if ($request->filled('search')) {
+                $searchTerm = $request->search;
+                $query->whereHas('student', function ($studentQuery) use ($searchTerm) {
+                    $studentQuery->where('student_userName', 'like', "%$searchTerm%")
+                        ->orWhere('student_email', 'like', "%$searchTerm%");
+                });
+            }
+    
+            // Sort by latest date first
+            $query->orderBy('created_at', 'desc');
+    
+            // Fetch the filtered applicants with pagination
+            $applicantInfo = $query->paginate($perPage)
                 ->through(function ($applicant) {
                     $student = $applicant->student;
                     $studentDetail = $student?->detail;
-                
+    
                     return [
                         "id" => $applicant->id ?? 'N/A',
                         "course_name" => $applicant->course->course_name ?? 'N/A',
@@ -2635,9 +2679,9 @@ class AdminController extends Controller
                         "country_code" => $student?->student_countryCode ?? '',
                         "contact_number" => $student?->student_contactNo ?? '',
                         "student_id" => $student->id ?? 'No student ID return',
+                        "created_date" => $applicant->created_at->format("d/M/y"),
                     ];
                 });
-                
     
             // Return the paginated response
             return response()->json($applicantInfo);
@@ -2652,8 +2696,7 @@ class AdminController extends Controller
         }
     }
     
-
-    public function applicantDetail(Request $request)
+        public function applicantDetail(Request $request)
     {
         try {
             $request->validate([
@@ -2941,11 +2984,13 @@ class AdminController extends Controller
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_package::count() : (int)$request->per_page)
                 : 10;
-
+        
             // Check if the 'id' parameter is provided to get a specific package
             if ($request->filled('id')) {
                 $package = stp_package::find($request->id);
-
+                if ($request->filled('stat')) {
+                    $package->where('package_status', $request->stat);
+                }
                 if (!$package) {
                     return response()->json([
                         'success' => false,
@@ -2972,6 +3017,9 @@ class AdminController extends Controller
                 })
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('package_name', 'like', '%' . $request->search . '%');
+                })
+                ->when($request->filled('stat'), function ($query) use ($request) {  // Add status filter
+                    $query->where('package_status', $request->stat);
                 })
                 ->paginate($perPage)
                 ->through(function ($package) {
@@ -3373,6 +3421,8 @@ class AdminController extends Controller
 
             $adminList = User::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('name', 'like', '%' . $request->search . '%');
+            })->when($request->filled('stat'), function ($query) use ($request) {
+                $query->where('status', $request->stat);
             })
 
                 ->paginate($perPage)
@@ -3517,10 +3567,13 @@ class AdminController extends Controller
             if ($request->filled('search')) {
                 $query->where('banner_name', 'like', '%' . $request->search . '%');
             }
-
             // Filter by ID if provided
             if ($request->filled('id')) {
                 $query->where('id', $request->id);
+            }
+            // Filter by status if provided
+            if ($request->filled('stat')) {
+                $query->where('banner_status', $request->stat);
             }
 
             // Paginate the results
@@ -4692,17 +4745,13 @@ class AdminController extends Controller
                 ->when($request->filled('featured_type'), function ($query) use ($request) {
                     $query->where('featured_type', $request->featured_type);
                 })
-                ->when($request->filled('status'), function ($query) use ($request) {
-                    $query->where('request_status', $request->status);
+                ->when($request->filled('stat'), function ($query) use ($request) {
+                    $query->where('request_status', $request->stat);
                 })
                 ->when($request->filled('request_type'), function ($query) use ($request) {
                     $query->where('request_type', $request->request_type);
                 })
                 ->paginate($perPage); // Use paginate instead of get()
-
-
-
-
 
             // Transform the paginated results
             $featuredList->getCollection()->transform(function ($item) {

@@ -171,7 +171,7 @@ class AuthController extends Controller
                 ->exists();
             if (!$checkUser) {
                 throw ValidationException::withMessages([
-                    'contact not found',
+                    'contact' => ['The provided contact number is incorrect.'],
                 ]);
             }
 
@@ -179,15 +179,19 @@ class AuthController extends Controller
                 ->where('student_contactNo', $request->contact_number)
                 ->first();
 
-
-            if (!$user || !Hash::check($request->password, $user->student_password)) {
+            if (!$user) {
                 throw ValidationException::withMessages([
-                    'credentials' => ['The provided credentials are incorrect.'],
+                    'contact' => ['The provided contact number is incorrect.'],
+                ]);
+            }
+
+            if (!Hash::check($request->password, $user->student_password)) {
+                throw ValidationException::withMessages([
+                    'credentials' => ['The provided password is incorrect.'],
                 ]);
             }
 
             // Auth::login($user);
-
 
             $token = $user->createToken('authToken')->plainTextToken;
 
@@ -214,36 +218,39 @@ class AuthController extends Controller
             $request->validate([
                 'password' => 'required',
                 'email' => 'required|string|email',
-
             ]);
             $checkUser = stp_school::where('school_email', $request->email)->exists();
             if (!$checkUser) {
                 throw ValidationException::withMessages([
-                    'email not found',
+                    'email' => ['The provided email is incorrect.'],
                 ]);
             }
 
             $user = stp_school::where('school_email', $request->email)->first();
 
-
-            if (!$user || !Hash::check($request->password, $user->school_password)) {
+            if (!$user) {
                 throw ValidationException::withMessages([
-                    'credentials' => ['The provided credentials are incorrect.'],
+                    'email' => ['The provided email is incorrect.'],
+                ]);
+            }
+
+            if (!Hash::check($request->password, $user->school_password)) {
+                throw ValidationException::withMessages([
+                    'password' => ['The provided password is incorrect.'],
                 ]);
             }
 
             switch ($user->school_status) {
                 case 0:
                     throw ValidationException::withMessages([
-                        'account' => ['Account had been disable. Please contact our support'],
+                        'account' => ['Account had been disabled. Please contact our support.'],
                     ]);
                     break;
                 case 2:
                     throw ValidationException::withMessages([
-                        'account' => ['Account still in pending waiting for approval from admin'],
+                        'account' => ['Account still pending approval from admin.'],
                     ]);
             }
-
 
             $token = $user->createToken('authToken')->plainTextToken;
 

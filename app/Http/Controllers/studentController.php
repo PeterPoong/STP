@@ -451,6 +451,9 @@ class studentController extends Controller
                 'description' => $courseList->course_description,
                 'requirement' => $courseList->course_requirement,
                 'cost' => number_format($courseList->course_cost),
+                'international_cost' => number_format($courseList->international_cost),
+                'country' => $courseList->school->country->country_name ?? null,
+                'country_code' => $courseList->school->country->country_code ?? null,
                 'period' => $courseList->course_period,
                 'intake' => $intakeList, // Updated to include all intakes
                 'courseFeatured' => $featuredList,
@@ -513,12 +516,12 @@ class studentController extends Controller
                 }
             }
 
-            $schoolCover = stp_school_media::where('school_id', $request->id)
+            $schoolCover = stp_school_media::where('school_id', $school->id)
                 ->where('schoolMedia_type', 66)
                 ->where('schoolMedia_status', 1)
                 ->first();
 
-            $schoolPhoto = stp_school_media::where('school_id', $request->id)
+            $schoolPhoto = stp_school_media::where('school_id', $school->id)
                 ->where('schoolMedia_type', 67)
                 ->where('schoolMedia_status', 1)
                 ->get();
@@ -537,6 +540,7 @@ class studentController extends Controller
                             'id' => $course->id,
                             'course_name' => $course->course_name,
                             'course_cost' => number_format($course->course_cost),
+                            'international_cost' => number_format($course->international_cost),
                             'course_period' => $course->course_period,
                             'course_intake' => $monthList,
                             'category' => $course->category->category_name,
@@ -560,6 +564,7 @@ class studentController extends Controller
                 'category' => $school->institueCategory->core_metaName ?? null,
                 'logo' => $school->school_logo,
                 'country' => $school->country->country_name ?? null,
+                'country_code' => $school->country->country_code ?? null,
                 'state' => $school->state->state_name ?? null,
                 'city' => $school->city->city_name ?? null,
                 'short_description' => $school->school_shortDesc,
@@ -872,6 +877,7 @@ class studentController extends Controller
                     'description' => $course->course_description,
                     'requirement' => $course->course_requirement,
                     'cost' => number_format($course->course_cost),
+                    'international_cost'=> number_format($course->international_cost),
                     'featured' => $featured,
                     'period' => $course->course_period,
                     'intake' => $intakeMonths,
@@ -880,6 +886,7 @@ class studentController extends Controller
                     'mode' => $course->studyMode->core_metaName ?? null,
                     'logo' => $course->course_logo ?? $course->school->school_logo,
                     'country' => $course->school->country->country_name ?? null,
+                    'country_code' => $course->school->country->country_code ?? null,
                     'state' => $course->school->state->state_name ?? null,
                     'institute_category' => $course->school->institueCategory->core_metaName ?? null,
                     'school_location' => $course->school->school_google_map_location,
@@ -3560,7 +3567,8 @@ class studentController extends Controller
                     'school_name'=> $interestedCourse->course->school->school_name,
                     'email'=> $interestedCourse->course->school->school_email,
                     'description'=> $interestedCourse->course->course_description,
-                    'cost'=> $interestedCourse->course->course_cost,
+                    'cost'=> number_format($interestedCourse->course->course_cost),
+                    'international_cost'=> number_format($interestedCourse->course->international_cost),
                     'period'=> $interestedCourse->course->course_period,
                     'featured'=> $featured,
                     'intake' => $intakeMonths,
@@ -3569,6 +3577,7 @@ class studentController extends Controller
                     'mode'=> $interestedCourse->course->studyMode->core_metaName,
                     'logo' => $interestedCourse->course->course_logo ?? $interestedCourse->course->school->school_logo,
                     'country'=> $interestedCourse->course->school->country->country_name ?? null,
+                    'country_code'=> $interestedCourse->course->school->country->country_code ?? null,
                     'state'=> $interestedCourse->course->school->state->state_name ?? null,
                     'institute_category'=> $interestedCourse->course->school->institueCategory->core_metaName ?? null,
                     'school_location'=> $interestedCourse->course->school->school_google_map_location ?? null,

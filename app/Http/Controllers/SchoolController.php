@@ -569,20 +569,17 @@ class SchoolController extends Controller
                 'email' => 'required|string|max:255',
                 'countryCode' => 'required|string|max:255',
                 'contact' => 'required|string|max:255',
-                'school_website' => 'nullable|string|max:255',
-                // 'password' => 'required|string|min:8',
-                // 'confirm_password' => 'required|string|min:8|same:password',
                 'school_fullDesc' => 'required|string|max:255',
-                'school_google_map_location' => 'nullable|string|max:255',
                 'school_shortDesc' => 'required|string|max:255',
                 'school_address' => 'required|string|max:255',
-                'google_map_location' => 'required|string|max:255',
+                'school_website' => 'nullable|string|max:255',
                 'country' => 'required|integer',
                 'state' => 'required|integer',
                 'city' => 'required|integer',
                 'category' => 'required|integer',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
                 'account_type' => 'required|integer'
+                // 'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+
             ]);
             $authUser = Auth::user();
 
@@ -618,10 +615,20 @@ class SchoolController extends Controller
                 $imagePath = $image->storeAs('schoolLogo', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
 
+            $encodedPlace = urlencode($request->school_address);
+            // Generate the Google Maps link
+            $googleMapsLink = "https://www.google.com/maps/search/?api=1&query={$encodedPlace}";
+
+            $embedUrl = "https://www.google.com/maps?q={$request->school_address}&output=embed";
+            // Generate the iframe HTML
+            $iframeCode = "<iframe src='{$embedUrl}' width='600' height='450' style='border:0;' allowfullscreen='' loading='lazy'></iframe>";
+
+
             $updateSchool = $school->update([
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->countryCode,
+                'school_contactNo'=>$request->contact,
                 'school_fullDesc' => $request->school_fullDesc,
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
@@ -631,14 +638,9 @@ class SchoolController extends Controller
                 'institue_category' => $request->category,
                 'school_lg' => $request->lg,
                 'school_lat' => $request->lat,
-                'school_google_map_location' => $request->google_map_location ?? null,
-                // 'person_inChargeName' => $request->PICName,
-                // 'person_inChargeNumber' => $request->PICNo,
-                // 'person_inChargeEmail' => $request->PICEmail,
-                'account_type' => $request->account,
+                'school_location' => $iframeCode,
+                "school_google_map_location" => $googleMapsLink,
                 'school_officalWebsite' => $request->school_website ?? null,
-                'google_map_location' => $request->google_map_location ?? null,
-                // 'school_logo' => $imagePath ?? null,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
                 'account_type' => $request->account_type

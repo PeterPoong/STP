@@ -175,6 +175,7 @@ class SocialLoginController extends Controller
             if ($existingUser) {
                 $token = $existingUser->createToken('authToken')->plainTextToken;
                 $user_id = $existingUser->id;
+                $user_name = $existingUser->student_userName;
                 if ($existingUser->student_countryCode === null && $existingUser->student_contactNo === null) {
                     $contact = false;
                 } else {
@@ -187,6 +188,7 @@ class SocialLoginController extends Controller
                         'google_id' => $googleUser->getId(),
                     ];
                     $checkExistingOfEmail->update($data);
+                    $user_name = $checkExistingOfEmail->student_userName;
                     $token = $checkExistingOfEmail->createToken('authToken')->plainTextToken;
                     $user_id = $checkExistingOfEmail->id;
                     if ($checkExistingOfEmail->student_countryCode === null && $checkExistingOfEmail->student_contactNo === null) {
@@ -194,13 +196,6 @@ class SocialLoginController extends Controller
                     } else {
                         $contact = true;
                     }
-
-
-                    // if ($checkExistingOfEmail->student_countryCode == null && $checkExistingOfEmail->student_contactNo == null) {
-                    //     $contact = false;
-                    // } else {
-                    //     $contact = true;
-                    // }
                 } else {
                     $data = [
                         'student_userName' => $googleUser->getName(),
@@ -210,6 +205,7 @@ class SocialLoginController extends Controller
                     ];
                     $newUser = stp_student::create($data);
                     stp_student_detail::create(['student_id' => $newUser->id]);
+                    $user_name = $googleUser->getName();
                     $token = $newUser->createToken('authToken')->plainTextToken;
                     $user_id = $newUser->id;
                     $contact = false;
@@ -220,7 +216,7 @@ class SocialLoginController extends Controller
             $data = [
                 'token' => $token,
                 'id' => $user_id,
-                'user_name' => $googleUser->getName(),
+                'user_name' => $user_name,
                 'contact' => $contact
 
             ];
