@@ -3051,37 +3051,38 @@ class studentController extends Controller
             ]);
 
             // Eager load related models to reduce queries
-            $country = stp_country::with(['state', 'courses_category' => function ($query) {
-                $query->where('category_status', 1)->orderBy('category_name', 'asc');
-            }, 'qualification' => function ($query) {
-                $query->where('qualification_status', 1);
-            }, 'core_meta' => function ($query) {
-                $query->where('core_metaType', 'study_mode')->where('core_metaStatus', 1);
-            }])->find($request->countryID);
+            $country = stp_country::with('state')->find($request->countryID);
+            $categoryList = stp_courses_category::where('category_status', 1)
+                ->orderBy('category_name', 'asc')
+                ->get()
+                ->map(function ($categories) {
+                    return [
+                        'id' => $categories->id,
+                        'category_name' => $categories->category_name
+                    ];
+                });
 
-            // Use eager loaded relationships to build lists
-            $categoryList = $country->courses_category->map(function ($categories) {
-                return [
-                    'id' => $categories->id,
-                    'category_name' => $categories->category_name
-                ];
-            });
+            $qualificationList = stp_qualification::where('qualification_status', 1)
+                ->get()
+                ->map(function ($qualiList) {
+                    return [
+                        'id' => $qualiList->id,
+                        'qualification_name' => $qualiList->qualification_name
+                    ];
+                });
 
-            $qualificationList = $country->qualification->map(function ($qualiList) {
-                return [
-                    'id' => $qualiList->id,
-                    'qualification_name' => $qualiList->qualification_name
-                ];
-            });
+            $studyModeListing = stp_core_meta::where('core_metaType', 'study_mode')
+                ->where('core_metaStatus', 1)
+                ->get()
+                ->map(function ($studyMode) {
+                    return [
+                        'id' => $studyMode->id,
+                        'studyMode_name' => $studyMode->core_metaName
+                    ];
+                });
 
-            $studyModeListing = $country->core_meta->map(function ($studyMode) {
-                return [
-                    'id' => $studyMode->id,
-                    'studyMode_name' => $studyMode->core_metaName
-                ];
-            });
-
-            $maxCost = stp_course::where('course_status', 1)->max('course_cost');
+            $maxCost = stp_course::where('course_status', 1)
+                ->max('course_cost');
 
             $monthsOrder = [
                 'January' => 1,
@@ -3098,7 +3099,7 @@ class studentController extends Controller
                 'December' => 12
             ];
 
-            $intakeList = stp_intake::with('month')->get()
+            $intakeList = stp_intake::get()
                 ->map(function ($intake) {
                     return [
                         'id' => $intake->month->id,
@@ -3112,7 +3113,7 @@ class studentController extends Controller
                 ->values();
 
             // Create the state list and sort it by state_name in ascending order
-            $stateList = $country->state->map(function ($state) {
+            $stateList = collect($country->state)->map(function ($state) {
                 return [
                     'id' => $state->id,
                     'state_name' => $state->state_name
