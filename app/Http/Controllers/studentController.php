@@ -3051,7 +3051,7 @@ class studentController extends Controller
             ]);
 
             // Fetch all relevant core_meta data in one query
-            $coreMetaData = stp_core_meta::whereIn('core_metaType', ['study_mode', 'institute', 'achievementType'])
+            $coreMetaData = stp_core_meta::whereIn('core_metaType', ['study_mode', 'institute', 'achievementType', 'month'])
                 ->where('core_metaStatus', 1)
                 ->get();
 
@@ -3059,6 +3059,7 @@ class studentController extends Controller
             $studyModeListing = [];
             $institueList = [];
             $achievementTypeList = [];
+            $intakeList = [];
 
             // Categorize the data based on core_metaType
             foreach ($coreMetaData as $meta) {
@@ -3079,6 +3080,12 @@ class studentController extends Controller
                         $achievementTypeList[] = [
                             'id' => $meta->id,
                             'achievement_type_name' => $meta->core_metaName
+                        ];
+                        break;
+                    case 'month':
+                        $intakeList[] = [
+                            'id' => $meta->id,
+                            'month' => $meta->core_metaName
                         ];
                         break;
                 }
@@ -3108,33 +3115,33 @@ class studentController extends Controller
                 ->max('course_cost');
 
             // Order the months and list intake information
-            $monthsOrder = [
-                'January' => 1,
-                'February' => 2,
-                'March' => 3,
-                'April' => 4,
-                'May' => 5,
-                'June' => 6,
-                'July' => 7,
-                'August' => 8,
-                'September' => 9,
-                'October' => 10,
-                'November' => 11,
-                'December' => 12
-            ];
+            // $monthsOrder = [
+            //     'January' => 1,
+            //     'February' => 2,
+            //     'March' => 3,
+            //     'April' => 4,
+            //     'May' => 5,
+            //     'June' => 6,
+            //     'July' => 7,
+            //     'August' => 8,
+            //     'September' => 9,
+            //     'October' => 10,
+            //     'November' => 11,
+            //     'December' => 12
+            // ];
 
-            $intakeList = stp_intake::get()
-                ->map(function ($intake) {
-                    return [
-                        'id' => $intake->month->id,
-                        'month' => $intake->month->core_metaName
-                    ];
-                })
-                ->unique('month')
-                ->sortBy(function ($intake) use ($monthsOrder) {
-                    return $monthsOrder[$intake['month']] ?? 13; // Default to 13 if month is not found
-                })
-                ->values();
+            // $intakeList = stp_intake::get()
+            //     ->map(function ($intake) {
+            //         return [
+            //             'id' => $intake->month->id,
+            //             'month' => $intake->month->core_metaName
+            //         ];
+            //     })
+            //     ->unique('month')
+            //     ->sortBy(function ($intake) use ($monthsOrder) {
+            //         return $monthsOrder[$intake['month']] ?? 13; // Default to 13 if month is not found
+            //     })
+            //     ->values();
 
             // Get country and states data
             $country = stp_country::find($request->countryID);
