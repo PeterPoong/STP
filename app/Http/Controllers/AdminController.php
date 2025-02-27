@@ -5162,7 +5162,14 @@ class AdminController extends Controller
                 ? ($request->per_page === 'All' ? stp_RIASECType::count() : (int)$request->per_page)
                 : 10;
 
-            $typeList = stp_RIASECType::query()
+            $query = stp_RIASECType::query();
+
+            // Add status filter if provided in request
+            if ($request->has('stat')) {
+                $query->where('status', (int)$request->stat);
+            }
+
+            $typeList = $query
                 ->paginate($perPage)
                 ->through(function ($type) {
                     return [
