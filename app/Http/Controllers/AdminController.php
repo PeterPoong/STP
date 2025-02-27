@@ -214,7 +214,6 @@ class AdminController extends Controller
         ]);
     }
     public function studentListAdmin(Request $request)
-
     {
         try {
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -224,7 +223,12 @@ class AdminController extends Controller
 
             $query = stp_student::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_userName', 'like', '%' . $request->search . '%');
+            })
+            ->when($request->filled('stat'), function ($query) use ($request) {
+                // Add status filter
+                $query->where('student_status', $request->stat);
             });
+
             $totalCount = $query->count();
             $studentList = $query->orderBy('created_at', 'desc')
                 ->paginate($perPage)
@@ -251,15 +255,10 @@ class AdminController extends Controller
                         'name' => $student->student_userName,
                         'email' => $student->student_email,
                         'contact_number' => $student->student_countryCode . $student->student_contactNo,
-                        'created_at' => Carbon::parse($student->created_at)->format('Y-m-d H:i'),
+                        'created_at' => Carbon::parse($student->created_at)->format('d-m-Y H:i'),
                         'status' => $status
                     ];
                 });
-            // return response()->json([
-            //     'current_page' => $studentList->currentPage(),
-            //     'total' => $totalCount, // Add the total number of filtered records
-            //     'data' => $studentList->items() // Paginated data for the current page
-            // ]);
 
             return response()->json($studentList);
         } catch (\Exception $e) {
