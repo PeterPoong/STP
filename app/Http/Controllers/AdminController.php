@@ -2494,6 +2494,7 @@ class AdminController extends Controller
             ]);
         }
     }
+
     public function categoryDetail(Request $request)
     {
         try {
@@ -3395,7 +3396,8 @@ class AdminController extends Controller
                         "email" => $admin->email,
                         "ic_number" => $admin->ic_number,
                         "contact_no" => $admin->contact_no,
-                        "status" => "Active"
+                        "status" => "Active",
+                        "user_role"=> $admin->user_role
                     ];
                 });
 
