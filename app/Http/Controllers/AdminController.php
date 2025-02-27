@@ -5414,8 +5414,8 @@ class AdminController extends Controller
                 ->when($request->has('type') && !empty($request->type), function ($query) use ($request) {
                     return $query->where('riasec_type', $request->type);
                 })
-                ->when($request->has('status'), function ($query) use ($request) {
-                    return $query->where('status', $request->status);
+                ->when($request->has('stat'), function ($query) use ($request) {
+                    return $query->where('status', $request->stat);
                 })
                 ->paginate($perPage)
                 ->through(function ($question) {
