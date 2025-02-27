@@ -3050,8 +3050,48 @@ class studentController extends Controller
                 'countryID' => 'required|integer'
             ]);
 
-            // Eager load related models to reduce queries
-            $country = stp_country::with('state')->find($request->countryID);
+            // Fetch all relevant core_meta data in one query
+            $coreMetaData = stp_core_meta::whereIn('core_metaType', ['study_mode', 'institute', 'achievementType', 'month'])
+                ->where('core_metaStatus', 1)
+                ->get();
+
+            // Initialize arrays to hold categorized data
+            $studyModeListing = [];
+            $institueList = [];
+            $achievementTypeList = [];
+            $intakeList = [];
+
+            // Categorize the data based on core_metaType
+            foreach ($coreMetaData as $meta) {
+                switch ($meta->core_metaType) {
+                    case 'study_mode':
+                        $studyModeListing[] = [
+                            'id' => $meta->id,
+                            'studyMode_name' => $meta->core_metaName
+                        ];
+                        break;
+                    case 'institute':
+                        $institueList[] = [
+                            'id' => $meta->id,
+                            'institute_name' => $meta->core_metaName
+                        ];
+                        break;
+                    case 'achievementType':
+                        $achievementTypeList[] = [
+                            'id' => $meta->id,
+                            'achievement_type_name' => $meta->core_metaName
+                        ];
+                        break;
+                    case 'month':
+                        $intakeList[] = [
+                            'id' => $meta->id,
+                            'month' => $meta->core_metaName
+                        ];
+                        break;
+                }
+            }
+
+            // Fetch categories, qualifications, and other data as required
             $categoryList = stp_courses_category::where('category_status', 1)
                 ->orderBy('category_name', 'asc')
                 ->get()
@@ -3071,62 +3111,59 @@ class studentController extends Controller
                     ];
                 });
 
-            $studyModeListing = stp_core_meta::where('core_metaType', 'study_mode')
-                ->where('core_metaStatus', 1)
-                ->get()
-                ->map(function ($studyMode) {
-                    return [
-                        'id' => $studyMode->id,
-                        'studyMode_name' => $studyMode->core_metaName
-                    ];
-                });
-
             $maxCost = stp_course::where('course_status', 1)
                 ->max('course_cost');
 
-            $monthsOrder = [
-                'January' => 1,
-                'February' => 2,
-                'March' => 3,
-                'April' => 4,
-                'May' => 5,
-                'June' => 6,
-                'July' => 7,
-                'August' => 8,
-                'September' => 9,
-                'October' => 10,
-                'November' => 11,
-                'December' => 12
-            ];
+            // Order the months and list intake information
+            // $monthsOrder = [
+            //     'January' => 1,
+            //     'February' => 2,
+            //     'March' => 3,
+            //     'April' => 4,
+            //     'May' => 5,
+            //     'June' => 6,
+            //     'July' => 7,
+            //     'August' => 8,
+            //     'September' => 9,
+            //     'October' => 10,
+            //     'November' => 11,
+            //     'December' => 12
+            // ];
 
-            $intakeList = stp_intake::get()
-                ->map(function ($intake) {
-                    return [
-                        'id' => $intake->month->id,
-                        'month' => $intake->month->core_metaName
-                    ];
-                })
-                ->unique('month')
-                ->sortBy(function ($intake) use ($monthsOrder) {
-                    return $monthsOrder[$intake['month']] ?? 13; // Default to 13 if month is not found
-                })
-                ->values();
+            // $intakeList = stp_intake::get()
+            //     ->map(function ($intake) {
+            //         return [
+            //             'id' => $intake->month->id,
+            //             'month' => $intake->month->core_metaName
+            //         ];
+            //     })
+            //     ->unique('month')
+            //     ->sortBy(function ($intake) use ($monthsOrder) {
+            //         return $monthsOrder[$intake['month']] ?? 13; // Default to 13 if month is not found
+            //     })
+            //     ->values();
+
+            // Get country and states data
+            $country = stp_country::find($request->countryID);
+            $states = $country->state;
 
             // Create the state list and sort it by state_name in ascending order
-            $stateList = collect($country->state)->map(function ($state) {
+            $stateList = collect($states)->map(function ($state) {
                 return [
                     'id' => $state->id,
                     'state_name' => $state->state_name
                 ];
             })->sortBy('state_name')->values();
 
+            // Return all filtered data in a structured response
             $filterList = [
                 'categoryList' => $categoryList,
                 'qualificationList' => $qualificationList,
                 'studyModeListing' => $studyModeListing,
+                'institueList' => $institueList,
+                'achievementTypeList' => $achievementTypeList,
                 'maxAmount' => $maxCost,
                 'intakeList' => $intakeList,
-                'institueList' => stp_core_meta::where('core_metaType', 'institute')->get(),
                 'state' => $stateList
             ];
 
