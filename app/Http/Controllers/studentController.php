@@ -502,19 +502,9 @@ class studentController extends Controller
                 $school = stp_school::where('school_name', $request->schoolName)->get()->first();
             }
 
-
-
-
-
             $courses = $school->courses;
 
-            $intake = [];
-            foreach ($courses as $c) {
-                $months = $c->intake->pluck('month.core_metaName')->toArray();
-                if (!empty($months)) {
-                    $intake = array_merge($intake, $months);
-                }
-            }
+
 
             $schoolCover = stp_school_media::where('school_id', $school->id)
                 ->where('schoolMedia_type', 66)
@@ -526,8 +516,44 @@ class studentController extends Controller
                 ->where('schoolMedia_status', 1)
                 ->get();
 
+            $intake = [];
+            $monthsOrder = [
+                'January' => 1,
+                'February' => 2,
+                'March' => 3,
+                'April' => 4,
+                'May' => 5,
+                'June' => 6,
+                'July' => 7,
+                'August' => 8,
+                'September' => 9,
+                'October' => 10,
+                'November' => 11,
+                'December' => 12
+            ];
 
-            $intakeMonth = array_values(array_unique($intake));
+            foreach ($courses as $c) {
+                $months = $c->intake->pluck('month.core_metaName')->toArray();
+                if (!empty($months)) {
+                    $intake = array_merge($intake, $months);
+                }
+            }
+
+            // Convert month names to numbers using the $monthsOrder mapping
+            $intakeNumeric = array_map(function ($month) use ($monthsOrder) {
+                return $monthsOrder[$month] ?? 13; // Default to 13 if month is not found
+            }, $intake);
+
+            // Sort the numeric months
+            sort($intakeNumeric);
+
+            // Convert the numeric months back to month names
+            $sortedIntake = array_map(function ($monthNumber) use ($monthsOrder) {
+                return array_flip($monthsOrder)[$monthNumber];
+            }, $intakeNumeric);
+
+
+            $intakeMonth = array_values(array_unique($sortedIntake));
             $coursesList = $school->courses
                 ->makeHidden('intake')
                 ->map(function ($course) {
@@ -536,6 +562,25 @@ class studentController extends Controller
                         foreach ($course->intake as $m) {
                             $monthList[] = $m->month->core_metaName;
                         }
+                        $monthOrder = [
+                            'January' => 1,
+                            'February' => 2,
+                            'March' => 3,
+                            'April' => 4,
+                            'May' => 5,
+                            'June' => 6,
+                            'July' => 7,
+                            'August' => 8,
+                            'September' => 9,
+                            'October' => 10,
+                            'November' => 11,
+                            'December' => 12
+                        ];
+
+                        // Sort months according to the predefined order
+                        usort($monthList, function ($a, $b) use ($monthOrder) {
+                            return $monthOrder[$a] - $monthOrder[$b];
+                        });
                         return [
                             'id' => $course->id,
                             'course_name' => $course->course_name,
