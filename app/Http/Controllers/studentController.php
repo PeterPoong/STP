@@ -562,7 +562,25 @@ class studentController extends Controller
                         foreach ($course->intake as $m) {
                             $monthList[] = $m->month->core_metaName;
                         }
-                        sort($monthList);
+                        $monthOrder = [
+                            'January' => 1,
+                            'February' => 2,
+                            'March' => 3,
+                            'April' => 4,
+                            'May' => 5,
+                            'June' => 6,
+                            'July' => 7,
+                            'August' => 8,
+                            'September' => 9,
+                            'October' => 10,
+                            'November' => 11,
+                            'December' => 12
+                        ];
+
+                        // Sort months according to the predefined order
+                        usort($monthList, function ($a, $b) use ($monthOrder) {
+                            return $monthOrder[$a] - $monthOrder[$b];
+                        });
                         return [
                             'id' => $course->id,
                             'course_name' => $course->course_name,
