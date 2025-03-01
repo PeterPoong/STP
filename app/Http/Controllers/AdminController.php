@@ -214,7 +214,6 @@ class AdminController extends Controller
         ]);
     }
     public function studentListAdmin(Request $request)
-
     {
         try {
             // Get the per_page value from the request, default to 10 if not provided or empty
@@ -224,7 +223,12 @@ class AdminController extends Controller
 
             $query = stp_student::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_userName', 'like', '%' . $request->search . '%');
+            })
+            ->when($request->filled('stat'), function ($query) use ($request) {
+                // Add status filter
+                $query->where('student_status', $request->stat);
             });
+
             $totalCount = $query->count();
             $studentList = $query->orderBy('created_at', 'desc')
                 ->paginate($perPage)
@@ -251,15 +255,10 @@ class AdminController extends Controller
                         'name' => $student->student_userName,
                         'email' => $student->student_email,
                         'contact_number' => $student->student_countryCode . $student->student_contactNo,
-                        'created_at' => Carbon::parse($student->created_at)->format('Y-m-d H:i'),
+                        'created_at' => Carbon::parse($student->created_at)->format('d-m-Y H:i'),
                         'status' => $status
                     ];
                 });
-            // return response()->json([
-            //     'current_page' => $studentList->currentPage(),
-            //     'total' => $totalCount, // Add the total number of filtered records
-            //     'data' => $studentList->items() // Paginated data for the current page
-            // ]);
 
             return response()->json($studentList);
         } catch (\Exception $e) {
@@ -2495,6 +2494,7 @@ class AdminController extends Controller
             ]);
         }
     }
+
     public function categoryDetail(Request $request)
     {
         try {
@@ -3396,7 +3396,8 @@ class AdminController extends Controller
                         "email" => $admin->email,
                         "ic_number" => $admin->ic_number,
                         "contact_no" => $admin->contact_no,
-                        "status" => "Active"
+                        "status" => "Active",
+                        "user_role"=> $admin->user_role
                     ];
                 });
 
@@ -5162,7 +5163,14 @@ class AdminController extends Controller
                 ? ($request->per_page === 'All' ? stp_RIASECType::count() : (int)$request->per_page)
                 : 10;
 
-            $typeList = stp_RIASECType::query()
+            $query = stp_RIASECType::query();
+
+            // Add status filter if provided in request
+            if ($request->has('stat')) {
+                $query->where('status', (int)$request->stat);
+            }
+
+            $typeList = $query
                 ->paginate($perPage)
                 ->through(function ($type) {
                     return [
@@ -5414,8 +5422,8 @@ class AdminController extends Controller
                 ->when($request->has('type') && !empty($request->type), function ($query) use ($request) {
                     return $query->where('riasec_type', $request->type);
                 })
-                ->when($request->has('status'), function ($query) use ($request) {
-                    return $query->where('status', $request->status);
+                ->when($request->has('stat'), function ($query) use ($request) {
+                    return $query->where('status', $request->stat);
                 })
                 ->paginate($perPage)
                 ->through(function ($question) {

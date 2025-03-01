@@ -131,6 +131,7 @@ class EnquiryController extends Controller
                 // Only apply the whereIn constraint if no specific stat is provided
                 return $query->whereIn('enquiry_status', [1, 2]);
             })
+                ->orderBy('created_at', 'desc')
                 ->paginate($perPage)
                 ->through(function ($enquiry) {
                     return [
@@ -141,6 +142,7 @@ class EnquiryController extends Controller
                         'enquiry_subject' => $enquiry->subject->core_metaName ?? null,
                         'enquiry_message' => $enquiry->enquiry_message,
                         'enquiry_status' => $enquiry->enquiry_status,
+                        'created_at'=> $enquiry->created_at->format("d/M/y")
                     ];
                 });
 
