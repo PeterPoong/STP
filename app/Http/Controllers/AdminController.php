@@ -4737,12 +4737,12 @@ class AdminController extends Controller
                 ? ($request->per_page === 'All' ? stp_featured_request::count() : (int)$request->per_page)
                 : 10;
 
-            $featuredList = stp_featured_request::when($request->filled('search'), function ($query) use ($request) {
-                $query->where('request_name', 'like', '%' . $request->search . '%') // Search in request_name
-                    ->orWhereHas('school', function ($q) use ($request) { // Search in school_name via relationship
-                        $q->where('school_name', 'like', '%' . $request->search . '%');
-                    });
-            })
+                $featuredList = stp_featured_request::when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('request_name', 'like', '%' . $request->search . '%') // Search in request_name
+                        ->orWhereHas('school', function ($q) use ($request) { // Search in school_name via relationship
+                            $q->where('school_name', 'like', '%' . $request->search . '%');
+                        });
+                })
                 ->when($request->filled('featured_type'), function ($query) use ($request) {
                     $query->where('featured_type', $request->featured_type);
                 })
@@ -4753,49 +4753,54 @@ class AdminController extends Controller
                     $query->where('request_type', $request->request_type);
                 })
                 ->paginate($perPage); // Use paginate instead of get()
-
-            // Transform the paginated results
-            $featuredList->getCollection()->transform(function ($item) {
-                $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
+                
+                // Transform the paginated results
+                $featuredList->getCollection()->transform(function ($item) {
+                    $usedFeatured = stp_featured::where('request_id', $item->id)->get()->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'course_name' => $item->courses['course_name'] ?? null,
+                            'start_date' => $item['featured_startTime'] ?? null,
+                            'end_date' => $item['featured_endTime'] ?? null,
+                            'day_left' => abs(Carbon::now()->startOfDay()->diffInDays(Carbon::parse($item['featured_endTime'])->startOfDay())),
+                        ];
+                    });
+                    // Debugging output
+                    \Log::info('Current Time: ' . now());
+                    \Log::info('Featured Start Time: ' . $item['featured_startTime']);
+                    \Log::info('Featured End Time: ' . $item['featured_endTime']);
+                    if ($item['featured_startTime'] > now()) {
+                        $status = 4; // Start date not yet passed
+                    } elseif ($item['featured_endTime'] < now()) {
+                        $status = 0; // End date passed
+                    } else {
+                        $status = 1; // Ongoing
+                    }
+                    // Include usedFeatured in the transformed item
                     return [
                         'id' => $item->id,
-                        'course_name' => $item->courses['course_name'] ?? null,
-                        'end_date' => $item['featured_endTime'] ?? null,
-                        'day_left' => abs(Carbon::now()->startOfDay()->diffInDays(Carbon::parse($item['featured_endTime'])->startOfDay())),
+                        'school' => [
+                            'school_id' => $item->school['id'] ?? null,
+                            'school_name' => $item->school['school_name'] ?? null
+                        ],
+                        'request_name' => $item->request_name,
+                        'featured_type' => [
+                            'featured_id' => $item->featured['id'],
+                            'featured_type' => $item->featured['core_metaName']
+                        ],
+                        'total_quantity' => $item->request_quantity,
+                        'duration' => $item->request_featured_duration,
+                        'transaction_proof' => $item->request_transaction_prove,
+                        'request_status' => $status,
+                        'used_featured' => $usedFeatured // Add this line to include usedFeatured
                     ];
                 });
-
-                $numberUsed = count($usedFeatured);
-                $featuredType = [
-                    'featured_id' => $item->featured['id'],
-                    'featured_type' => $item->featured['core_metaName']
-                ];
-
-
-                return [
-                    'id' => $item->id,
-                    'school' => [
-                        'school_id' => $item->school['id'] ?? null,
-                        'school_name' => $item->school['school_name'] ?? null
-                    ],
-                    'request_name' => $item->request_name,
-                    'featured_type' => $featuredType,
-                    'total_quantity' => $item->request_quantity,
-                    'duration' => $item->request_featured_duration,
-                    'transaction_proof' => $item->request_transaction_prove,
-                    'request_status' => $item->request_status
-                ];
-            });
-
-
-
-            // Return paginated response
-
-
-            return response()->json([
-                'success' => true,
-                'data' => $featuredList
-            ]);
+                
+                // Return paginated response
+                return response()->json([
+                    'success' => true,
+                    'data' => $featuredList
+                ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
