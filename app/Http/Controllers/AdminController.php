@@ -253,6 +253,7 @@ class AdminController extends Controller
                     return [
                         'id' => $student->id,
                         'name' => $student->student_userName,
+                        'fullname'=> $student->detail->student_detailFirstName ." ".$student->detail->student_detailLastName,
                         'email' => $student->student_email,
                         'contact_number' => $student->student_countryCode . $student->student_contactNo,
                         'created_at' => Carbon::parse($student->created_at)->format('d-m-Y H:i'),
@@ -2672,6 +2673,7 @@ class AdminController extends Controller
                             4 => "Accepted",
                             default => null,
                         },
+                        "username"=> $applicant->student->student_userName ?? 'N/A',
                         "student_name" => $studentDetail
                                 ? "{$studentDetail->student_detailFirstName} {$studentDetail->student_detailLastName}"
                                 : ($student?->student_userName ?? 'N/A'),
