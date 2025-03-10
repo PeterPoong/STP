@@ -2809,6 +2809,7 @@ class studentController extends Controller
                         'course_qualification_color' => $featured->courses->qualification->qualification_color_code,
                         'school_id' => $featured->courses->school->id,
                         'school_category' => $featured->courses->school->institueCategory->core_metaName,
+                        'school_email' => $featured->courses->school->school_email,
                         'course_school' => $featured->courses->school->school_name,
                         'state' => $featured->courses->school->state->state_name ?? null,
                         'country' => $featured->courses->school->country->country_name ?? null,
