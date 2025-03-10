@@ -481,6 +481,7 @@ class studentController extends Controller
                 'schoolShortDescription' => $courseList->school->school_shortDesc,
                 'schoolLongDescription' => $courseList->school->school_fullDesc,
                 'schoolCategory' => $courseList->school->institueCategory->core_metaName,
+                'schoolEmail' => $courseList->school->school_email,
                 'schoolID' => $courseList->school_id,
                 'schoolLocation' => $courseList->school->school_location ?? null,
                 'google_map_location' => $courseList->school->school_google_map_location ?? null,
