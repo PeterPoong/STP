@@ -158,6 +158,8 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/studentDetail', [AdminController::class, 'studentDetail']);
     Route::post('/editStudent', [AdminController::class, 'editStudent']);
     Route::post('/editStatus', [AdminController::class, 'editStudentStatus']);
+    Route::post('/applicantDetailHigherTranscript', [AdminController::class, 'applicantDetailHigherTranscript']);
+    Route::post('/applicantDetailTranscript', [AdminController::class, 'applicantDetailTranscript']);
 
 
     Route::post('/replyEnquiry', [EnquiryController::class, 'replyEnquiry']);
