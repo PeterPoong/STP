@@ -2895,6 +2895,28 @@ class AdminController extends Controller
                     'status' => $applicant->form_status,
                     'address'=> $applicant->student->detail->student_detailAddress ?? '',
                     'ic'=> $applicant->student->student_icNumber ??'',
+                    'achievement' => $applicant->student->award->map(function ($achievement) {
+                        return [
+                            'achievement_name' => $achievement->achievement_name,
+                            'title_obtained' => $achievement->title->core_metaName,
+                            'achievement_media' => $achievement->achievement_media,
+                            'awarded_by' => $achievement->awarded_by,
+                        ];
+                    }),
+                    'cocurriculum' => $applicant->student->cocurriculum->map(function ($cocurriculum) {
+                        return [
+                            'club_name' => $cocurriculum->club_name,
+                            'student_position' => $cocurriculum->student_position,
+                            'location' => $cocurriculum->location,
+                            'year' => $cocurriculum->year,
+                        ];
+                    }),
+                    'others' => $applicant->student->otherCertificate->map(function ($otherCertificate) {
+                        return [
+                            'certificate_name' => $otherCertificate->certificate_name,
+                            'certificate_media' => $otherCertificate->certificate_media,
+                        ];
+                    }),
                     'cgpaFoundation' => $filteredStudentCgpaFoundation ?? '',
                     'cgpaDiploma'=> $filteredStudentCgpaDiploma ??'',
                     'cgpaOlevel'=> $filteredStudentCgpaOLevel ??'',
@@ -2934,6 +2956,7 @@ class AdminController extends Controller
                     'alevel'=>$filteredALevel ?? '',
                     'olevel'=>$filteredOLevel ?? '',
                     'diploma'=>$filteredDiploma ?? '',
+                    
                     ]
 
             ]);
