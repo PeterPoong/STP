@@ -260,6 +260,15 @@ class serviceFunctionController extends Controller
         return $sendEmailToSchool;
     }
 
+    public function notifyAdminCustomSchoolApplication($courseId, $student)
+    {
+        $course = stp_course::find($courseId);
+        $school = $course->school;
+
+        $sendEmailToSchool = $this->serviceFunction->notifyAdminCustomSchoolApplication($school, $course, $student);
+        return $sendEmailToSchool;
+    }
+
     public function sendEnquiryEmail($fullName, $email, $contact, $emailSubject, $message)
     {
 

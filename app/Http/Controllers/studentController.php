@@ -2402,6 +2402,7 @@ class studentController extends Controller
         try {
             $authUser = Auth::user();
 
+
             $request->validate([
                 'certificate_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000', // File validation
                 'certificate_name' => 'required|string|max:255'
@@ -3805,6 +3806,95 @@ class studentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $getImage
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function applyCustomSchool(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+
+            $request->validate([
+                'certificate_media' => 'required|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000', // File validation
+                'course_id' => 'required|integer'
+            ]);
+
+            $checkCourse = stp_submited_form::where('student_id', $authUser->id)
+                ->where('courses_id', $request->course_id)
+                ->where('form_status', 2)
+                ->get()
+                ->first();
+
+            if ($checkCourse) {
+                throw ValidationException::withMessages([
+                    "courses" => ["Your Application still pending"]
+                ]);
+            }
+
+            stp_submited_form::create([
+                'student_id' => $authUser->id,
+                'courses_id' => $request->course_id,
+                'form_status' => 2,
+                'updated_by' => $authUser->id,
+                'created_by' => $authUser->id,
+                'created_at' => now(),
+            ]);
+
+            $checkingCertificateFile = stp_other_certificate::where('student_id', $authUser->id)
+                ->where('certificate_name', 'studentIc')
+                ->get()
+                ->first();
+
+            if ($checkingCertificateFile) {
+                $oldFilePath = $checkingCertificateFile->certificate_media; // The file path in the database
+
+                if (Storage::disk('public')->exists($oldFilePath)) {
+                    Storage::disk('public')->delete($oldFilePath);
+                }
+
+                // Upload the new certificate if file is present
+                if ($request->hasFile('certificate_media')) {
+                    $image = $request->file('certificate_media');
+                    $imageName = time() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('otherCertificate', $imageName, 'public');
+                }
+
+                // Update the existing record with the new file path
+                $checkingCertificateFile->update([
+                    'certificate_media' => $imagePath ?? $oldFilePath, // Keep old path if no new file is uploaded
+                ]);
+            } else {
+                if ($request->hasFile('certificate_media')) {
+                    $image = $request->file('certificate_media');
+                    $imageName = time() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('otherCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
+                }
+
+                stp_other_certificate::create([
+                    'certificate_name' => 'studentIc',
+                    'certificate_media' => $imagePath ?? '',
+                    'certificate_status' => 1,
+                    'student_id' => $authUser->id,
+                    'created_by' => $authUser->id,
+                    'created_at' => now()
+                ]);
+            }
+
+
+
+            $this->serviceFunctionController->notifyAdminCustomSchoolApplication($request->course_id, $authUser);
+
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Apply']
             ]);
         } catch (\Exception $e) {
             return response()->json([

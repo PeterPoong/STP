@@ -148,6 +148,9 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/submitTestResult', [studentController::class, 'submitTestResult']);
     Route::middleware('auth:sanctum')->get('/getTestResult', [studentController::class, 'getTestResult']);
     Route::middleware('auth:sanctum')->post('/riasecCourseCategory', [studentController::class, 'riasecCourseCategory']);
+
+    // Route::middleware('auth:sanctum')->post('/emailSchoolDocument', [studentController::class, 'emailSchoolDocument']);
+    Route::middleware('auth:sanctum')->post('/applyCustomSchool', [studentController::class, 'applyCustomSchool']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
