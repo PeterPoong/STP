@@ -5182,8 +5182,9 @@ class AdminController extends Controller
                 ->values()           // Re-index the array (optional)
                 ->toArray();
 
-            $courseAvailable = stp_course::where('school_id', $requestId['school_id'])
-                ->whereNotIn('id', $coursesRequest) // Use whereNotIn for exclusion
+                $courseAvailable = stp_course::where('school_id', $requestId['school_id'])
+                ->where('course_status', 1)  // Add this line to only get active courses
+                ->whereNotIn('id', $coursesRequest)
                 ->get()
                 ->map(function ($query) {
                     return [
@@ -5191,7 +5192,7 @@ class AdminController extends Controller
                         'course_name' => $query->course_name,
                     ];
                 });
-            return response()->json([
+            return response()->json([                                              
                 'success' => true,
                 'data' => $courseAvailable
             ]);

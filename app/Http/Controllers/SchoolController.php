@@ -3099,9 +3099,9 @@ class SchoolController extends Controller
                 ->unique()           // Remove duplicate values
                 ->values()           // Re-index the array (optional)
                 ->toArray();
-
-            $courseAvailable = stp_course::where('school_id', $authUser->id)
-                ->whereNotIn('id', $coursesRequest) // Use whereNotIn for exclusion
+                $courseAvailable = stp_course::where('school_id', $authUser->id)
+                ->where('course_status', 1)  // Add this line to only get active courses
+                ->whereNotIn('id', $coursesRequest)
                 ->get()
                 ->map(function ($query) {
                     return [
