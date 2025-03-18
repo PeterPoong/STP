@@ -79,6 +79,7 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/addEditTranscript', [studentController::class, 'addEditTranscript']);
     Route::middleware('auth:sanctum')->post('/addEditHigherTranscript', [studentController::class, 'addEditHigherTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
+    Route::middleware('auth:sanctum')->post('/checkCourseApplicationStatus', [studentController::class, 'checkCourseApplicationStatus']);
 
     //interested course
     Route::middleware('auth:sanctum')->post('/addInterestedCourse', [studentController::class, 'addInterestedCourse']);

@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\stp_advertisement_banner;
 use App\Models\stp_personalityTestResult;
 use App\Models\stp_riasecResultImage;
+
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 
@@ -3895,6 +3896,37 @@ class studentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => ['message' => 'Successfully Apply']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function checkCourseApplicationStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'courseId' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+
+            $checkApplicantExist = stp_submited_form::where('student_id', $authUser->id)
+                ->where('courses_id', $request->courseId)
+                ->where('form_status', 2)
+                ->get()
+                ->first();
+
+            if ($checkApplicantExist) {
+                throw new \Exception('You have already applied for this course and your application is under review.');
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Course are not applied before"]
             ]);
         } catch (\Exception $e) {
             return response()->json([
