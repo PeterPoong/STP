@@ -129,8 +129,8 @@ class SchoolController extends Controller
             $request->validate([
                 'schoolID' => 'required|integer',
                 'name' => 'required|string|max:255',
-                'description' => 'string|max:255',
-                'requirement' => 'string|max:255',
+                'description' => 'string',
+                'requirement' => 'string',
                 'cost' => 'required|regex:/^\d+(\.\d{1,2})?$/',
                 'period' => 'required|string|max:255',
                 'intake' => 'required|array',
@@ -628,7 +628,7 @@ class SchoolController extends Controller
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->countryCode,
-                'school_contactNo'=>$request->contact,
+                'school_contactNo' => $request->contact,
                 'school_fullDesc' => $request->school_fullDesc,
                 'school_shortDesc' => $request->school_shortDesc,
                 'school_address' => $request->school_address,
@@ -3099,7 +3099,7 @@ class SchoolController extends Controller
                 ->unique()           // Remove duplicate values
                 ->values()           // Re-index the array (optional)
                 ->toArray();
-                $courseAvailable = stp_course::where('school_id', $authUser->id)
+            $courseAvailable = stp_course::where('school_id', $authUser->id)
                 ->where('course_status', 1)  // Add this line to only get active courses
                 ->whereNotIn('id', $coursesRequest)
                 ->get()
