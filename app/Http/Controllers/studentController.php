@@ -1408,7 +1408,7 @@ class studentController extends Controller
                 'created_at' => now(),
             ]);
 
-            $this->serviceFunctionController->sendSchoolEmail($request->courseID, $authUser, $newApplicant->id);
+            // $this->serviceFunctionController->sendSchoolEmail($request->courseID, $authUser, $newApplicant->id);
 
             return response()->json([
                 'success' => true,
