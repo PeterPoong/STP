@@ -79,6 +79,7 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/addEditTranscript', [studentController::class, 'addEditTranscript']);
     Route::middleware('auth:sanctum')->post('/addEditHigherTranscript', [studentController::class, 'addEditHigherTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
+    Route::middleware('auth:sanctum')->post('/checkCourseApplicationStatus', [studentController::class, 'checkCourseApplicationStatus']);
 
     //interested course
     Route::middleware('auth:sanctum')->post('/addInterestedCourse', [studentController::class, 'addInterestedCourse']);
@@ -148,6 +149,9 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/submitTestResult', [studentController::class, 'submitTestResult']);
     Route::middleware('auth:sanctum')->get('/getTestResult', [studentController::class, 'getTestResult']);
     Route::middleware('auth:sanctum')->post('/riasecCourseCategory', [studentController::class, 'riasecCourseCategory']);
+
+    // Route::middleware('auth:sanctum')->post('/emailSchoolDocument', [studentController::class, 'emailSchoolDocument']);
+    Route::middleware('auth:sanctum')->post('/applyCustomSchool', [studentController::class, 'applyCustomSchool']);
 });
 
 Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -158,6 +162,8 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/studentDetail', [AdminController::class, 'studentDetail']);
     Route::post('/editStudent', [AdminController::class, 'editStudent']);
     Route::post('/editStatus', [AdminController::class, 'editStudentStatus']);
+    Route::post('/applicantDetailHigherTranscript', [AdminController::class, 'applicantDetailHigherTranscript']);
+    Route::post('/applicantDetailTranscript', [AdminController::class, 'applicantDetailTranscript']);
 
 
     Route::post('/replyEnquiry', [EnquiryController::class, 'replyEnquiry']);

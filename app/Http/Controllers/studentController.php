@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\stp_advertisement_banner;
 use App\Models\stp_personalityTestResult;
 use App\Models\stp_riasecResultImage;
+
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 
@@ -327,6 +328,25 @@ class studentController extends Controller
                         }
                     }
                 }
+                $monthOrder = [
+                    'January' => 1,
+                    'February' => 2,
+                    'March' => 3,
+                    'April' => 4,
+                    'May' => 5,
+                    'June' => 6,
+                    'July' => 7,
+                    'August' => 8,
+                    'September' => 9,
+                    'October' => 10,
+                    'November' => 11,
+                    'December' => 12
+                ];
+
+                // Sort the months according to the predefined order
+                usort($monthList, function ($a, $b) use ($monthOrder) {
+                    return $monthOrder[$a] - $monthOrder[$b];
+                });
 
                 return [
                     'id' => $school->id,
@@ -461,6 +481,8 @@ class studentController extends Controller
                 'school' => $courseList->school->school_name,
                 'schoolShortDescription' => $courseList->school->school_shortDesc,
                 'schoolLongDescription' => $courseList->school->school_fullDesc,
+                'schoolCategory' => $courseList->school->institueCategory->core_metaName,
+                'schoolEmail' => $courseList->school->school_email,
                 'schoolID' => $courseList->school_id,
                 'schoolLocation' => $courseList->school->school_location ?? null,
                 'google_map_location' => $courseList->school->school_google_map_location ?? null,
@@ -502,19 +524,9 @@ class studentController extends Controller
                 $school = stp_school::where('school_name', $request->schoolName)->get()->first();
             }
 
-
-
-
-
             $courses = $school->courses;
 
-            $intake = [];
-            foreach ($courses as $c) {
-                $months = $c->intake->pluck('month.core_metaName')->toArray();
-                if (!empty($months)) {
-                    $intake = array_merge($intake, $months);
-                }
-            }
+
 
             $schoolCover = stp_school_media::where('school_id', $school->id)
                 ->where('schoolMedia_type', 66)
@@ -526,8 +538,44 @@ class studentController extends Controller
                 ->where('schoolMedia_status', 1)
                 ->get();
 
+            $intake = [];
+            $monthsOrder = [
+                'January' => 1,
+                'February' => 2,
+                'March' => 3,
+                'April' => 4,
+                'May' => 5,
+                'June' => 6,
+                'July' => 7,
+                'August' => 8,
+                'September' => 9,
+                'October' => 10,
+                'November' => 11,
+                'December' => 12
+            ];
 
-            $intakeMonth = array_values(array_unique($intake));
+            foreach ($courses as $c) {
+                $months = $c->intake->pluck('month.core_metaName')->toArray();
+                if (!empty($months)) {
+                    $intake = array_merge($intake, $months);
+                }
+            }
+
+            // Convert month names to numbers using the $monthsOrder mapping
+            $intakeNumeric = array_map(function ($month) use ($monthsOrder) {
+                return $monthsOrder[$month] ?? 13; // Default to 13 if month is not found
+            }, $intake);
+
+            // Sort the numeric months
+            sort($intakeNumeric);
+
+            // Convert the numeric months back to month names
+            $sortedIntake = array_map(function ($monthNumber) use ($monthsOrder) {
+                return array_flip($monthsOrder)[$monthNumber];
+            }, $intakeNumeric);
+
+
+            $intakeMonth = array_values(array_unique($sortedIntake));
             $coursesList = $school->courses
                 ->makeHidden('intake')
                 ->map(function ($course) {
@@ -536,6 +584,25 @@ class studentController extends Controller
                         foreach ($course->intake as $m) {
                             $monthList[] = $m->month->core_metaName;
                         }
+                        $monthOrder = [
+                            'January' => 1,
+                            'February' => 2,
+                            'March' => 3,
+                            'April' => 4,
+                            'May' => 5,
+                            'June' => 6,
+                            'July' => 7,
+                            'August' => 8,
+                            'September' => 9,
+                            'October' => 10,
+                            'November' => 11,
+                            'December' => 12
+                        ];
+
+                        // Sort months according to the predefined order
+                        usort($monthList, function ($a, $b) use ($monthOrder) {
+                            return $monthOrder[$a] - $monthOrder[$b];
+                        });
                         return [
                             'id' => $course->id,
                             'course_name' => $course->course_name,
@@ -877,7 +944,7 @@ class studentController extends Controller
                     'description' => $course->course_description,
                     'requirement' => $course->course_requirement,
                     'cost' => number_format($course->course_cost),
-                    'international_cost'=> number_format($course->international_cost),
+                    'international_cost' => number_format($course->international_cost),
                     'featured' => $featured,
                     'period' => $course->course_period,
                     'intake' => $intakeMonths,
@@ -2336,6 +2403,7 @@ class studentController extends Controller
         try {
             $authUser = Auth::user();
 
+
             $request->validate([
                 'certificate_media' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000', // File validation
                 'certificate_name' => 'required|string|max:255'
@@ -2742,6 +2810,8 @@ class studentController extends Controller
                         'course_qualification' => $featured->courses->qualification->qualification_name,
                         'course_qualification_color' => $featured->courses->qualification->qualification_color_code,
                         'school_id' => $featured->courses->school->id,
+                        'school_category' => $featured->courses->school->institueCategory->core_metaName,
+                        'school_email' => $featured->courses->school->school_email,
                         'course_school' => $featured->courses->school->school_name,
                         'state' => $featured->courses->school->state->state_name ?? null,
                         'country' => $featured->courses->school->country->country_name ?? null,
@@ -3050,24 +3120,48 @@ class studentController extends Controller
                 'countryID' => 'required|integer'
             ]);
 
-            $categoryList = stp_courses_category::where('category_status', 1)->get();
-            $qualificationList = stp_qualification::where('qualification_status', 1)
-                ->get()
-                ->map(function ($qualiList) {
-                    return [
-                        'id' => $qualiList->id,
-                        'qualification_name' => $qualiList->qualification_name
-                    ];
-                });
-            $studyModeListing = stp_core_meta::where('core_metaType', 'study_mode')
+            // Fetch all relevant core_meta data in one query
+            $coreMetaData = stp_core_meta::whereIn('core_metaType', ['study_mode', 'institute', 'achievementType', 'month'])
                 ->where('core_metaStatus', 1)
-                ->get()
-                ->map(function ($studyMode) {
-                    return [
-                        'id' => $studyMode->id,
-                        'studyMode_name' => $studyMode->core_metaName
-                    ];
-                });
+                ->get();
+
+            // Initialize arrays to hold categorized data
+            $studyModeListing = [];
+            $institueList = [];
+            $achievementTypeList = [];
+            $intakeList = [];
+
+            // Categorize the data based on core_metaType
+            foreach ($coreMetaData as $meta) {
+                switch ($meta->core_metaType) {
+                    case 'study_mode':
+                        $studyModeListing[] = [
+                            'id' => $meta->id,
+                            'studyMode_name' => $meta->core_metaName
+                        ];
+                        break;
+                    case 'institute':
+                        $institueList[] = [
+                            'id' => $meta->id,
+                            'institute_name' => $meta->core_metaName
+                        ];
+                        break;
+                    case 'achievementType':
+                        $achievementTypeList[] = [
+                            'id' => $meta->id,
+                            'achievement_type_name' => $meta->core_metaName
+                        ];
+                        break;
+                    case 'month':
+                        $intakeList[] = [
+                            'id' => $meta->id,
+                            'month' => $meta->core_metaName
+                        ];
+                        break;
+                }
+            }
+
+            // Fetch categories, qualifications, and other data as required
             $categoryList = stp_courses_category::where('category_status', 1)
                 ->orderBy('category_name', 'asc')
                 ->get()
@@ -3077,41 +3171,52 @@ class studentController extends Controller
                         'category_name' => $categories->category_name
                     ];
                 });
+
+            $qualificationList = stp_qualification::where('qualification_status', 1)
+                ->get()
+                ->map(function ($qualiList) {
+                    return [
+                        'id' => $qualiList->id,
+                        'qualification_name' => $qualiList->qualification_name
+                    ];
+                });
+
             $maxCost = stp_course::where('course_status', 1)
                 ->max('course_cost');
 
-            $monthsOrder = [
-                'January' => 1,
-                'February' => 2,
-                'March' => 3,
-                'April' => 4,
-                'May' => 5,
-                'June' => 6,
-                'July' => 7,
-                'August' => 8,
-                'September' => 9,
-                'October' => 10,
-                'November' => 11,
-                'December' => 12
-            ];
-            $intakeList = stp_intake::get()
-                ->map(function ($intake) {
-                    return [
-                        'id' => $intake->month->id,
-                        'month' => $intake->month->core_metaName
-                    ];
-                })
-                ->unique('month')
-                ->sortBy(function ($intake) use ($monthsOrder) {
-                    // Sort by the corresponding month number
-                    return $monthsOrder[$intake['month']] ?? 13; // Default to 13 if month is not found
-                })
-                ->values(); // Reindex the array'
+            // Order the months and list intake information
+            // $monthsOrder = [
+            //     'January' => 1,
+            //     'February' => 2,
+            //     'March' => 3,
+            //     'April' => 4,
+            //     'May' => 5,
+            //     'June' => 6,
+            //     'July' => 7,
+            //     'August' => 8,
+            //     'September' => 9,
+            //     'October' => 10,
+            //     'November' => 11,
+            //     'December' => 12
+            // ];
 
-            $institueList = stp_core_meta::where('core_metaType', 'institute')->get();
+            // $intakeList = stp_intake::get()
+            //     ->map(function ($intake) {
+            //         return [
+            //             'id' => $intake->month->id,
+            //             'month' => $intake->month->core_metaName
+            //         ];
+            //     })
+            //     ->unique('month')
+            //     ->sortBy(function ($intake) use ($monthsOrder) {
+            //         return $monthsOrder[$intake['month']] ?? 13; // Default to 13 if month is not found
+            //     })
+            //     ->values();
+
+            // Get country and states data
             $country = stp_country::find($request->countryID);
-
             $states = $country->state;
+
             // Create the state list and sort it by state_name in ascending order
             $stateList = collect($states)->map(function ($state) {
                 return [
@@ -3120,14 +3225,15 @@ class studentController extends Controller
                 ];
             })->sortBy('state_name')->values();
 
+            // Return all filtered data in a structured response
             $filterList = [
                 'categoryList' => $categoryList,
                 'qualificationList' => $qualificationList,
                 'studyModeListing' => $studyModeListing,
-                'categoryList' => $categoryList,
+                'institueList' => $institueList,
+                'achievementTypeList' => $achievementTypeList,
                 'maxAmount' => $maxCost,
                 'intakeList' => $intakeList,
-                'institueList' => $institueList,
                 'state' => $stateList
             ];
 
@@ -3560,29 +3666,29 @@ class studentController extends Controller
                     ->toArray();
 
                 return [
-                    'id'=> $interestedCourse->id,
+                    'id' => $interestedCourse->id,
                     'course_id' => $interestedCourse->course->id,
-                    'school_id'=> $interestedCourse->course->school->id,
+                    'school_id' => $interestedCourse->course->school->id,
                     'name' => $interestedCourse->course->course_name,
-                    'school_name'=> $interestedCourse->course->school->school_name,
-                    'email'=> $interestedCourse->course->school->school_email,
-                    'description'=> $interestedCourse->course->course_description,
-                    'cost'=> number_format($interestedCourse->course->course_cost),
-                    'international_cost'=> number_format($interestedCourse->course->international_cost),
-                    'period'=> $interestedCourse->course->course_period,
-                    'featured'=> $featured,
+                    'school_name' => $interestedCourse->course->school->school_name,
+                    'email' => $interestedCourse->course->school->school_email,
+                    'description' => $interestedCourse->course->course_description,
+                    'cost' => number_format($interestedCourse->course->course_cost),
+                    'international_cost' => number_format($interestedCourse->course->international_cost),
+                    'period' => $interestedCourse->course->course_period,
+                    'featured' => $featured,
                     'intake' => $intakeMonths,
-                    'category_id'=> $interestedCourse->course->category_id,
-                    'qualification'=> $interestedCourse->course->qualification->qualification_name,
-                    'mode'=> $interestedCourse->course->studyMode->core_metaName,
+                    'category_id' => $interestedCourse->course->category_id,
+                    'qualification' => $interestedCourse->course->qualification->qualification_name,
+                    'mode' => $interestedCourse->course->studyMode->core_metaName,
                     'logo' => $interestedCourse->course->course_logo ?? $interestedCourse->course->school->school_logo,
-                    'country'=> $interestedCourse->course->school->country->country_name ?? null,
-                    'country_code'=> $interestedCourse->course->school->country->country_code ?? null,
-                    'state'=> $interestedCourse->course->school->state->state_name ?? null,
-                    'institute_category'=> $interestedCourse->course->school->institueCategory->core_metaName ?? null,
-                    'school_location'=> $interestedCourse->course->school->school_google_map_location ?? null,
-                    'school_status'=> $interestedCourse->course->school->school_status,
-                    'status'=> $interestedCourse->status
+                    'country' => $interestedCourse->course->school->country->country_name ?? null,
+                    'country_code' => $interestedCourse->course->school->country->country_code ?? null,
+                    'state' => $interestedCourse->course->school->state->state_name ?? null,
+                    'institute_category' => $interestedCourse->course->school->institueCategory->core_metaName ?? null,
+                    'school_location' => $interestedCourse->course->school->school_google_map_location ?? null,
+                    'school_status' => $interestedCourse->course->school->school_status,
+                    'status' => $interestedCourse->status
                 ];
             });
             return response()->json([
@@ -3701,6 +3807,126 @@ class studentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $getImage
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function applyCustomSchool(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+
+            $request->validate([
+                'certificate_media' => 'required|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000', // File validation
+                'course_id' => 'required|integer'
+            ]);
+
+            $checkCourse = stp_submited_form::where('student_id', $authUser->id)
+                ->where('courses_id', $request->course_id)
+                ->where('form_status', 2)
+                ->get()
+                ->first();
+
+            if ($checkCourse) {
+                throw ValidationException::withMessages([
+                    "courses" => ["Your Application still pending"]
+                ]);
+            }
+
+            stp_submited_form::create([
+                'student_id' => $authUser->id,
+                'courses_id' => $request->course_id,
+                'form_status' => 2,
+                'updated_by' => $authUser->id,
+                'created_by' => $authUser->id,
+                'created_at' => now(),
+            ]);
+
+            $checkingCertificateFile = stp_other_certificate::where('student_id', $authUser->id)
+                ->where('certificate_name', 'studentIc')
+                ->get()
+                ->first();
+
+            if ($checkingCertificateFile) {
+                $oldFilePath = $checkingCertificateFile->certificate_media; // The file path in the database
+
+                if (Storage::disk('public')->exists($oldFilePath)) {
+                    Storage::disk('public')->delete($oldFilePath);
+                }
+
+                // Upload the new certificate if file is present
+                if ($request->hasFile('certificate_media')) {
+                    $image = $request->file('certificate_media');
+                    $imageName = time() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('otherCertificate', $imageName, 'public');
+                }
+
+                // Update the existing record with the new file path
+                $checkingCertificateFile->update([
+                    'certificate_media' => $imagePath ?? $oldFilePath, // Keep old path if no new file is uploaded
+                ]);
+            } else {
+                if ($request->hasFile('certificate_media')) {
+                    $image = $request->file('certificate_media');
+                    $imageName = time() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('otherCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
+                }
+
+                stp_other_certificate::create([
+                    'certificate_name' => 'studentIc',
+                    'certificate_media' => $imagePath ?? '',
+                    'certificate_status' => 1,
+                    'student_id' => $authUser->id,
+                    'created_by' => $authUser->id,
+                    'created_at' => now()
+                ]);
+            }
+
+
+
+            $this->serviceFunctionController->notifyAdminCustomSchoolApplication($request->course_id, $authUser);
+
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Successfully Apply']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function checkCourseApplicationStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'courseId' => 'required|integer'
+            ]);
+            $authUser = Auth::user();
+
+            $checkApplicantExist = stp_submited_form::where('student_id', $authUser->id)
+                ->where('courses_id', $request->courseId)
+                ->where('form_status', 2)
+                ->get()
+                ->first();
+
+            if ($checkApplicantExist) {
+                throw new \Exception('You have already applied for this course and your application is under review.');
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Course are not applied before"]
             ]);
         } catch (\Exception $e) {
             return response()->json([

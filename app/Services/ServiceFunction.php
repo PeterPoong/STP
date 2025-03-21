@@ -15,6 +15,7 @@ use App\Mail\SendEnquiryEmail;
 use App\Mail\ReplyEnquiryEmail;
 use App\Mail\SendInterestedCourseCategoryEmail;
 use App\Mail\AdminCourseCategoryInterested;
+use App\Mail\SendCustomSchoolApplicationAdmin;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
@@ -77,6 +78,28 @@ class ServiceFunction
             ];
 
             Mail::to($institute_email)->send(new SendSchoolEmail($data));
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function notifyAdminCustomSchoolApplication($school, $course, $student)
+    {
+        try {
+            $personInChargeEmail = $school->person_inChargeEmail;
+            $data = [
+                'institute_name' => $school->school_name,
+                'course_name' => $course->course_name,
+                'student_name' => $student->student_userName,
+                'student_email' => $student->student_email,
+                'student_phone' => $student->student_countryCode . " " . $student->student_contactNo,
+                'application_date' => now()->format('Y-m-d H:i:s'),
+            ];
+            Mail::to($personInChargeEmail)->send(new SendCustomSchoolApplicationAdmin($data));
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
