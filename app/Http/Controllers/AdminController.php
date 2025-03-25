@@ -2624,7 +2624,8 @@ class AdminController extends Controller
                 'student_id' => 'integer|nullable',
                 'courses_id' => 'integer|nullable',
                 'qualification_id' => 'integer|nullable',
-                'search' => 'string|nullable'
+                'search' => 'string|nullable',
+                'school_id' => 'integer|nullable',  // Add validation for school_id
             ]);
     
             // Get the per_page value, default to 10 if not provided
@@ -2638,6 +2639,13 @@ class AdminController extends Controller
             // Apply the form_status filter if provided
             if ($request->filled('stat')) {
                 $query->where('form_status', $request->stat);
+            }
+    
+            // Apply school_id filter if provided
+            if ($request->filled('school_id')) {
+                $query->whereHas('course.school', function($q) use ($request) {
+                    $q->where('id', $request->school_id);
+                });
             }
     
             if ($request->filled('qualification_id')) {
@@ -2654,6 +2662,8 @@ class AdminController extends Controller
     
             // Sort by latest date first
             $query->orderBy('created_at', 'desc');
+            
+            // ... rest of your existing code ...
     
             // Fetch the filtered applicants with pagination
             $applicantInfo = $query->paginate($perPage)
@@ -2664,6 +2674,7 @@ class AdminController extends Controller
                     return [
                         "id" => $applicant->id ?? 'N/A',
                         "course_name" => $applicant->course->course_name ?? 'N/A',
+                        "institution_id" => $applicant->course->school->id ?? 'N/A',
                         "institution" => $applicant->course->school->school_name ?? 'N/A',
                         "form_status" => match ($applicant->form_status) {
                             0 => "Disable",
