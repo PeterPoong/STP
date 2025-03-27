@@ -37,11 +37,11 @@
                     </tr>
                     <tr>
                         <td style="padding: 10px; border: 1px solid #dddddd;"><strong>Email Address:</strong></td>
-                        <td style="padding: 10px; border: 1px solid #dddddd;">{{ $student_email }}</td>
+                        <td style="padding: 10px; border: 1px solid #dddddd;">{{ str_repeat('*', strlen($student_email) - strpos($student_email, '@')) . substr($student_email, strpos($student_email, '@')) }}</td>
                     </tr>
                     <tr>
                         <td style="padding: 10px; border: 1px solid #dddddd;"><strong>Phone Number:</strong></td>
-                        <td style="padding: 10px; border: 1px solid #dddddd;">{{ $student_phone }}</td>
+                        <td style="padding: 10px; border: 1px solid #dddddd;"> {{ '+' . str_repeat('*', strlen($student_phone) - 5) . substr($student_phone, -5) }}</td>
                     </tr>
                     <tr>
                         <td style="padding: 10px; border: 1px solid #dddddd;"><strong>Course Applied For:</strong></td>
