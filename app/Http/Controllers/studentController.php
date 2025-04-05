@@ -34,6 +34,7 @@ use App\Models\stp_advertisement_banner;
 use App\Models\stp_personalityTestResult;
 use App\Models\stp_riasecResultImage;
 
+use App\Models\stp_totalNumberVisit;
 // use Dotenv\Exception\ValidationException;
 use Illuminate\Validation\ValidationException;
 
@@ -41,6 +42,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
+use Carbon\Carbon;
 
 use App\Rules\UniqueInArray;
 use Exception;
@@ -3928,6 +3930,69 @@ class studentController extends Controller
                 'success' => true,
                 'data' => ['message' => "Course are not applied before"]
             ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function increaseNumberVisit(Request $request)
+    {
+        try {
+            $request->validate([
+                'school_id' => 'integer'
+            ]);
+
+            if (!empty($request->school_id)) {
+                $schoolId = $request->school_id;
+            } else {
+                $request->validate([
+                    'school_name' => 'required|string'
+                ]);
+                $school = stp_school::where('school_name', $request->school_name)->get()->first();
+                $schoolId = $school->id;
+            }
+
+
+            $validateExsitData = stp_totalNumberVisit::where('school_id', $schoolId)
+                ->whereDay('created_at', Carbon::now()->day)  // Check if the day matches the current day
+                ->whereMonth('created_at', Carbon::now()->month)  // Check if the month matches the current month
+                ->whereYear('created_at', Carbon::now()->year)  // Check if the year matches the current year
+                ->where('status', 1)
+                ->first();
+
+
+
+
+            if (empty($validateExsitData)) {
+                $formData = [
+                    'school_id' => $schoolId,
+                    'totalNumberVisit' => 1
+                ];
+                $createData = stp_totalNumberVisit::create($formData);
+                if ($createData) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'message' => "create data successfully"
+                        ]
+                    ]);
+                } else {
+                    throw new \Exception("failed to create number visit data");
+                }
+            } else {
+                $validateExsitData->increment('totalNumberVisit');
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'message' => "Visit count updated successfully",
+                        'totalNumberVisit' => $validateExsitData->totalNumberVisit
+                    ]
+                ]);
+            }
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

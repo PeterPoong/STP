@@ -96,4 +96,9 @@ class stp_school extends Model
     {
         return $this->hasMany(stp_featured_request::class, 'school_id', 'id');
     }
+
+    public function numberVisit(): BelongsTo
+    {
+        return $this->belongsTo(stp_totalNumberVisit::class, 'school_id', 'id');
+    }
 }

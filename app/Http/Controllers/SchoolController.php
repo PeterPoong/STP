@@ -39,6 +39,7 @@ use App\Models\stp_higher_transcript;
 use App\Models\stp_intake;
 use App\Models\stp_other_certificate;
 use App\Models\stp_school_media;
+use App\Models\stp_totalNumberVisit;
 use PHPUnit\TextUI\Help;
 use Carbon\Carbon;
 use Exception;
@@ -3432,6 +3433,144 @@ class SchoolController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $getPrice
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getMonthlyNumberVisit(Request $request)
+    {
+        try {
+            $request->validate([
+                'month' => 'required|string'
+            ]);
+
+            $authUser = Auth::user();
+
+
+            // Get start and end date of the requested month
+            $monthStart = Carbon::createFromFormat('F', $request->month)->startOfMonth();
+            $monthEnd = Carbon::createFromFormat('F', $request->month)->endOfMonth();
+
+            // Get all records for the requested month
+            $numberVisits = stp_totalNumberVisit::whereBetween('created_at', [$monthStart, $monthEnd])
+                ->where('school_id', $authUser->id)
+                ->get(['created_at', 'totalNumberVisit']); // Select only the relevant fields
+
+            // Group by day and sum the visits for each day
+            $formattedData = $numberVisits->groupBy(function ($visit) {
+                return Carbon::parse($visit->created_at)->format('d'); // Group by day (d)
+            })->map(function ($group) {
+                return [
+                    'date' => $group->first()->created_at->format('d'), // Day of the month as "DD"
+                    'totalNumberVisit' => $group->sum('totalNumberVisit') // Sum total visits for that day
+                ];
+            });
+
+            // Get today's day number
+            $today = Carbon::now()->format('d');
+
+            // Generate all days of the month up to today
+            $daysInMonth = range(1, $today); // Limit to today
+            $completeData = [];
+
+            foreach ($daysInMonth as $day) {
+                // Format day as two digits
+                $dayFormatted = str_pad($day, 2, '0', STR_PAD_LEFT);
+
+                // Check if data exists for this day, if not set to 0
+                $visitData = $formattedData->firstWhere('date', $dayFormatted);
+                $completeData[] = [
+                    $dayFormatted,
+                    $visitData ? $visitData['totalNumberVisit'] : 0, // Use 0 if no data
+                ];
+            }
+
+            // Return the formatted data as JSON
+            return response()->json([
+                'success' => true,
+                'data' => $completeData
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getYearlyNumberVisit(Request $request)
+    {
+        try {
+            // Validate that the year is provided and is an integer
+            $request->validate([
+                'year' => 'required|integer'
+            ]);
+
+            // Get the year from the request
+            $year = $request->year;
+            $authUser = Auth::user();
+
+            // Retrieve the data for the entire year from the 'created_at' column
+            $yearlyVisits = stp_totalNumberVisit::whereYear('created_at', $year)
+                ->where('school_id', $authUser->id)
+                ->get(['created_at', 'totalNumberVisit']); // Get only the relevant fields (created_at and totalNumberVisit)
+
+            // Format the data for the response
+            $formattedData = $yearlyVisits->groupBy(function ($visit) {
+                return Carbon::parse($visit->created_at)->format('m'); // Group by month (m)
+            })->map(function ($group) {
+                // Get the month name using Carbon's format function (e.g., 'January', 'February', etc.)
+                $monthName = Carbon::parse($group->first()->created_at)->format('F'); // 'F' gives the full month name
+
+                return [
+                    'month' => $monthName, // Month in word format (e.g., 'January')
+                    'totalNumberVisit' => $group->sum('totalNumberVisit') // Sum visits for that month
+                ];
+            });
+
+            // Sort the months based on their numerical values (1 for January, 12 for December)
+            $sortedData = $formattedData->sortBy(function ($item) {
+                return Carbon::parse($item['month'])->format('m'); // Sort by the numerical month (1 = January, 12 = December)
+            });
+
+            // Return the sorted data as JSON
+            return response()->json([
+                'success' => true,
+                'data' => $sortedData->values() // Return the sorted values
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getYearListNumberVisit(Request $request)
+    {
+        try {
+            // Get the authenticated user
+            $authUser = Auth::user();
+
+            // Get all the unique years for the given school_id
+            $years = stp_totalNumberVisit::where('school_id', $authUser->id)
+                ->selectRaw('YEAR(created_at) as year') // Extract the year from the created_at column
+                ->distinct() // Ensure the years are unique
+                ->orderBy('year', 'asc') // Order by year in ascending order
+                ->pluck('year'); // Get the values as an array of years
+
+            // Return the years as JSON
+            return response()->json([
+                'success' => true,
+                'data' => $years
             ]);
         } catch (\Exception $e) {
             return response()->json([

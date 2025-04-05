@@ -65,6 +65,7 @@ Route::prefix('student')->group(function () {
     Route::post('/enquiryDetail', [EnquiryController::class, 'enquiryDetail']);
 
     Route::post('/advertisementList', [studentController::class, 'advertisementList']);
+    Route::post('/increaseNumberVisit', [studentController::class, 'increaseNumberVisit']);
 
 
 
@@ -379,6 +380,10 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('schoolFeaturedPriceList', [SchoolController::class, 'schoolFeaturedPriceList']);
 
     Route::get('testFeaturedRequest', [SchoolController::class, 'testFeaturedRequest']);
+
+    Route::post('getMonthlyNumberVisit', [SchoolController::class, 'getMonthlyNumberVisit']);
+    Route::post('getYearlyNumberVisit', [SchoolController::class, 'getYearlyNumberVisit']);
+    Route::get('getYearListNumberVisit', [SchoolController::class, 'getYearListNumberVisit']);
 });
 
 // Route::get('auth/facebook', [LoginController::class, 'redirectToFacebook'])->name('login.facebook');
