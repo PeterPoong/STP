@@ -976,7 +976,7 @@ class studentController extends Controller
                 ];
             })->values(); // Apply values() to reindex the data
 
-            return $transformedCourses;
+
 
             // Reset the collection in the paginator
             $paginator->setCollection(collect($transformedCourses));
