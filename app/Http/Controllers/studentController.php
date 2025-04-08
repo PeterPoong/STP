@@ -777,6 +777,7 @@ class studentController extends Controller
 
     public function courseList(Request $request)
     {
+
         try {
             $request->validate([
                 'search' => 'nullable|string',
@@ -937,9 +938,21 @@ class studentController extends Controller
                     ->pluck('month.core_metaName')
                     ->toArray();
 
+
+
+                $coverPhoto = null;  // Initialize it to null
+
+                foreach ($course->school->media as $photo) {
+                    if ($photo->schoolMedia_type == 66) {
+                        $coverPhoto = $photo->schoolMedia_location;
+                        break;
+                    }
+                }
+
                 return [
                     'school_id' => $course->school->id,
                     'email' => $course->school->school_email,
+                    'school_cover' => $coverPhoto,
                     'id' => $course->id,
                     'school_name' => $course->school->school_name,
                     'name' => $course->course_name,
@@ -962,6 +975,8 @@ class studentController extends Controller
                     'school_status' => $course->course_status
                 ];
             })->values(); // Apply values() to reindex the data
+
+            return $transformedCourses;
 
             // Reset the collection in the paginator
             $paginator->setCollection(collect($transformedCourses));
