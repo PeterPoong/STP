@@ -412,6 +412,7 @@ class AuthController extends Controller
                 'password' => 'required|string|min:8',
                 'confirm_password' => 'required|string|min:8|same:password',
                 'country_code' => 'required',
+                'student_nationality' => 'required|string',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255',
                 'ic' => 'required|string|unique:stp_students,student_icNumber'
@@ -450,6 +451,7 @@ class AuthController extends Controller
                     'student_userName' => $request->name,
                     'student_countryCode' => $request->country_code,
                     'student_contactNo' => $request->contact_number,
+                    'student_nationality' => $request->student_nationality,
                     'student_password' => Hash::make($request->password),
                     'student_icNumber' => $request->ic,
                 ];
@@ -459,6 +461,7 @@ class AuthController extends Controller
                     'student_userName' => $request->name,
                     'student_email' => $request->email,
                     'student_countryCode' => $request->country_code,
+                    'student_nationality' => $request->student_nationality,
                     'student_contactNo' => $request->contact_number,
                     'student_password' => Hash::make($request->password),
                     'student_icNumber' => $request->ic,

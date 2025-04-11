@@ -253,7 +253,9 @@ class SocialLoginController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'country_id' => 'required|string',
-                'contact_number' => 'required|string'
+                'contact_number' => 'required|string',
+                'student_icNumber' => 'required|string',
+                'student_nationality' => 'required|string'
             ]);
 
             $validateContact = stp_student::where('student_countryCode', $request->country_id)
@@ -269,7 +271,9 @@ class SocialLoginController extends Controller
             $findUser = stp_student::find($request->id);
             $updateData = [
                 'student_countryCode' => $request->country_id,
-                'student_contactNo' => $request->contact_number
+                'student_contactNo' => $request->contact_number,
+                'student_icNumber' => $request->student_icNumber,
+                'student_nationality' => $request->student_nationality
             ];
 
             $findUser->update($updateData);

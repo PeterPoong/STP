@@ -24,6 +24,7 @@ class stp_student extends Model
         'student_contactNo',
         'user_role',
         'student_profilePic',
+        'student_nationality',
         'student_status',
         'facebook_id',
         'created_by',
@@ -41,8 +42,9 @@ class stp_student extends Model
 
     public function media()
     {
-        return $this->belongsToMany(stp_user_media::class);
+        return $this->hasMany(stp_student_media::class, 'student_id', 'id');
     }
+
 
     public function detail(): HasOne
     {
