@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('student_password');
             $table->string('student_icNumber')->unique()->nullable();
             $table->string('student_email')->unique()->nullable();
+            $table->string('student_nationality')->nullable();
             $table->string('student_countryCode');
             $table->string('student_contactNo');
             $table->foreignId('user_role')->nullable()->constrained('stp_core_metas')->onDelete('set null');

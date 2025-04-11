@@ -972,7 +972,7 @@ class studentController extends Controller
                     'state' => $course->school->state->state_name ?? null,
                     'institute_category' => $course->school->institueCategory->core_metaName ?? null,
                     'school_location' => $course->school->school_google_map_location,
-                    'school_status' => $course->course_status
+                    'course_status' => $course->course_status
                 ];
             })->values(); // Apply values() to reindex the data
 
@@ -1005,6 +1005,28 @@ class studentController extends Controller
     {
         try {
             $authUser = Auth::user();
+            $getFrontIc = $authUser->media()->where('studentMedia_type', 89)->get()->first();
+            $getBackIc = $authUser->media()->where('studentMedia_type', 90)->get()->first();
+            $getPassport = $authUser->media()->where('studentMedia_type', 91)->get()->first();
+            $frontIc = [
+                'studentMedia_name' => $getFrontIc->studentMedia_name ?? "",
+                'studentMedia_location' => $getFrontIc->studentMedia_location ?? ""
+            ];
+
+            $backIc = [
+                'studentMedia_name' => $getBackIc->studentMedia_name ?? "",
+                'studentMedia_location' => $getBackIc->studentMedia_location ?? ""
+            ];
+
+            $passport = [
+                'studentMedia_name' => $getPassport->studentMedia_name ?? "",
+                'studentMedia_location' => $getPassport->studentMedia_location ?? ""
+
+            ];
+
+
+
+
 
             $studentDetail = [
                 'id' => $authUser->id,
@@ -1015,6 +1037,7 @@ class studentController extends Controller
                 'email' => $authUser->student_email,
                 'country_code' => $authUser->student_countryCode,
                 'contact' => $authUser->student_contactNo,
+                'nationality' => $authUser->student_nationality,
                 'profilePic' => $authUser->student_profilePic,
                 'gender' => $authUser->detail->studentGender->core_metaName ?? null,
                 'address' => $authUser->detail->student_detailAddress,
@@ -1022,6 +1045,10 @@ class studentController extends Controller
                 'state' => $authUser->detail->state->state_name ?? null,
                 'city' => $authUser->detail->city->city_name ?? null,
                 'postcode' => $authUser->detail->student_detailPostcode,
+                'frontIc' => $frontIc,
+                'backIc' => $backIc,
+                'passport' => $passport
+
             ];
             return response()->json([
                 'success' => true,
@@ -1716,16 +1743,22 @@ class studentController extends Controller
                 'first_name' => 'string|max:255',
                 'last_name' => 'string|max:255',
                 'address' => 'string|max:255',
+                'student_nationality' => 'required|string',
                 'country' => 'integer',
                 'city' => 'integer',
                 'state' => 'integer',
                 'gender' => 'integer',
                 'postcode' => 'string',
-                'ic' => 'string|min:6|',
+                'ic' => 'required|string',
                 'country_code' => 'required',
                 'contact_number' => 'required|numeric|digits_between:1,15',
                 'email' => 'required|string|email|max:255',
+                'student_frontIC' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:10000',
+                'student_backIC' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:10000',
+                'student_passport' => 'nullable|file|mimes:jpeg,png,jpg,pdf,PNG|max:10000',
             ]);
+
+
             $authUser = Auth::user();
 
             //check ic
@@ -1751,7 +1784,6 @@ class studentController extends Controller
                 ]);
             }
 
-
             $student = stp_student::find($authUser->id);
             $studentDetail = $student->detail;
 
@@ -1760,12 +1792,108 @@ class studentController extends Controller
                 ->exists();
 
 
+
             if ($checkingEmail) {
                 throw ValidationException::withMessages([
                     'email' => ['Email has been taken'],
                 ]);
-            } else {
             }
+
+            // front ic
+            if ($request->hasFile('student_frontIC')) {
+                $checkFrontIC = stp_student_media::where('student_id', $authUser->id)->where('studentMedia_type', 89)->get()->first();
+                if ($checkFrontIC == null) {
+
+                    $icFrontImage = $request->file('student_frontIC');
+                    $icFrontImageName = 'frontIc' . time() . '.' . $icFrontImage->getClientOriginalExtension();
+                    $icFrontImagePath = $icFrontImage->storeAs('studentDocument', $icFrontImageName, 'public'); // Store in 'storage/app/public/images'
+
+                    stp_student_media::create([
+                        'studentMedia_name' => 'icFrontImage',
+                        'studentMedia_type' => 89,
+                        'studentMedia_format' => 'photo',
+                        'studentMedia_location' => $icFrontImagePath ?? '',
+                        'studentMedia_status' => 1,
+                        'student_id' => $authUser->id,
+                        'created_by' => $authUser->id,
+                        'created_at' => now()
+                    ]);
+                } else {
+
+                    Storage::delete('public/' .  $checkFrontIC->studentMedia_location);
+                    $icFrontImage = $request->file('student_frontIC');
+                    $icFrontImageName =  'frontIc' . time() . '.' . $icFrontImage->getClientOriginalExtension();
+                    $icFrontImagePath = $icFrontImage->storeAs('studentDocument', $icFrontImageName, 'public'); // Store in 'storage/app/public/images'
+                    $newFrontIcData['studentMedia_location'] = $icFrontImagePath ?? null;
+                    $checkFrontIC->update($newFrontIcData);
+                }
+            }
+
+
+
+            // back ic
+            if ($request->hasFile('student_backIC')) {
+                $checkBackIC = stp_student_media::where('student_id', $authUser->id)->where('studentMedia_type', 90)->get()->first();
+                if ($checkBackIC == null) {
+
+                    $icBackImage = $request->file('student_backIC');
+                    $icBackImageName = 'backIc' .  time() . '.' . $icBackImage->getClientOriginalExtension();
+                    $icBackImagePath = $icBackImage->storeAs('studentDocument', $icBackImageName, 'public'); // Store in 'storage/app/public/images'
+
+                    stp_student_media::create([
+                        'studentMedia_name' => 'icBackImage',
+                        'studentMedia_type' => 90,
+                        'studentMedia_format' => 'photo',
+                        'studentMedia_location' => $icBackImagePath ?? '',
+                        'studentMedia_status' => 1,
+                        'student_id' => $authUser->id,
+                        'created_by' => $authUser->id,
+                        'created_at' => now()
+                    ]);
+                } else {
+                    Storage::delete('public/' .  $checkBackIC->studentMedia_location);
+                    $icBackImage = $request->file('student_backIC');
+                    $icBackImageName = 'backIc' . time() . '.' . $icBackImage->getClientOriginalExtension();
+                    $icBackImagePath = $icBackImage->storeAs('studentDocument', $icBackImageName, 'public'); // Store in 'storage/app/public/images'
+                    $newData['studentMedia_location'] = $icBackImagePath ?? null;
+                    $checkBackIC->update($newData);
+                }
+            }
+
+
+
+
+
+            //passport
+            if ($request->hasFile('student_passport')) {
+                $checkPassport = stp_student_media::where('student_id', $authUser->id)->where('studentMedia_type', 91)->get()->first();
+                if ($checkPassport == null) {
+                    $passportImage = $request->file('student_passport');
+
+                    $passportImageName = 'passport' . time() . '.' . $passportImage->getClientOriginalExtension();
+                    $passportImagePath = $passportImage->storeAs('studentDocument', $passportImageName, 'public'); // Store in 'storage/app/public/images'
+
+                    stp_student_media::create([
+                        'studentMedia_name' => 'passport',
+                        'studentMedia_type' => 91,
+                        'studentMedia_format' => 'photo',
+                        'studentMedia_location' => $passportImagePath ?? '',
+                        'studentMedia_status' => 1,
+                        'student_id' => $authUser->id,
+                        'created_by' => $authUser->id,
+                        'created_at' => now()
+                    ]);
+                } else {
+                    Storage::delete('public/' .  $checkPassport->studentMedia_location);
+                    $passportImage = $request->file('student_passport');
+                    $passportImageName = 'passport' . time() . '.' . $passportImage->getClientOriginalExtension();
+                    $passportImagePath = $passportImage->storeAs('studentDocument', $passportImageName, 'public'); // Store in 'storage/app/public/images'
+                    $newData['studentMedia_location'] = $passportImagePath ?? null;
+                    $checkPassport->update($newData);
+                }
+            }
+            // return 'ok';
+
 
             $updateingStudent = $student->update([
                 "student_userName" => $request->name,
@@ -1773,6 +1901,7 @@ class studentController extends Controller
                 'student_email' => $request->email,
                 'student_countryCode' => $request->country_code,
                 'student_contactNo' => $request->contact_number,
+                'student_nationality' => $request->student_nationality,
                 'updated_by' => $authUser->id
             ]);
 
@@ -1787,6 +1916,8 @@ class studentController extends Controller
                 "student_detailPostcode" => $request->postcode ?? "",
                 'updated_by' => $authUser->id
             ]);
+
+
 
             if ($updateingStudent) {
                 return response()->json([
