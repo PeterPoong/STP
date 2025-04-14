@@ -1451,8 +1451,14 @@ class studentController extends Controller
                 'created_by' => $authUser->id,
                 'created_at' => now(),
             ]);
+            if ($newApplicant->course->school->id == 115) {
 
-            $this->serviceFunctionController->sendSchoolEmail($request->courseID, $authUser, $newApplicant->id);
+                $this->serviceFunctionController->notifyAdminCustomSchoolApplication($request->courseID, $authUser);
+            } else {
+                $this->serviceFunctionController->sendSchoolEmail($request->courseID, $authUser, $newApplicant->id);
+            }
+
+
 
             return response()->json([
                 'success' => true,
