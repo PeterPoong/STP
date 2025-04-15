@@ -520,6 +520,7 @@ class AdminController extends Controller
                 ->when($request->filled('search'), function ($query) use ($request) {
                     $query->where('school_name', 'like', '%' . $request->search . '%');
                 })
+                ->orderBy('created_at', 'desc')  // Add this line to sort alphabetically
                 ->paginate($perPage)
                 ->through(function ($school) {
                     switch ($school->school_status) {
@@ -1419,6 +1420,7 @@ class AdminController extends Controller
                 ->whereHas('school', function ($query) {
                     $query->whereIn('school_status', [1, 2, 3]); // Only include courses from active schools
                 })
+                ->orderBy('created_at', 'desc')
                 ->paginate($perPage)
                 ->through(function ($course) {
                     switch ($course->course_status) {
@@ -2543,6 +2545,7 @@ class AdminController extends Controller
                 })->when($request->filled('stat'), function ($query) use ($request) {
                     $query->where('category_status', $request->stat);
                 })
+                ->orderBy('category_name', 'asc')  // Add this line to sort alphabetically by category name
                 ->paginate($perPage)
                 ->through(function ($category) {
                     switch ($category->category_status) {
@@ -4427,6 +4430,7 @@ class AdminController extends Controller
         try {
             $schoolList = stp_school::query()
                 ->whereIn('school_status', [1, 2, 3])
+                ->orderBy('school_name', 'asc')
                 ->get()
                 ->map(function ($school) {
                     $status = ($school->status == 1) ? "Active" : "Inactive";
