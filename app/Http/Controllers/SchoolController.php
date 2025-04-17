@@ -3452,10 +3452,12 @@ class SchoolController extends Controller
 
             $authUser = Auth::user();
 
+            // Capitalize the month to match the expected format (e.g., February instead of february)
+            $monthFormatted = ucfirst(strtolower($request->month)); // Capitalize the first letter
 
             // Get start and end date of the requested month
-            $monthStart = Carbon::createFromFormat('F', $request->month)->startOfMonth();
-            $monthEnd = Carbon::createFromFormat('F', $request->month)->endOfMonth();
+            $monthStart = Carbon::createFromFormat('F', $monthFormatted)->startOfMonth();
+            $monthEnd = Carbon::createFromFormat('F', $monthFormatted)->endOfMonth();
 
             // Get all records for the requested month
             $numberVisits = stp_totalNumberVisit::whereBetween('created_at', [$monthStart, $monthEnd])
@@ -3472,11 +3474,15 @@ class SchoolController extends Controller
                 ];
             });
 
-            // Get today's day number
-            $today = Carbon::now()->format('d');
+            // Check if the requested month is the current month
+            $isCurrentMonth = Carbon::now()->format('F') === $monthFormatted;
 
-            // Generate all days of the month up to today
-            $daysInMonth = range(1, $today); // Limit to today
+            // Get total number of days in the requested month
+            $totalDaysInMonth = Carbon::createFromFormat('F', $monthFormatted)->daysInMonth;
+
+            // If it's the current month, limit the days to today
+            $daysInMonth = $isCurrentMonth ? range(1, Carbon::now()->format('d')) : range(1, $totalDaysInMonth);
+
             $completeData = [];
 
             foreach ($daysInMonth as $day) {
@@ -3485,6 +3491,7 @@ class SchoolController extends Controller
 
                 // Check if data exists for this day, if not set to 0
                 $visitData = $formattedData->firstWhere('date', $dayFormatted);
+
                 $completeData[] = [
                     $dayFormatted,
                     $visitData ? $visitData['totalNumberVisit'] : 0, // Use 0 if no data
