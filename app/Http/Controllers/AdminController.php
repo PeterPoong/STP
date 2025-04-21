@@ -3118,7 +3118,7 @@ class AdminController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'type' => 'required|string|max:255',
-                'feedback' => 'string|max:255'
+                'feedback' => 'string'
             ]);
             $authUser = Auth::user();
 
@@ -3175,7 +3175,7 @@ class AdminController extends Controller
                 'id' => 'required|integer',
                 'courses_id' => 'required|integer',
                 'school_id' => 'required|integer',
-                'feedback' => 'string|max:255|nullable',
+                'feedback' => 'string',
                 'created_at' => 'required|date_format:Y-m-d',
                 'status' => 'integer'
             ]);
