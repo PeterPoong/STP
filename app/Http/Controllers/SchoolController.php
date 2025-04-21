@@ -3447,6 +3447,7 @@ class SchoolController extends Controller
     {
         try {
             $request->validate([
+                'year' => 'required|integer',
                 'month' => 'required|string'
             ]);
 
@@ -3459,7 +3460,7 @@ class SchoolController extends Controller
             $monthStart = Carbon::createFromFormat('F', $monthFormatted)->startOfMonth();
             $monthEnd = Carbon::createFromFormat('F', $monthFormatted)->endOfMonth();
 
-            // Get all records for the requested month
+            // Get all records for the requested year and month
             $numberVisits = stp_totalNumberVisit::whereBetween('created_at', [$monthStart, $monthEnd])
                 ->where('school_id', $authUser->id)
                 ->get(['created_at', 'totalNumberVisit']); // Select only the relevant fields
@@ -3578,6 +3579,118 @@ class SchoolController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $years
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getVisitMonthlyListgetVisitYearList(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+
+            // Get all distinct years from the created_at field
+            $years = stp_totalNumberVisit::where('school_id', $authUser->id)
+                ->where('status', 1)
+                ->selectRaw('YEAR(created_at) as year') // Extract the year from created_at
+                ->distinct() // Get only distinct years
+                ->orderBy('year', 'asc') // Optional: Order by year ascending
+                ->get()
+                ->pluck('year'); // Extract the 'year' values as a simple array
+
+            return response()->json([
+                'success' => true,
+                'data' => $years // Return years as an array of values
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    public function getMonthListByYear(Request $request)
+    {
+        try {
+            // Validate the 'year' parameter
+            $request->validate([
+                'year' => 'required|integer'
+            ]);
+
+            // Get the authenticated user
+            $authUser = Auth::user();
+
+            // Get the distinct months for the given year and school_id
+            $monthList = stp_totalNumberVisit::where('school_id', $authUser->id)
+                ->whereYear('created_at', $request->year) // Filter by the requested year
+                ->selectRaw('MONTH(created_at) as month') // Extract the month part of the created_at column
+                ->distinct() // Get distinct months
+                ->orderBy('month', 'asc') // Order by month in ascending order
+                ->pluck('month'); // Get the values as an array of months
+
+            // Return the list of months as JSON
+            return response()->json([
+                'success' => true,
+                'data' => $monthList
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    public function getVisitMonthlyList(Request $request)
+    {
+        try {
+            // Validate the 'year' parameter
+            $request->validate([
+                'year' => 'required|integer'
+            ]);
+
+            // Get the authenticated user
+            $authUser = Auth::user();
+
+            // Get the distinct months for the given year and school_id
+            $monthList = stp_totalNumberVisit::where('school_id', $authUser->id)
+                ->whereYear('created_at', $request->year) // Filter by the requested year
+                ->selectRaw('MONTH(created_at) as month') // Extract the month part of the created_at column
+                ->distinct() // Get distinct months
+                ->orderBy('month', 'asc') // Order by month in ascending order
+                ->pluck('month'); // Get the values as an array of months
+
+            // Map month numbers to month names
+            $monthNames = [
+                1 => 'January',
+                2 => 'February',
+                3 => 'March',
+                4 => 'April',
+                5 => 'May',
+                6 => 'June',
+                7 => 'July',
+                8 => 'August',
+                9 => 'September',
+                10 => 'October',
+                11 => 'November',
+                12 => 'December'
+            ];
+
+            // Convert the month numbers to month names
+            $monthNamesList = $monthList->map(function ($month) use ($monthNames) {
+                return $monthNames[$month]; // Get the name of the month from the array
+            });
+
+            // Return the list of months as JSON
+            return response()->json([
+                'success' => true,
+                'data' => $monthNamesList
             ]);
         } catch (\Exception $e) {
             return response()->json([
