@@ -68,8 +68,6 @@ Route::prefix('student')->group(function () {
     Route::post('/increaseNumberVisit', [studentController::class, 'increaseNumberVisit']);
 
 
-
-
     //student portal
     Route::middleware('auth:sanctum')->post('/checkTermsAgreement', [studentController::class, 'checkTermsAgreement']);
     Route::middleware('auth:sanctum')->post('/agreeTerms', [studentController::class, 'agreeTerms']);
@@ -81,6 +79,7 @@ Route::prefix('student')->group(function () {
     Route::middleware('auth:sanctum')->post('/addEditHigherTranscript', [studentController::class, 'addEditHigherTranscript']);
     Route::middleware('auth:sanctum')->post('/applyCourse', [studentController::class, 'applyCourse']);
     Route::middleware('auth:sanctum')->post('/checkCourseApplicationStatus', [studentController::class, 'checkCourseApplicationStatus']);
+    Route::middleware('auth:sanctum')->post('/updateICPassport', [studentController::class, 'updateICPassport']);
 
     //interested course
     Route::middleware('auth:sanctum')->post('/addInterestedCourse', [studentController::class, 'addInterestedCourse']);
@@ -384,6 +383,9 @@ Route::prefix('school')->middleware('auth:sanctum')->group(function () {
     Route::post('getMonthlyNumberVisit', [SchoolController::class, 'getMonthlyNumberVisit']);
     Route::post('getYearlyNumberVisit', [SchoolController::class, 'getYearlyNumberVisit']);
     Route::get('getYearListNumberVisit', [SchoolController::class, 'getYearListNumberVisit']);
+
+    Route::get('getVisitYearList', [SchoolController::class, 'getVisitMonthlyListgetVisitYearList']);
+    Route::post('getVisitMonthlyList', [SchoolController::class, 'getVisitMonthlyList']);
 });
 
 // Route::get('auth/facebook', [LoginController::class, 'redirectToFacebook'])->name('login.facebook');

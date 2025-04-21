@@ -1845,10 +1845,6 @@ class studentController extends Controller
                 }
             }
 
-
-
-
-
             //passport
             if ($request->hasFile('student_passport')) {
                 $checkPassport = stp_student_media::where('student_id', $authUser->id)->where('studentMedia_type', 91)->get()->first();
@@ -1877,7 +1873,7 @@ class studentController extends Controller
                     $checkPassport->update($newData);
                 }
             }
-            // return 'ok';
+
 
 
             $updateingStudent = $student->update([
@@ -4124,6 +4120,117 @@ class studentController extends Controller
                     ]
                 ]);
             }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function updateICPassport(Request $request)
+    {
+        try {
+            $request->validate([
+                'student_frontIC' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:10000',
+                'student_backIC' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:10000',
+                'student_passport' => 'nullable|file|mimes:jpeg,png,jpg,pdf,PNG|max:10000',
+            ]);
+            $authUser = Auth::user();
+            // front ic
+            if ($request->hasFile('student_frontIC')) {
+                $checkFrontIC = stp_student_media::where('student_id', $authUser->id)->where('studentMedia_type', 89)->get()->first();
+                if ($checkFrontIC == null) {
+
+                    $icFrontImage = $request->file('student_frontIC');
+                    $icFrontImageName = 'frontIc' . time() . '.' . $icFrontImage->getClientOriginalExtension();
+                    $icFrontImagePath = $icFrontImage->storeAs('studentDocument', $icFrontImageName, 'public'); // Store in 'storage/app/public/images'
+
+                    stp_student_media::create([
+                        'studentMedia_name' => 'icFrontImage',
+                        'studentMedia_type' => 89,
+                        'studentMedia_format' => 'photo',
+                        'studentMedia_location' => $icFrontImagePath ?? '',
+                        'studentMedia_status' => 1,
+                        'student_id' => $authUser->id,
+                        'created_by' => $authUser->id,
+                        'created_at' => now()
+                    ]);
+                } else {
+
+                    Storage::delete('public/' .  $checkFrontIC->studentMedia_location);
+                    $icFrontImage = $request->file('student_frontIC');
+                    $icFrontImageName =  'frontIc' . time() . '.' . $icFrontImage->getClientOriginalExtension();
+                    $icFrontImagePath = $icFrontImage->storeAs('studentDocument', $icFrontImageName, 'public'); // Store in 'storage/app/public/images'
+                    $newFrontIcData['studentMedia_location'] = $icFrontImagePath ?? null;
+                    $checkFrontIC->update($newFrontIcData);
+                }
+            }
+
+
+
+            // back ic
+            if ($request->hasFile('student_backIC')) {
+                $checkBackIC = stp_student_media::where('student_id', $authUser->id)->where('studentMedia_type', 90)->get()->first();
+                if ($checkBackIC == null) {
+
+                    $icBackImage = $request->file('student_backIC');
+                    $icBackImageName = 'backIc' .  time() . '.' . $icBackImage->getClientOriginalExtension();
+                    $icBackImagePath = $icBackImage->storeAs('studentDocument', $icBackImageName, 'public'); // Store in 'storage/app/public/images'
+
+                    stp_student_media::create([
+                        'studentMedia_name' => 'icBackImage',
+                        'studentMedia_type' => 90,
+                        'studentMedia_format' => 'photo',
+                        'studentMedia_location' => $icBackImagePath ?? '',
+                        'studentMedia_status' => 1,
+                        'student_id' => $authUser->id,
+                        'created_by' => $authUser->id,
+                        'created_at' => now()
+                    ]);
+                } else {
+                    Storage::delete('public/' .  $checkBackIC->studentMedia_location);
+                    $icBackImage = $request->file('student_backIC');
+                    $icBackImageName = 'backIc' . time() . '.' . $icBackImage->getClientOriginalExtension();
+                    $icBackImagePath = $icBackImage->storeAs('studentDocument', $icBackImageName, 'public'); // Store in 'storage/app/public/images'
+                    $newData['studentMedia_location'] = $icBackImagePath ?? null;
+                    $checkBackIC->update($newData);
+                }
+            }
+
+            //passport
+            if ($request->hasFile('student_passport')) {
+                $checkPassport = stp_student_media::where('student_id', $authUser->id)->where('studentMedia_type', 91)->get()->first();
+                if ($checkPassport == null) {
+                    $passportImage = $request->file('student_passport');
+
+                    $passportImageName = 'passport' . time() . '.' . $passportImage->getClientOriginalExtension();
+                    $passportImagePath = $passportImage->storeAs('studentDocument', $passportImageName, 'public'); // Store in 'storage/app/public/images'
+
+                    stp_student_media::create([
+                        'studentMedia_name' => 'passport',
+                        'studentMedia_type' => 91,
+                        'studentMedia_format' => 'photo',
+                        'studentMedia_location' => $passportImagePath ?? '',
+                        'studentMedia_status' => 1,
+                        'student_id' => $authUser->id,
+                        'created_by' => $authUser->id,
+                        'created_at' => now()
+                    ]);
+                } else {
+                    Storage::delete('public/' .  $checkPassport->studentMedia_location);
+                    $passportImage = $request->file('student_passport');
+                    $passportImageName = 'passport' . time() . '.' . $passportImage->getClientOriginalExtension();
+                    $passportImagePath = $passportImage->storeAs('studentDocument', $passportImageName, 'public'); // Store in 'storage/app/public/images'
+                    $newData['studentMedia_location'] = $passportImagePath ?? null;
+                    $checkPassport->update($newData);
+                }
+            }
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => 'Update ic and passport successfully']
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
