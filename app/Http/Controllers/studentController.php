@@ -1437,13 +1437,16 @@ class studentController extends Controller
             $studentID = $authUser->id;
             $checkingCourse = stp_submited_form::where('courses_id', $request->courseID)
                 ->where('student_id', $studentID)
-                ->where('form_status', '!=', 0)
+                ->where('form_status', 2)
                 ->exists();
+
+
             if ($checkingCourse) {
                 throw ValidationException::withMessages([
                     "courses" => ['You had already Applied this course']
                 ]);
             }
+
             $newApplicant = stp_submited_form::create([
                 'student_id' => $studentID,
                 'courses_id' => $request->courseID,
