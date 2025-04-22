@@ -1437,23 +1437,31 @@ class studentController extends Controller
             $studentID = $authUser->id;
             $checkingCourse = stp_submited_form::where('courses_id', $request->courseID)
                 ->where('student_id', $studentID)
-                ->where('form_status', 2)
-                ->exists();
+                ->first();
 
+            if ($checkingCourse != null) {
+                if ($checkingCourse->form_status == 2) {
+                    throw ValidationException::withMessages([
+                        "courses" => ['You had already Applied this course']
+                    ]);
+                } else {
+                    $checkingCourse->update([
+                        'form_status' => 2,
+                    ]);
+                    $newApplicant = $checkingCourse;
+                }
+            } else {
 
-            if ($checkingCourse) {
-                throw ValidationException::withMessages([
-                    "courses" => ['You had already Applied this course']
+                $newApplicant = stp_submited_form::create([
+                    'student_id' => $studentID,
+                    'courses_id' => $request->courseID,
+                    'form_status' => 2,
+                    'created_by' => $authUser->id,
+                    'created_at' => now(),
                 ]);
             }
 
-            $newApplicant = stp_submited_form::create([
-                'student_id' => $studentID,
-                'courses_id' => $request->courseID,
-                'form_status' => 2,
-                'created_by' => $authUser->id,
-                'created_at' => now(),
-            ]);
+
             if ($newApplicant->course->school->id == 115 || $newApplicant->course->school->id == 118) {
                 $this->serviceFunctionController->notifyAdminCustomSchoolApplication($request->courseID, $authUser);
             } else {
