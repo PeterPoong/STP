@@ -4252,6 +4252,12 @@ class studentController extends Controller
                 'success' => true,
                 'data' => ['message' => 'Update ic and passport successfully']
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
