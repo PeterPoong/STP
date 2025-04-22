@@ -1045,7 +1045,7 @@ class SchoolController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'type' => 'required|string|max:255',
-                'feedback' => 'string|max:255'
+                'feedback' => 'string'
             ]);
             $authUser = Auth::user();
 
