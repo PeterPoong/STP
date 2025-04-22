@@ -1451,8 +1451,7 @@ class studentController extends Controller
                 'created_by' => $authUser->id,
                 'created_at' => now(),
             ]);
-            if ($newApplicant->course->school->id == 115) {
-
+            if ($newApplicant->course->school->id == 115 || $newApplicant->course->school->id == 118) {
                 $this->serviceFunctionController->notifyAdminCustomSchoolApplication($request->courseID, $authUser);
             } else {
                 $this->serviceFunctionController->sendSchoolEmail($request->courseID, $authUser, $newApplicant->id);
@@ -3973,7 +3972,6 @@ class studentController extends Controller
             $authUser = Auth::user();
 
             $request->validate([
-                'certificate_media' => 'required|file|mimes:jpeg,png,jpg,gif,svg,doc,docx,pdf|max:10000', // File validation
                 'course_id' => 'required|integer'
             ]);
 
@@ -3997,48 +3995,6 @@ class studentController extends Controller
                 'created_by' => $authUser->id,
                 'created_at' => now(),
             ]);
-
-            $checkingCertificateFile = stp_other_certificate::where('student_id', $authUser->id)
-                ->where('certificate_name', 'studentIc')
-                ->get()
-                ->first();
-
-            if ($checkingCertificateFile) {
-                $oldFilePath = $checkingCertificateFile->certificate_media; // The file path in the database
-
-                if (Storage::disk('public')->exists($oldFilePath)) {
-                    Storage::disk('public')->delete($oldFilePath);
-                }
-
-                // Upload the new certificate if file is present
-                if ($request->hasFile('certificate_media')) {
-                    $image = $request->file('certificate_media');
-                    $imageName = time() . '.' . $image->getClientOriginalExtension();
-                    $imagePath = $image->storeAs('otherCertificate', $imageName, 'public');
-                }
-
-                // Update the existing record with the new file path
-                $checkingCertificateFile->update([
-                    'certificate_media' => $imagePath ?? $oldFilePath, // Keep old path if no new file is uploaded
-                ]);
-            } else {
-                if ($request->hasFile('certificate_media')) {
-                    $image = $request->file('certificate_media');
-                    $imageName = time() . '.' . $image->getClientOriginalExtension();
-                    $imagePath = $image->storeAs('otherCertificate', $imageName, 'public'); // Store in 'storage/app/public/images'
-                }
-
-                stp_other_certificate::create([
-                    'certificate_name' => 'studentIc',
-                    'certificate_media' => $imagePath ?? '',
-                    'certificate_status' => 1,
-                    'student_id' => $authUser->id,
-                    'created_by' => $authUser->id,
-                    'created_at' => now()
-                ]);
-            }
-
-
 
             $this->serviceFunctionController->notifyAdminCustomSchoolApplication($request->course_id, $authUser);
 
