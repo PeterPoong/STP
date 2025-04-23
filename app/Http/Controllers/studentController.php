@@ -57,6 +57,23 @@ class studentController extends Controller
     {
         $this->serviceFunctionController = $serviceFunctionController;
     }
+
+    public function checkAppVersion()
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => ["app version" => "1.0.1"]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     public function checkTermsAgreement()
     {
         try {

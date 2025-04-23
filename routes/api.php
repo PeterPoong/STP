@@ -31,6 +31,7 @@ Route::get('/countryCode', [countryController::class, 'countryCode']);
 
 
 Route::prefix('student')->group(function () {
+    Route::get('/checkAppVersion', [studentController::class, 'checkAppVersion']);
     Route::post('/hpFeaturedSchoolList', [studentController::class, 'hpFeaturedSchoolList']);
     Route::post('/hpFeaturedCoursesList', [studentController::class, 'hpFeaturedCoursesList']);
     Route::post('/schoolList', [studentController::class, 'schoolList']);
