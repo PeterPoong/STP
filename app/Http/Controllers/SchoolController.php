@@ -1045,7 +1045,7 @@ class SchoolController extends Controller
             $request->validate([
                 'id' => 'required|integer',
                 'type' => 'required|string|max:255',
-                'feedback' => 'string'
+                'feedback' => 'string|max:255'
             ]);
             $authUser = Auth::user();
 
@@ -3453,17 +3453,21 @@ class SchoolController extends Controller
 
             $authUser = Auth::user();
 
+            // return stp_totalNumberVisit::where('school_id', $authUser->id)->get();
             // Capitalize the month to match the expected format (e.g., February instead of february)
             $monthFormatted = ucfirst(strtolower($request->month)); // Capitalize the first letter
 
             // Get start and end date of the requested month
-            $monthStart = Carbon::createFromFormat('F', $monthFormatted)->startOfMonth();
-            $monthEnd = Carbon::createFromFormat('F', $monthFormatted)->endOfMonth();
+            $monthStart = Carbon::createFromFormat('F Y', $monthFormatted . ' ' . $request->year)->startOfMonth();
+            $monthEnd = Carbon::createFromFormat('F Y', $monthFormatted . ' ' . $request->year)->endOfMonth();
+
 
             // Get all records for the requested year and month
-            $numberVisits = stp_totalNumberVisit::whereBetween('created_at', [$monthStart, $monthEnd])
-                ->where('school_id', $authUser->id)
+            $numberVisits = stp_totalNumberVisit::where('school_id', $authUser->id)
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->whereYear('created_at', $request->year) // Add year condition
                 ->get(['created_at', 'totalNumberVisit']); // Select only the relevant fields
+
 
             // Group by day and sum the visits for each day
             $formattedData = $numberVisits->groupBy(function ($visit) {
@@ -3475,14 +3479,24 @@ class SchoolController extends Controller
                 ];
             });
 
+
+
             // Check if the requested month is the current month
             $isCurrentMonth = Carbon::now()->format('F') === $monthFormatted;
+            $isCurrentYear = Carbon::now()->year === (int)$request->year;
+
 
             // Get total number of days in the requested month
-            $totalDaysInMonth = Carbon::createFromFormat('F', $monthFormatted)->daysInMonth;
-
-            // If it's the current month, limit the days to today
-            $daysInMonth = $isCurrentMonth ? range(1, Carbon::now()->format('d')) : range(1, $totalDaysInMonth);
+            // $totalDaysInMonth = Carbon::createFromFormat('F', $monthFormatted)->daysInMonth;
+            $totalDaysInMonth = Carbon::createFromFormat('F Y', $monthFormatted . ' ' . $request->year)->daysInMonth;
+            // Determine the days in the month based on whether the year is the current year and month
+            if ($isCurrentYear && $isCurrentMonth) {
+                // If it's the current year and the current month, limit the days to today
+                $daysInMonth = range(1, Carbon::now()->format('d'));
+            } else {
+                // If it's a past month or future month, use the full number of days in the month
+                $daysInMonth = range(1, $totalDaysInMonth);
+            }
 
             $completeData = [];
 
@@ -3542,6 +3556,10 @@ class SchoolController extends Controller
                     'totalNumberVisit' => $group->sum('totalNumberVisit') // Sum visits for that month
                 ];
             });
+
+
+
+
 
             // Sort the months based on their numerical values (1 for January, 12 for December)
             $sortedData = $formattedData->sortBy(function ($item) {
