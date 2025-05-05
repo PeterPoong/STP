@@ -2412,12 +2412,22 @@ class SchoolController extends Controller
             $request->validate([
                 'studentId' => 'required|integer'
             ]);
+
             $studentDetail = stp_student::find($request->studentId);
 
             $detail = stp_student_detail::where('student_id', $request->studentId)->first();
+            $getFrontIc = stp_student_media::where('student_id', $request->studentId)->where('studentMedia_type', 89)->get()->first();
+            $getBackIc = stp_student_media::where('student_id', $request->studentId)->where('studentMedia_type', 90)->get()->first();
+            $getPassport = stp_student_media::where('student_id', $request->studentId)->where('studentMedia_type', 91)->get()->first();
+
             $studentDetail["first_name"] = $detail->student_detailFirstName;
             $studentDetail["last_name"] = $detail->student_detailLastName;
             $studentDetail["address"] = $detail->student_detailAddress;
+            $studentDetail["frontIc"] = $getFrontIc;
+            $studentDetail["backIC"] = $getBackIc;
+            $studentDetail["passport"] = $getPassport;
+
+
 
             return response()->json([
                 'success' => true,
