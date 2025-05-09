@@ -179,7 +179,7 @@ class studentController extends Controller
             ]);
 
             $filterConditions = function ($query) use ($request) {
-                $query->where('school_status', '!=', 0)
+                $query->whereNotIn('school_status', [0, 4])
                     ->when($request->filled('qualification_id'), function ($q) use ($request) {
                         $q->whereHas('courses', function ($query) use ($request) {
                             $query->where('qualification_id', $request->qualification_id);
