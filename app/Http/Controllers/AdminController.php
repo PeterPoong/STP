@@ -2679,7 +2679,7 @@ class AdminController extends Controller
                         "course_name" => $applicant->course->course_name ?? 'N/A',
                         "institution_id" => $applicant->course->school->id ?? 'N/A',
                         "institution" => $applicant->course->school->school_name ?? 'N/A',
-                        "form_status" => match ($applicant->form_status) {
+                        "form_status" => match((int)$applicant->form_status) {
                             0 => "Disable",
                             1 => "Active",
                             2 => "Pending",
@@ -2687,7 +2687,7 @@ class AdminController extends Controller
                             4 => "Accepted",
                             default => null,
                         },
-                        "username"=> $applicant->student->student_userName ?? 'N/A',
+                        "username" => $applicant->student->student_userName ?? 'N/A',
                         "student_name" => $studentDetail
                                 ? "{$studentDetail->student_detailFirstName} {$studentDetail->student_detailLastName}"
                                 : ($student?->student_userName ?? 'N/A'),
@@ -2698,11 +2698,19 @@ class AdminController extends Controller
                     ];
                 });
     
-            // Return the paginated response
-            return response()->json($applicantInfo);
+            // Return the paginated response with success flag
+            return response()->json([
+                'success' => true,
+                'data' => $applicantInfo,
+                'message' => 'Applicant details retrieved successfully'
+            ]);
     
         } catch (\Exception $e) {
-            // Handle exceptions and return error response
+            \Log::error('Error in applicantDetailInfo: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
