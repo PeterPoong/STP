@@ -754,9 +754,15 @@ class SchoolController extends Controller
                         return $cocurriculum->cocurriculums_status == 1;
                     })->pluck('student_position');
 
+                    if ($applicant->student->detail->student_detailFirstName != null && $applicant->student->detail->student_detailLastName != null) {
+                        $studentName = $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName;
+                    } else {
+                        $studentName = null;
+                    }
                     return [
                         "id" => $applicant->id ?? 'N/A',
-                        "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName,
+                        "student_name" => $studentName,
+                        // "student_name" => $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName ?? null,
                         "profile_pic" => $applicant->student->student_profilePic,
                         "email" => $applicant->student->student_email,
                         "user_name" => $applicant->student->student_userName ?? null,
