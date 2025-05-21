@@ -31,6 +31,7 @@ use App\Models\stp_courseInterest;
 use App\Models\stp_subject;
 use App\Models\stp_tag;
 use App\Models\stp_personalityQuestions;
+use App\Models\stp_totalNumberVisit;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -38,6 +39,7 @@ use Intervention\Image\Facades\Image as Image;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
+
 
 
 
@@ -224,10 +226,10 @@ class AdminController extends Controller
             $query = stp_student::when($request->filled('search'), function ($query) use ($request) {
                 $query->where('student_userName', 'like', '%' . $request->search . '%');
             })
-            ->when($request->filled('stat'), function ($query) use ($request) {
-                // Add status filter
-                $query->where('student_status', $request->stat);
-            });
+                ->when($request->filled('stat'), function ($query) use ($request) {
+                    // Add status filter
+                    $query->where('student_status', $request->stat);
+                });
 
             $totalCount = $query->count();
             $studentList = $query->orderBy('created_at', 'desc')
@@ -253,7 +255,7 @@ class AdminController extends Controller
                     return [
                         'id' => $student->id,
                         'name' => $student->student_userName,
-                        'fullname'=> $student->detail->student_detailFirstName ." ".$student->detail->student_detailLastName,
+                        'fullname' => $student->detail->student_detailFirstName . " " . $student->detail->student_detailLastName,
                         'email' => $student->student_email,
                         'contact_number' => $student->student_countryCode . $student->student_contactNo,
                         'created_at' => Carbon::parse($student->created_at)->format('d-m-Y H:i'),
@@ -1246,7 +1248,7 @@ class AdminController extends Controller
     public function addCourse(Request $request)
     {
         try {
-            
+
             $request->validate([
                 'name' => 'required|string|max:255',
                 'schoolID' => 'required|integer',
@@ -1282,7 +1284,7 @@ class AdminController extends Controller
                 'course_description' => $request->description ?? null,
                 'course_requirement' => $request->requirement ?? null,
                 'course_cost' => $request->cost,
-                'international_cost'=> $request->international_cost ?? null,
+                'international_cost' => $request->international_cost ?? null,
                 'course_period' => $request->period,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
@@ -1503,7 +1505,7 @@ class AdminController extends Controller
                 'description' => $courseList->course_description,
                 'requirement' => $courseList->course_requirement,
                 'cost' => $courseList->course_cost,
-                'international_cost'=> $courseList->international_cost,
+                'international_cost' => $courseList->international_cost,
                 'period' => $courseList->course_period,
                 'intake' => $intakeList, // Updated to include filtered intakes
                 'courseFeatured' => $featuredList, // Updated to include filtered featured items
@@ -1609,7 +1611,7 @@ class AdminController extends Controller
                 'course_description' => $request->description ?? null,
                 'course_requirement' => $request->requirement,
                 'course_cost' => $request->cost,
-                'international_cost'=> $request->international_cost ?? null,
+                'international_cost' => $request->international_cost ?? null,
                 'course_period' => $request->period,
                 'category_id' => $request->category,
                 'qualification_id' => $request->qualification,
@@ -2620,7 +2622,7 @@ class AdminController extends Controller
         try {
             // Get the authenticated user
             $authUser = Auth::user();
-    
+
             // Validate the request inputs
             $request->validate([
                 'form_status' => 'integer|nullable',
@@ -2630,31 +2632,31 @@ class AdminController extends Controller
                 'search' => 'string|nullable',
                 'school_id' => 'integer|nullable',  // Add validation for school_id
             ]);
-    
+
             // Get the per_page value, default to 10 if not provided
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_submited_form::count() : (int)$request->per_page)
                 : 10;
-    
+
             // Fetch the applicant information with relationships
             $query = stp_submited_form::with(['student.detail', 'course.school']);
-    
+
             // Apply the form_status filter if provided
             if ($request->filled('stat')) {
                 $query->where('form_status', $request->stat);
             }
-    
+
             // Apply school_id filter if provided
             if ($request->filled('school_id')) {
-                $query->whereHas('course.school', function($q) use ($request) {
+                $query->whereHas('course.school', function ($q) use ($request) {
                     $q->where('id', $request->school_id);
                 });
             }
-    
+
             if ($request->filled('qualification_id')) {
                 $query->where('qualification_id', $request->qualification_id);
             }
-    
+
             if ($request->filled('search')) {
                 $searchTerm = $request->search;
                 $query->whereHas('student', function ($studentQuery) use ($searchTerm) {
@@ -2662,18 +2664,18 @@ class AdminController extends Controller
                         ->orWhere('student_email', 'like', "%$searchTerm%");
                 });
             }
-    
+
             // Sort by latest date first
             $query->orderBy('created_at', 'desc');
-            
+
             // ... rest of your existing code ...
-    
+
             // Fetch the filtered applicants with pagination
             $applicantInfo = $query->paginate($perPage)
                 ->through(function ($applicant) {
                     $student = $applicant->student;
                     $studentDetail = $student?->detail;
-    
+
                     return [
                         "id" => $applicant->id ?? 'N/A',
                         "course_name" => $applicant->course->course_name ?? 'N/A',
@@ -2687,20 +2689,19 @@ class AdminController extends Controller
                             4 => "Accepted",
                             default => null,
                         },
-                        "username"=> $applicant->student->student_userName ?? 'N/A',
+                        "username" => $applicant->student->student_userName ?? 'N/A',
                         "student_name" => $studentDetail
-                                ? "{$studentDetail->student_detailFirstName} {$studentDetail->student_detailLastName}"
-                                : ($student?->student_userName ?? 'N/A'),
+                            ? "{$studentDetail->student_detailFirstName} {$studentDetail->student_detailLastName}"
+                            : ($student?->student_userName ?? 'N/A'),
                         "country_code" => $student?->student_countryCode ?? '',
                         "contact_number" => $student?->student_contactNo ?? '',
                         "student_id" => $student->id ?? 'No student ID return',
                         "created_date" => $applicant->created_at->format("d/M/y"),
                     ];
                 });
-    
+
             // Return the paginated response
             return response()->json($applicantInfo);
-    
         } catch (\Exception $e) {
             // Handle exceptions and return error response
             return response()->json([
@@ -2710,8 +2711,8 @@ class AdminController extends Controller
             ], 500);
         }
     }
-    
-        public function applicantDetail(Request $request)
+
+    public function applicantDetail(Request $request)
     {
         try {
             $request->validate([
@@ -2730,7 +2731,7 @@ class AdminController extends Controller
                 return [
                     'id' => $cgpaFoundation->id,
                     'category' => $cgpaFoundation->transcript_category,
-                    'cgpa'=> $cgpaFoundation->cgpa
+                    'cgpa' => $cgpaFoundation->cgpa
                 ];
             })->values();
             $filteredStudentCgpaDiploma = $applicant->student->cgpa->filter(function ($cgpaDiploma) {
@@ -2739,7 +2740,7 @@ class AdminController extends Controller
                 return [
                     'id' => $cgpaDiploma->id,
                     'category' => $cgpaDiploma->transcript_category,
-                    'cgpa'=> $cgpaDiploma->cgpa
+                    'cgpa' => $cgpaDiploma->cgpa
                 ];
             })->values();
             $filteredStudentCgpaStpm = $applicant->student->cgpa->filter(function ($cgpaStpm) {
@@ -2747,8 +2748,8 @@ class AdminController extends Controller
             })->map(function ($cgpaStpm) {
                 return [
                     'id' => $cgpaStpm->id,
-                    'category' =>$cgpaStpm->transcript_category,
-                    'cgpa'=>$cgpaStpm->cgpa
+                    'category' => $cgpaStpm->transcript_category,
+                    'cgpa' => $cgpaStpm->cgpa
                 ];
             })->values();
             $filteredStudentCgpaALevel = $applicant->student->cgpa->filter(function ($cgpaAlevel) {
@@ -2756,8 +2757,8 @@ class AdminController extends Controller
             })->map(function ($cgpaAlevel) {
                 return [
                     'id' => $cgpaAlevel->id,
-                    'category' =>$cgpaAlevel->transcript_category,
-                    'cgpa'=>$cgpaAlevel->cgpa
+                    'category' => $cgpaAlevel->transcript_category,
+                    'cgpa' => $cgpaAlevel->cgpa
                 ];
             })->values();
             $filteredStudentCgpaOLevel = $applicant->student->cgpa->filter(function ($cgpaOlevel) {
@@ -2766,81 +2767,81 @@ class AdminController extends Controller
                 return [
                     'id' => $cgpaOlevel->id,
                     'category' => $cgpaOlevel->transcript_category,
-                    'cgpa'=> $cgpaOlevel->cgpa
+                    'cgpa' => $cgpaOlevel->cgpa
                 ];
             })->values();
             $filteredStudentMediaSpm = $applicant->student->studentMedia
-            ->where('studentMedia_type', 32) // Filter for studentMedia_type 33
-            ->map(function ($mediaSpm) {
-                return [
-                    'id' => $mediaSpm->id,
-                    'studentMedia_location' => $mediaSpm->studentMedia_location,
-                    'studentMedia_type' => $mediaSpm->studentMedia_type,
-                ];
-            })->values();
+                ->where('studentMedia_type', 32) // Filter for studentMedia_type 33
+                ->map(function ($mediaSpm) {
+                    return [
+                        'id' => $mediaSpm->id,
+                        'studentMedia_location' => $mediaSpm->studentMedia_location,
+                        'studentMedia_type' => $mediaSpm->studentMedia_type,
+                    ];
+                })->values();
             $filteredStudentMediaSpmTrial = $applicant->student->studentMedia
-            ->where('studentMedia_type', 85) // Filter for studentMedia_type 33
-            ->map(function ($mediaSpmTrial) {
-                return [
-                    'id' => $mediaSpmTrial->id,
-                    'studentMedia_location' => $mediaSpmTrial->studentMedia_location,
-                    'studentMedia_type' => $mediaSpmTrial->studentMedia_type,
-                ];
-            })->values();
+                ->where('studentMedia_type', 85) // Filter for studentMedia_type 33
+                ->map(function ($mediaSpmTrial) {
+                    return [
+                        'id' => $mediaSpmTrial->id,
+                        'studentMedia_location' => $mediaSpmTrial->studentMedia_location,
+                        'studentMedia_type' => $mediaSpmTrial->studentMedia_type,
+                    ];
+                })->values();
             $filteredStudentMediaStpm = $applicant->student->studentMedia
-            ->where('studentMedia_type', 33) // Filter for studentMedia_type 33
-            ->map(function ($mediaStpm) {
-                return [
-                    'id' => $mediaStpm->id,
-                    'studentMedia_location' => $mediaStpm->studentMedia_location,
-                    'studentMedia_type' => $mediaStpm->studentMedia_type,
-                ];
-            })->values();
+                ->where('studentMedia_type', 33) // Filter for studentMedia_type 33
+                ->map(function ($mediaStpm) {
+                    return [
+                        'id' => $mediaStpm->id,
+                        'studentMedia_location' => $mediaStpm->studentMedia_location,
+                        'studentMedia_type' => $mediaStpm->studentMedia_type,
+                    ];
+                })->values();
             $filteredStudentMediaALevel = $applicant->student->studentMedia
-            ->where('studentMedia_type', 34) 
-            ->map(function ($mediaALevel) {
-                return [
-                    'id' => $mediaALevel->id,
-                    'studentMedia_location' => $mediaALevel->studentMedia_location,
-                    'studentMedia_type' => $mediaALevel->studentMedia_type,
-                ];
-            })->values();
+                ->where('studentMedia_type', 34)
+                ->map(function ($mediaALevel) {
+                    return [
+                        'id' => $mediaALevel->id,
+                        'studentMedia_location' => $mediaALevel->studentMedia_location,
+                        'studentMedia_type' => $mediaALevel->studentMedia_type,
+                    ];
+                })->values();
             $filteredStudentMediaOLevel = $applicant->student->studentMedia
-            ->where('studentMedia_type', 35) 
-            ->map(function ($mediaOLevel) {
-                return [
-                    'id' => $mediaOLevel->id,
-                    'studentMedia_location' => $mediaOLevel->studentMedia_location,
-                    'studentMedia_type' => $mediaOLevel->studentMedia_type,
-                ];
-            })->values();
+                ->where('studentMedia_type', 35)
+                ->map(function ($mediaOLevel) {
+                    return [
+                        'id' => $mediaOLevel->id,
+                        'studentMedia_location' => $mediaOLevel->studentMedia_location,
+                        'studentMedia_type' => $mediaOLevel->studentMedia_type,
+                    ];
+                })->values();
             $filteredStudentMediaDiploma = $applicant->student->studentMedia
-            ->where('studentMedia_type', 36) 
-            ->map(function ($mediaDiploma) {
-                return [
-                    'id' => $mediaDiploma->id,
-                    'studentMedia_location' => $mediaDiploma->studentMedia_location,
-                    'studentMedia_type' => $mediaDiploma->studentMedia_type,
-                ];
-            })->values();
+                ->where('studentMedia_type', 36)
+                ->map(function ($mediaDiploma) {
+                    return [
+                        'id' => $mediaDiploma->id,
+                        'studentMedia_location' => $mediaDiploma->studentMedia_location,
+                        'studentMedia_type' => $mediaDiploma->studentMedia_type,
+                    ];
+                })->values();
             $filteredStudentMediaFoundation = $applicant->student->studentMedia
-            ->where('studentMedia_type', 37) 
-            ->map(function ($mediaFoundation) {
-                return [
-                    'id' => $mediaFoundation->id,
-                    'studentMedia_location' => $mediaFoundation->studentMedia_location,
-                    'studentMedia_type' => $mediaFoundation->studentMedia_type,
-                ];
-            })->values();
+                ->where('studentMedia_type', 37)
+                ->map(function ($mediaFoundation) {
+                    return [
+                        'id' => $mediaFoundation->id,
+                        'studentMedia_location' => $mediaFoundation->studentMedia_location,
+                        'studentMedia_type' => $mediaFoundation->studentMedia_type,
+                    ];
+                })->values();
             $filteredFoundation = $applicant->student->higherTranscript->filter(function ($foundation) {
                 return $foundation->category->id == 37; // Filter for category 37
             })->map(function ($foundation) {
                 return [
                     'id' => $foundation->id,
-                    'highTranscript'=> $foundation->category->core_metaName,
+                    'highTranscript' => $foundation->category->core_metaName,
                     'highTranscript_name' => $foundation->highTranscript_name,
                     'higherTranscript_grade' => $foundation->higherTranscript_grade,
-                    'category'=> $foundation->category->id
+                    'category' => $foundation->category->id
                 ];
             })->values();
             $filteredStpm = $applicant->student->higherTranscript->filter(function ($stpm) {
@@ -2848,10 +2849,10 @@ class AdminController extends Controller
             })->map(function ($stpm) {
                 return [
                     'id' => $stpm->id,
-                    'highTranscript'=> $stpm->category->core_metaName,
+                    'highTranscript' => $stpm->category->core_metaName,
                     'highTranscript_name' => $stpm->highTranscript_name,
                     'higherTranscript_grade' => $stpm->higherTranscript_grade,
-                    'category'=> $stpm->category->id
+                    'category' => $stpm->category->id
                 ];
             })->values();
             $filteredALevel = $applicant->student->higherTranscript->filter(function ($alevel) {
@@ -2859,35 +2860,35 @@ class AdminController extends Controller
             })->map(function ($alevel) {
                 return [
                     'id' => $alevel->id,
-                    'highTranscript'=> $alevel->category->core_metaName,
-                    'highTranscript_name' =>$alevel->highTranscript_name,
+                    'highTranscript' => $alevel->category->core_metaName,
+                    'highTranscript_name' => $alevel->highTranscript_name,
                     'higherTranscript_grade' => $alevel->higherTranscript_grade,
-                    'category'=> $alevel->category->id
+                    'category' => $alevel->category->id
                 ];
             })->values();
             $filteredOLevel = $applicant->student->higherTranscript->filter(function ($olevel) {
-                return $olevel->category->id == 35; 
+                return $olevel->category->id == 35;
             })->map(function ($olevel) {
                 return [
                     'id' => $olevel->id,
-                    'highTranscript'=> $olevel->category->core_metaName,
-                    'highTranscript_name' =>$olevel->highTranscript_name,
+                    'highTranscript' => $olevel->category->core_metaName,
+                    'highTranscript_name' => $olevel->highTranscript_name,
                     'higherTranscript_grade' => $olevel->higherTranscript_grade,
-                    'category'=> $olevel->category->id
+                    'category' => $olevel->category->id
                 ];
             })->values();
             $filteredDiploma = $applicant->student->higherTranscript->filter(function ($diploma) {
-                return $diploma->category->id == 36; 
+                return $diploma->category->id == 36;
             })->map(function ($diploma) {
                 return [
                     'id' => $diploma->id,
-                    'highTranscript'=> $diploma->category->core_metaName,
-                    'highTranscript_name' =>$diploma->highTranscript_name,
+                    'highTranscript' => $diploma->category->core_metaName,
+                    'highTranscript_name' => $diploma->highTranscript_name,
                     'higherTranscript_grade' => $diploma->higherTranscript_grade,
-                    'category'=> $diploma->category->id
+                    'category' => $diploma->category->id
                 ];
             })->values();
-             // Group higherTranscript by category_id
+            // Group higherTranscript by category_id
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -2897,8 +2898,8 @@ class AdminController extends Controller
                     'email' => $applicant->student->student_email ?? 'N/A',
                     "institution" => $applicant->course->school->school_name,
                     "schoolID" => $applicant->course->school_id,
-                    'name' => $applicant->student && $applicant->student->detail 
-                        ? $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName 
+                    'name' => $applicant->student && $applicant->student->detail
+                        ? $applicant->student->detail->student_detailFirstName . ' ' . $applicant->student->detail->student_detailLastName
                         : 'N/A',
                     "country_code" => $applicant->student->student_countryCode ?? 'N/A',
                     "contact_number" => $applicant->student->student_contactNo ?? 'N/A',
@@ -2907,8 +2908,8 @@ class AdminController extends Controller
                     'feedback' => $applicant->form_feedback,
                     'applied' => $applicant->created_at,
                     'status' => $applicant->form_status,
-                    'address'=> $applicant->student->detail->student_detailAddress ?? '',
-                    'ic'=> $applicant->student->student_icNumber ??'',
+                    'address' => $applicant->student->detail->student_detailAddress ?? '',
+                    'ic' => $applicant->student->student_icNumber ?? '',
                     'achievement' => $applicant->student->award->map(function ($achievement) {
                         return [
                             'achievement_name' => $achievement->achievement_name,
@@ -2932,46 +2933,46 @@ class AdminController extends Controller
                         ];
                     }),
                     'cgpaFoundation' => $filteredStudentCgpaFoundation ?? '',
-                    'cgpaDiploma'=> $filteredStudentCgpaDiploma ??'',
-                    'cgpaOlevel'=> $filteredStudentCgpaOLevel ??'',
-                    'cgpaAlevel'=> $filteredStudentCgpaALevel ??'',
-                    'cgpaStpm'=> $filteredStudentCgpaStpm ??'',
-                    'media_spm'=> $filteredStudentMediaSpm ?? '',
-                    'media_spm_trial'=> $filteredStudentMediaSpmTrial ?? '',
-                    'media_stpm'=> $filteredStudentMediaStpm ?? '',
-                    'media_alevel'=>$filteredStudentMediaALevel ?? '',
-                    'media_olevel'=>$filteredStudentMediaOLevel ??'',
-                    'media_diploma'=>  $filteredStudentMediaDiploma ?? '',
-                    'media_foundation'=> $filteredStudentMediaFoundation ?? '',
-                    'spm' => $applicant->student->transcript->filter(function($transcript) {
+                    'cgpaDiploma' => $filteredStudentCgpaDiploma ?? '',
+                    'cgpaOlevel' => $filteredStudentCgpaOLevel ?? '',
+                    'cgpaAlevel' => $filteredStudentCgpaALevel ?? '',
+                    'cgpaStpm' => $filteredStudentCgpaStpm ?? '',
+                    'media_spm' => $filteredStudentMediaSpm ?? '',
+                    'media_spm_trial' => $filteredStudentMediaSpmTrial ?? '',
+                    'media_stpm' => $filteredStudentMediaStpm ?? '',
+                    'media_alevel' => $filteredStudentMediaALevel ?? '',
+                    'media_olevel' => $filteredStudentMediaOLevel ?? '',
+                    'media_diploma' =>  $filteredStudentMediaDiploma ?? '',
+                    'media_foundation' => $filteredStudentMediaFoundation ?? '',
+                    'spm' => $applicant->student->transcript->filter(function ($transcript) {
                         return $transcript->category->id == 32; // Filter for category 32
-                    })->map(function($transcript) {
+                    })->map(function ($transcript) {
                         return [
                             'id' => $transcript->id,
-                            'category'=> $transcript->category->id,
+                            'category' => $transcript->category->id,
                             'subject_id' => $transcript->subject_id,
-                            'subject_name'=> $transcript->subject->subject_name,
-                            'transcript_grade' => $transcript->grade->core_metaName ??'',
+                            'subject_name' => $transcript->subject->subject_name,
+                            'transcript_grade' => $transcript->grade->core_metaName ?? '',
                         ];
                     }),
-                    'spm_trial' => $applicant->student->transcript->filter(function($transcriptTrial) {
+                    'spm_trial' => $applicant->student->transcript->filter(function ($transcriptTrial) {
                         return $transcriptTrial->category->id == 85; // Filter for category 85
-                    })->map(function($transcriptTrial) {
+                    })->map(function ($transcriptTrial) {
                         return [
                             'id' => $transcriptTrial->id,
-                            'category'=> $transcriptTrial->category->id,
+                            'category' => $transcriptTrial->category->id,
                             'subject_id' => $transcriptTrial->subject_id,
-                            'subject_name'=> $transcriptTrial->subject->subject_name,
+                            'subject_name' => $transcriptTrial->subject->subject_name,
                             'transcript_grade' => $transcriptTrial->grade->core_metaName ?? '',
                         ];
                     })->values(), // Add this line to reset the keys
-                    'foundation' => $filteredFoundation ?? '',// Updated to return grouped higherTranscript
-                    'stpm'=>$filteredStpm ?? '',
-                    'alevel'=>$filteredALevel ?? '',
-                    'olevel'=>$filteredOLevel ?? '',
-                    'diploma'=>$filteredDiploma ?? '',
-                    
-                    ]
+                    'foundation' => $filteredFoundation ?? '', // Updated to return grouped higherTranscript
+                    'stpm' => $filteredStpm ?? '',
+                    'alevel' => $filteredALevel ?? '',
+                    'olevel' => $filteredOLevel ?? '',
+                    'diploma' => $filteredDiploma ?? '',
+
+                ]
 
             ]);
         } catch (\Exception $e) {
@@ -3003,7 +3004,7 @@ class AdminController extends Controller
                     'transcripts' => $items->map(function ($item) {
                         return [
                             'id' => $item->id,
-                            'highTranscript'=> $item->category->core_metaName,
+                            'highTranscript' => $item->category->core_metaName,
                             'highTranscript_name' => $item->highTranscript_name,
                             'higherTranscript_grade' => $item->higherTranscript_grade,
                         ];
@@ -3082,7 +3083,7 @@ class AdminController extends Controller
                 return $items->map(function ($item) {
                     return [
                         'id' => $item->id,
-                        'highTranscript'=> $item->category->core_metaName,
+                        'highTranscript' => $item->category->core_metaName,
                         'highTranscript_name' => $item->subject->subject_name,
                         'higherTranscript_grade' => $item->grade->core_metaName,
                     ];
@@ -3360,7 +3361,7 @@ class AdminController extends Controller
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_package::count() : (int)$request->per_page)
                 : 10;
-        
+
             // Check if the 'id' parameter is provided to get a specific package
             if ($request->filled('id')) {
                 $package = stp_package::find($request->id);
@@ -3773,7 +3774,7 @@ class AdminController extends Controller
                         "ic_number" => $admin->ic_number,
                         "contact_no" => $admin->contact_no,
                         "status" => "Active",
-                        "user_role"=> $admin->user_role
+                        "user_role" => $admin->user_role
                     ];
                 });
 
@@ -5098,90 +5099,90 @@ class AdminController extends Controller
         }
     }
 
-    public function featuredRequestList(Request $request) 
-{
-    try {
-        // Validate request input
-        $validatedData = $request->validate([
-            'search' => "nullable|string",
-            'featured_type' => "nullable|integer",
-            "status" => "nullable|integer",
-            "request_type" => "nullable|integer",
-            "per_page" => "nullable|string"
-        ]);
+    public function featuredRequestList(Request $request)
+    {
+        try {
+            // Validate request input
+            $validatedData = $request->validate([
+                'search' => "nullable|string",
+                'featured_type' => "nullable|integer",
+                "status" => "nullable|integer",
+                "request_type" => "nullable|integer",
+                "per_page" => "nullable|string"
+            ]);
 
-        // Determine pagination
-        $perPage = $request->filled('per_page') && $request->per_page !== ""
-            ? ($request->per_page === 'All' ? null : (int) $request->per_page)
-            : 10;
+            // Determine pagination
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? null : (int) $request->per_page)
+                : 10;
 
-        // Query with filters and ordering
-        $query = stp_featured_request::with(['school', 'featured'])
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('request_name', 'like', '%' . $request->search . '%')
-                    ->orWhereHas('school', function ($q) use ($request) {
-                        $q->where('school_name', 'like', '%' . $request->search . '%');
-                    });
-            })
-            ->when($request->filled('featured_type'), function ($query) use ($request) {
-                $query->where('featured_type', $request->featured_type);
-            })
-            ->when($request->filled('status'), function ($query) use ($request) {
-                $query->where('request_status', $request->status);
-            })
-            ->when($request->filled('request_type'), function ($query) use ($request) {
-                $query->where('request_type', $request->request_type);
-            })
-            ->latest(); // Order by created_at in descending order
+            // Query with filters and ordering
+            $query = stp_featured_request::with(['school', 'featured'])
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $query->where('request_name', 'like', '%' . $request->search . '%')
+                        ->orWhereHas('school', function ($q) use ($request) {
+                            $q->where('school_name', 'like', '%' . $request->search . '%');
+                        });
+                })
+                ->when($request->filled('featured_type'), function ($query) use ($request) {
+                    $query->where('featured_type', $request->featured_type);
+                })
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->where('request_status', $request->status);
+                })
+                ->when($request->filled('request_type'), function ($query) use ($request) {
+                    $query->where('request_type', $request->request_type);
+                })
+                ->latest(); // Order by created_at in descending order
 
-        // Fetch results
-        $featuredList = $perPage ? $query->paginate($perPage) : $query->get();
+            // Fetch results
+            $featuredList = $perPage ? $query->paginate($perPage) : $query->get();
 
-        // Transform data
-        $formattedData = $featuredList->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'school' => [
-                    'school_id' => $item->school->id ?? null,
-                    'school_name' => $item->school->school_name ?? null
-                ],
-                'request_name' => $item->request_name,
-                'featured_type' => [
-                    'featured_id' => $item->featured->id ?? null,
-                    'featured_type' => $item->featured->core_metaName ?? null
-                ],
-                'total_quantity' => $item->request_quantity,
-                'duration' => $item->request_featured_duration,
-                'transaction_proof' => $item->request_transaction_prove,
-                'request_status' => $item->request_status,
-                'request_date'=> $item->created_at->format("d/M/y"),
-            ];
-        });
+            // Transform data
+            $formattedData = $featuredList->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'school' => [
+                        'school_id' => $item->school->id ?? null,
+                        'school_name' => $item->school->school_name ?? null
+                    ],
+                    'request_name' => $item->request_name,
+                    'featured_type' => [
+                        'featured_id' => $item->featured->id ?? null,
+                        'featured_type' => $item->featured->core_metaName ?? null
+                    ],
+                    'total_quantity' => $item->request_quantity,
+                    'duration' => $item->request_featured_duration,
+                    'transaction_proof' => $item->request_transaction_prove,
+                    'request_status' => $item->request_status,
+                    'request_date' => $item->created_at->format("d/M/y"),
+                ];
+            });
 
-        // Return response
-        return response()->json([
-            'success' => true,
-            'data' => $formattedData,
-            'pagination' => $perPage ? [
-                'current_page' => $featuredList->currentPage(),
-                'last_page' => $featuredList->lastPage(),
-                'per_page' => $featuredList->perPage(),
-                'total' => $featuredList->total(),
-            ] : null
-        ]);
-    } catch (\Exception $e) {
-        Log::error('Error in featuredRequestList: ' . $e->getMessage(), [
-            'request_data' => $request->all()
-        ]);
+            // Return response
+            return response()->json([
+                'success' => true,
+                'data' => $formattedData,
+                'pagination' => $perPage ? [
+                    'current_page' => $featuredList->currentPage(),
+                    'last_page' => $featuredList->lastPage(),
+                    'per_page' => $featuredList->perPage(),
+                    'total' => $featuredList->total(),
+                ] : null
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in featuredRequestList: ' . $e->getMessage(), [
+                'request_data' => $request->all()
+            ]);
 
-        return response()->json([
-            'success' => false,
-            'message' => "Internal Server Error",
-            'error' => $e->getMessage()
-        ], 500);
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
-   
+
 
     public function adminFeaturedCourseAvailable(Request $request)
     {
@@ -5197,7 +5198,7 @@ class AdminController extends Controller
                 ->values()           // Re-index the array (optional)
                 ->toArray();
 
-                $courseAvailable = stp_course::where('school_id', $requestId['school_id'])
+            $courseAvailable = stp_course::where('school_id', $requestId['school_id'])
                 ->where('course_status', 1)  // Add this line to only get active courses
                 ->whereNotIn('id', $coursesRequest)
                 ->get()
@@ -5207,7 +5208,7 @@ class AdminController extends Controller
                         'course_name' => $query->course_name,
                     ];
                 });
-            return response()->json([                                              
+            return response()->json([
                 'success' => true,
                 'data' => $courseAvailable
             ]);
@@ -6168,6 +6169,87 @@ class AdminController extends Controller
                 'success' => false,
                 'message' => 'Internal Server Error',
                 'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function totalNumberVisitSchoolList(Request $request)
+    {
+        try {
+
+            $request->validate([
+                'school_name' => 'nullable|string',
+                'start_date' => 'nullable|date|required_with:end_date',
+                'end_date' => 'nullable|date|required_with:start_date',
+            ]);
+
+            $getNumberOfVisit = stp_school::where('school_status', '!=', 0)
+                ->when($request->school_name, function ($query, $schoolName) {
+                    $query->where('school_name', 'like', '%' . $schoolName . '%');
+                })
+                ->get()
+                ->map(function ($school) use ($request) {
+                    // Filter visits where created_at is today (UTC date)
+                    $startDate = $request->start_date ? Carbon::parse($request->start_date)->startOfDay() : null;
+                    $endDate = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : null;
+
+                    $todayVisits = $school->numberVisit
+                        ->filter(function ($visit) {
+                            return Carbon::parse($visit->created_at)->isToday();
+                        });
+
+                    $monthVisti = $school->numberVisit
+                        ->filter(
+                            fn($visit) =>
+                            Carbon::parse($visit->created_at)->isSameMonth(now())
+                        );
+
+                    $yearVisit = $school->numberVisit
+                        ->filter(
+                            fn($visit) =>
+                            Carbon::parse($visit->created_at)->isSameYear(now())
+                        );
+
+                    $customDateVisit = ($startDate && $endDate)
+                        ? $school->numberVisit->filter(function ($visit) use ($startDate, $endDate) {
+                            $createdAt = Carbon::parse($visit->created_at);
+                            return $createdAt->between($startDate, $endDate);
+                        })
+                        : collect(); // Empty if no date provided
+
+
+
+                    $totalVisits = $school->numberVisit->sum('totalNumberVisit');
+                    // $totalVisits = $school;
+
+
+                    return [
+                        'school_id' => $school->id,
+                        'school_name' => $school->school_name,
+                        'today_visit' => $todayVisits->sum('totalNumberVisit'),
+                        'month_visit' => $monthVisti->sum('totalNumberVisit'),
+                        'total_visit' => $totalVisits,
+                        'year_visit' => $yearVisit->sum('totalNumberVisit'),
+
+                        'FilteredVisit' => $customDateVisit->sum('totalNumberVisit')
+                    ];
+                })
+                ->values();
+
+
+
+            return response()->json([
+                'success' => true,
+                'data' => $getNumberOfVisit
+            ]);
+            // return $getNumberOfVisit;
+
+            // $getNumberOfVisit=stp_totalNumberVisit::whereHas('school',)
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Internal Server Error",
+                'error' => $e->getMessage()
             ]);
         }
     }

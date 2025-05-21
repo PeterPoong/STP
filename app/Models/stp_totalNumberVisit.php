@@ -18,6 +18,6 @@ class stp_totalNumberVisit extends Model
 
     public function school()
     {
-        return $this->hasOne(stp_school::class, 'id', 'school_id');
+        return $this->belongsTo(stp_school::class, 'id', 'school_id');
     }
 }

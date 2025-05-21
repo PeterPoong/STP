@@ -286,6 +286,9 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/questionDetail', [AdminController::class, 'questionDetail']);
     Route::post('/personalityQuestionList', [AdminController::class, 'personalityQuestionList']);
     Route::post('/riasecDetail', [AdminController::class, 'riasecDetail']);
+
+    //number of visit 
+    Route::post('/totalNumberVisitSchoolList', [AdminController::class, 'totalNumberVisitSchoolList']);
 });
 
 Route::prefix('school')->middleware('auth:sanctum')->group(function () {
