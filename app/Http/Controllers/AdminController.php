@@ -6230,8 +6230,8 @@ class AdminController extends Controller
                         'month_visit' => $monthVisti->sum('totalNumberVisit'),
                         'total_visit' => $totalVisits,
                         'year_visit' => $yearVisit->sum('totalNumberVisit'),
+                        'FilteredVisit' => $customDateVisit->sum('totalNumberVisit'),
 
-                        'FilteredVisit' => $customDateVisit->sum('totalNumberVisit')
                     ];
                 })
                 ->values();
