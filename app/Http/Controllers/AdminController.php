@@ -6176,20 +6176,25 @@ class AdminController extends Controller
     public function totalNumberVisitSchoolList(Request $request)
     {
         try {
-
             $request->validate([
                 'school_name' => 'nullable|string',
                 'start_date' => 'nullable|date|required_with:end_date',
                 'end_date' => 'nullable|date|required_with:start_date',
+                'per_page' => 'nullable|string'  // Add validation for per_page
             ]);
 
-            $getNumberOfVisit = stp_school::where('school_status', '!=', 0)
+            // Get the per_page value, default to 10 if not provided
+            $perPage = $request->filled('per_page') && $request->per_page !== ""
+                ? ($request->per_page === 'All' ? stp_school::count() : (int)$request->per_page)
+                : 10;
+
+            $query = stp_school::where('school_status', '!=', 0)
                 ->when($request->school_name, function ($query, $schoolName) {
                     $query->where('school_name', 'like', '%' . $schoolName . '%');
-                })
-                ->get()
-                ->map(function ($school) use ($request) {
-                    // Filter visits where created_at is today (UTC date)
+                });
+
+            $getNumberOfVisit = $query->paginate($perPage)
+                ->through(function ($school) use ($request) {
                     $startDate = $request->start_date ? Carbon::parse($request->start_date)->startOfDay() : null;
                     $endDate = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : null;
 
@@ -6215,13 +6220,9 @@ class AdminController extends Controller
                             $createdAt = Carbon::parse($visit->created_at);
                             return $createdAt->between($startDate, $endDate);
                         })
-                        : collect(); // Empty if no date provided
-
-
+                        : collect();
 
                     $totalVisits = $school->numberVisit->sum('totalNumberVisit');
-                    // $totalVisits = $school;
-
 
                     return [
                         'school_id' => $school->id,
@@ -6231,20 +6232,25 @@ class AdminController extends Controller
                         'total_visit' => $totalVisits,
                         'year_visit' => $yearVisit->sum('totalNumberVisit'),
                         'FilteredVisit' => $customDateVisit->sum('totalNumberVisit'),
-
                     ];
-                })
-                ->values();
-
-
+                });
 
             return response()->json([
                 'success' => true,
-                'data' => $getNumberOfVisit
+                'current_page' => $getNumberOfVisit->currentPage(),
+                'data' => $getNumberOfVisit->items(),
+                'first_page_url' => $getNumberOfVisit->url(1),
+                'from' => $getNumberOfVisit->firstItem(),
+                'last_page' => $getNumberOfVisit->lastPage(),
+                'last_page_url' => $getNumberOfVisit->url($getNumberOfVisit->lastPage()),
+                'next_page_url' => $getNumberOfVisit->nextPageUrl(),
+                'path' => $getNumberOfVisit->path(),
+                'per_page' => $getNumberOfVisit->perPage(),
+                'prev_page_url' => $getNumberOfVisit->previousPageUrl(),
+                'to' => $getNumberOfVisit->lastItem(),
+                'total' => $getNumberOfVisit->total()
             ]);
-            // return $getNumberOfVisit;
 
-            // $getNumberOfVisit=stp_totalNumberVisit::whereHas('school',)
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
