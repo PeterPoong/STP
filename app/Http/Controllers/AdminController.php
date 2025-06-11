@@ -6180,10 +6180,9 @@ class AdminController extends Controller
                 'school_name' => 'nullable|string',
                 'start_date' => 'nullable|date|required_with:end_date',
                 'end_date' => 'nullable|date|required_with:start_date',
-                'per_page' => 'nullable|string'  // Add validation for per_page
+                'per_page' => 'nullable|string'
             ]);
 
-            // Get the per_page value, default to 10 if not provided
             $perPage = $request->filled('per_page') && $request->per_page !== ""
                 ? ($request->per_page === 'All' ? stp_school::count() : (int)$request->per_page)
                 : 10;
@@ -6224,6 +6223,13 @@ class AdminController extends Controller
 
                     $totalVisits = $school->numberVisit->sum('totalNumberVisit');
 
+                    $filteredVisitCount = $customDateVisit->sum('totalNumberVisit');
+
+                    // If date range is provided and filtered visit is 0, return null
+                    if ($startDate && $endDate && $filteredVisitCount === 0) {
+                        return null;
+                    }
+
                     return [
                         'school_id' => $school->id,
                         'school_name' => $school->school_name,
@@ -6231,9 +6237,22 @@ class AdminController extends Controller
                         'month_visit' => $monthVisti->sum('totalNumberVisit'),
                         'total_visit' => $totalVisits,
                         'year_visit' => $yearVisit->sum('totalNumberVisit'),
-                        'FilteredVisit' => $customDateVisit->sum('totalNumberVisit'),
+                        'FilteredVisit' => $filteredVisitCount,
                     ];
                 });
+
+            // If date range is provided
+            if ($request->filled('start_date') && $request->filled('end_date')) {
+                // Filter out null values (schools with zero visits) and sort
+                $filteredData = collect($getNumberOfVisit->items())
+                    ->filter()  // Remove null values
+                    ->sortByDesc('FilteredVisit')
+                    ->values()
+                    ->all();
+                
+                // Replace the items with filtered and sorted data
+                $getNumberOfVisit->setCollection(collect($filteredData));
+            }
 
             return response()->json([
                 'success' => true,
