@@ -239,6 +239,7 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/adminList', [AdminController::class, 'adminList']);
     Route::post('/adminListAdmin', [AdminController::class, 'adminListAdmin']);
     Route::post('/editAdmin', [AdminController::class, 'editAdmin']);
+    Route::post('/adminDetail', [AdminController::class, 'adminDetail']);
 
     Route::post('/addBanner', [AdminController::class, 'addBanner']);
     Route::post('/editBanner', [AdminController::class, 'editBanner']);

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique()->nullable();
-            $table->integer('ic_Number')->unique()->nullable();
+            $table->string('ic_Number')->unique()->nullable();
             $table->string('country_code');
             $table->string('contact_no');
             // $table->unsignedBigInteger('user_role')->nullable();

@@ -3646,29 +3646,58 @@ class AdminController extends Controller
                 'country_code' => 'required|string|max:255',
                 'contact_no' => 'required|string|max:255',
                 'password' => 'required|string|max:255',
-                'user_detailPostcode' => 'required|string|max:255',
-                'user_detailCountry' => 'required|string|max:255',
-                'user_detailCity' => 'required|string|max:255',
-                'user_detailState' => 'required|string|max:255',
-                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validation
+                // 'user_detailPostcode' => 'required|string|max:255',
+                // 'user_detailCountry' => 'required|string|max:255',
+                // 'user_detailCity' => 'required|string|max:255',
+                // 'user_detailState' => 'required|string|max:255',
+                // 'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validation
             ]);
 
             $authUser = Auth::user();
-            $checkingName = User::where('id',  $authUser->id)
-                ->where('name', $request->name)
+
+
+            $checkingName = User::where('name', $request->name)
                 ->exists();
 
+            $checkEmail = User::where('email', $request->email)
+                ->exists();
+
+            $checkingUserContact = User::where('country_code', $request->country_code)->where('contact_no', $request->contact_no)
+                ->exists();
+
+            $errorMessage = [];
+
+
+
+            if ($checkEmail) {
+                $errorMessage['email error'] = 'This Email Already Exist.';
+            };
+
+
+
             if ($checkingName) {
-                throw ValidationException::withMessages([
-                    "names" => ['This Name Already Exist.']
-                ]);
+                $errorMessage['name error'] = 'This User name Already Exist.';
             }
+
+            if ($checkingUserContact) {
+                $errorMessage['contact error'] = 'This Contact Number Already Exist.';
+            }
+
+            if (!empty($errorMessage)) {
+                throw ValidationException::withMessages($errorMessage);
+            }
+
+
+
+
 
             if ($request->hasFile('profile_pic')) {
                 $image = $request->file('profile_pic');
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
                 $imagePath = $image->storeAs('profilePic', $imageName, 'public'); // Store in 'storage/app/public/images'
             }
+
+
 
             $user = User::create([
                 'name' => $request->name,
@@ -3679,23 +3708,23 @@ class AdminController extends Controller
                 'password' => $request->password,
                 'profile_pic' => $imagePath ?? '', // Image validation
                 'user_role' => 1,
-                'status' => 3,
+                'status' => 1,
                 'created_by' => $authUser->id,
                 'created_at' => now()
             ]);
 
 
 
-            stp_user_detail::create([
-                'user_detailPostcode' => $request->user_detailPostcode,
-                'user_detailCountry' => $request->user_detailCountry,
-                'user_detailCity' => $request->user_detailCity,
-                'user_detailState' => $request->user_detailState,
-                'user_detailStatus' => 1,
-                'user_id' => $user->id,
-                'created_by' => $authUser->id,
-                'created_at' => now()
-            ]);
+            // stp_user_detail::create([
+            //     'user_detailPostcode' => $request->user_detailPostcode,
+            //     'user_detailCountry' => $request->user_detailCountry,
+            //     'user_detailCity' => $request->user_detailCity,
+            //     'user_detailState' => $request->user_detailState,
+            //     'user_detailStatus' => 1,
+            //     'user_id' => $user->id,
+            //     'created_by' => $authUser->id,
+            //     'created_at' => now()
+            // ]);
 
             return response()->json([
                 'success' => true,
@@ -3715,6 +3744,128 @@ class AdminController extends Controller
             ]);
         }
     }
+    public function editAdmin(Request $request)
+    {
+        try {
+            $authUser = Auth::user();
+            $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string|max:255',
+                'email' => 'string|max:255',
+                'ic_number' => 'nullable|string',
+                'country_code' => 'required|string|max:255',
+                'contact_no' => 'required|string|max:255',
+                'password' => 'nullable|string|max:255', // Make password nullable for edits
+                // 'user_detailPostcode' => 'required|string|max:255',
+                // 'user_detailCountry' => 'required|string|max:255',
+                // 'user_detailCity' => 'required|string|max:255',
+                // 'user_detailState' => 'required|string|max:255',
+                // 'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validation
+            ]);
+
+            // Check if the name already exists for another user
+
+
+            $admin = User::findOrFail($request->id); // Find the user or throw a 404 error
+
+            $checkingName = User::where('name', $request->name)->where('id', '!=', $request->id) // Ensure we don't check against the current user
+                ->exists();
+
+            $checkEmail = User::where('email', $request->email)->where('id', '!=', $request->id)
+                ->exists();
+
+            $checkingUserContact = User::where('country_code', $request->country_code)->where('contact_no', $request->contact_no)->where('id', '!=', $request->id)
+                ->exists();
+
+            $errorMessage = [];
+
+
+
+            if ($checkEmail) {
+                $errorMessage['email error'] = 'This Email Already Exist.';
+            };
+
+
+
+            if ($checkingName) {
+                $errorMessage['name error'] = 'This User name Already Exist.';
+            }
+
+            if ($checkingUserContact) {
+                $errorMessage['contact error'] = 'This Contact Number Already Exist.';
+            }
+
+            if (!empty($errorMessage)) {
+                throw ValidationException::withMessages($errorMessage);
+            }
+
+
+
+
+            // Update the admin user
+            $admin->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'ic_Number' => $request->ic_number,
+                'country_code' => $request->country_code,
+                'contact_no' => $request->contact_no,
+                'password' => $request->password ? bcrypt($request->password) : $admin->password, // Only update password if provided
+                'status' => 1,
+                'updated_by' => $authUser->id,
+                'updated_at' => now(),
+            ]);
+
+            // Update the admin user's details
+
+
+            return response()->json([
+                'success' => true,
+                'data' => ['message' => "Update Successfully"]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation Error",
+                'errors' => $e->errors()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Internal Server Error",
+                "errors" => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function adminDetail(Request $request)
+    {
+        try {
+            $request->validate(['id' => "required|integer"]);
+
+            $admin = User::find($request->id);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $admin->id,
+                    'name' => $admin->name,
+                    'email' => $admin->email,
+                    'ic_number' => $admin->ic_Number,
+                    'country_code' => $admin->country_code,
+                    'contact_no' => $admin->contact_no,
+                    'profile_pic' => $admin->profile_pic ? asset('storage/' . $admin->profile_pic) : null, // Return full URL for profile picture
+                    'status' => $admin->status == 1 ? "Active" : "Inactive",
+                    'user_role' => $admin->user_role
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     public function disableAdmin(Request $request)
     {
         try {
@@ -3843,92 +3994,7 @@ class AdminController extends Controller
             ], 500);
         }
     }
-    public function editAdmin(Request $request)
-    {
-        try {
-            $authUser = Auth::user();
-            $request->validate([
-                'id' => 'required|integer',
-                'name' => 'required|string|max:255',
-                'email' => 'string|max:255',
-                'ic_number' => 'nullable|string',
-                'country_code' => 'required|string|max:255',
-                'contact_no' => 'required|string|max:255',
-                'password' => 'nullable|string|max:255', // Make password nullable for edits
-                'user_detailPostcode' => 'required|string|max:255',
-                'user_detailCountry' => 'required|string|max:255',
-                'user_detailCity' => 'required|string|max:255',
-                'user_detailState' => 'required|string|max:255',
-                'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000', // Image validation
-            ]);
 
-            // Check if the name already exists for another user
-            $checkingName = User::where('id', '!=', $request->id)
-                ->where('name', $request->name)
-                ->exists();
-
-            if ($checkingName) {
-                throw ValidationException::withMessages([
-                    "names" => ['This Name Already Exists.']
-                ]);
-            }
-
-            $admin = User::findOrFail($request->id); // Find the user or throw a 404 error
-
-            // Handle profile picture upload
-            $imagePath = $admin->profile_pic; // Default to current profile picture
-            if ($request->hasFile('profile_pic')) {
-                if (!empty($admin->profile_pic)) {
-                    Storage::delete('public/' . $admin->profile_pic);
-                }
-                $image = $request->file('profile_pic');
-                $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('profilePic', $imageName, 'public');
-            }
-
-            // Update the admin user
-            $admin->update([
-                'name' => $request->name,
-                'email' => $request->email,
-                'ic_number' => $request->ic_number,
-                'country_code' => $request->country_code,
-                'contact_no' => $request->contact_no,
-                'password' => $request->password ? bcrypt($request->password) : $admin->password, // Only update password if provided
-                'profile_pic' => $imagePath,
-                'status' => 1,
-                'updated_by' => $authUser->id,
-                'updated_at' => now(),
-            ]);
-
-            // Update the admin user's details
-            $admin->detail->update([
-                'user_detailPostcode' => $request->user_detailPostcode,
-                'user_detailCountry' => $request->user_detailCountry,
-                'user_detailCity' => $request->user_detailCity,
-                'user_detailState' => $request->user_detailState,
-                'user_detailStatus' => 1,
-                'updated_by' => $authUser->id,
-                'updated_at' => now(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'data' => ['message' => "Update Successfully"]
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => "Validation Error",
-                'errors' => $e->errors()
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                "success" => false,
-                "message" => "Internal Server Error",
-                "errors" => $e->getMessage()
-            ]);
-        }
-    }
 
     public function bannerListAdmin(Request $request)
     {
@@ -6249,7 +6315,7 @@ class AdminController extends Controller
                     ->sortByDesc('FilteredVisit')
                     ->values()
                     ->all();
-                
+
                 // Replace the items with filtered and sorted data
                 $getNumberOfVisit->setCollection(collect($filteredData));
             }
@@ -6269,7 +6335,6 @@ class AdminController extends Controller
                 'to' => $getNumberOfVisit->lastItem(),
                 'total' => $getNumberOfVisit->total()
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
