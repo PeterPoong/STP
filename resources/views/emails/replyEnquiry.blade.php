@@ -54,7 +54,7 @@
         </div>
 
         <div class="content">
-            <p>Dear Valued Customer,</p>
+
 
             <div class="message">
                 {!! nl2br(e($messageContent)) !!}
