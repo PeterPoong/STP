@@ -813,7 +813,7 @@ class studentController extends Controller
                 $query->whereHas('school', function ($q) {
                     $q->whereIn('school_status', ["1", "3"]);
                 })
-                    ->where('course_status', '!=', 0)
+                    ->where('course_status', 1)
                     ->when($request->filled('qualification'), function ($q) use ($request) {
                         $q->where('qualification_id', $request->qualification);
                     })
@@ -821,10 +821,12 @@ class studentController extends Controller
                         $q->whereIn('category_id', $request->category);
                     })
                     ->when($request->filled('search'), function ($q) use ($request) {
-                        $q->where('course_name', 'like', '%' . $request->search . '%')
-                            ->orWhereHas('school', function ($q) use ($request) {
-                                $q->where('school_name', 'like', '%' . $request->search . '%');
-                            });
+                        $q->where(function ($subQuery) use ($request) {
+                            $subQuery->where('course_name', 'like', '%' . $request->search . '%')
+                                ->orWhereHas('school', function ($q) use ($request) {
+                                    $q->where('school_name', 'like', '%' . $request->search . '%');
+                                });
+                        });
                     })
                     ->when($request->filled('countryID'), function ($q) use ($request) {
                         $q->whereHas('school', function ($q) use ($request) {
