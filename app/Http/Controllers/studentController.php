@@ -23,6 +23,7 @@ use App\Models\stp_transcript;
 use App\Models\stp_submited_form;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\serviceFunctionController;
 use App\Models\stp_cgpa;
 use App\Models\stp_cocurriculum;
@@ -3782,8 +3783,13 @@ class studentController extends Controller
     public function removeInterestedCourse(Request $request)
     {
         try {
+            // Validate authentication
             $authUser = Auth::user();
             if (!$authUser) {
+                \Log::warning('removeInterestedCourse: Unauthenticated user attempt', [
+                    'ip' => request()->ip(),
+                    'user_agent' => request()->userAgent()
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'User is not authenticated',
@@ -3792,12 +3798,9 @@ class studentController extends Controller
 
             // Validate the request inputs
             $request->validate([
-                'course_id' => 'required|integer',
-                'type' => 'required|string'
+                'course_id' => 'required|integer|min:1',
+                'type' => 'required|string|in:disable'
             ]);
-
-            // Determine the new status
-            $status = ($request->type == 'disable') ? 0 : 1;
 
             // Find the interest record by course_id and the authenticated user's ID
             $interest = stp_courseInterest::where('course_id', $request->course_id)
@@ -3806,27 +3809,66 @@ class studentController extends Controller
 
             // Check if the interest exists
             if (!$interest) {
+                \Log::warning('removeInterestedCourse: Course interest not found', [
+                    'student_id' => $authUser->id,
+                    'course_id' => $request->course_id
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Course interest not found or does not belong to the authenticated user.',
                 ], 404);
             }
 
-            // Update the interest status
-            $interest->update([
-                'status' => $status,
-                'updated_by' => $authUser->id,
+            // Disable the interest (set status to 0)
+            DB::beginTransaction();
+            try {
+                $updated = $interest->update([
+                    'status' => 0,
+                    'updated_by' => $authUser->id,
+                ]);
+                DB::commit();
+                
+                if ($updated) {
+                    \Log::info('removeInterestedCourse: Course interest disabled successfully', [
+                        'student_id' => $authUser->id,
+                        'course_id' => $request->course_id
+                    ]);
+                    
+                    return response()->json([
+                        'success' => true,
+                        'data' => ['message' => 'Course interest disabled successfully.'],
+                    ]);
+                } else {
+                    throw new \Exception('Failed to disable course interest');
+                }
+            } catch (\Exception $e) {
+                DB::rollback();
+                throw $e;
+            }
+            
+        } catch (ValidationException $e) {
+            \Log::warning('removeInterestedCourse: Validation error', [
+                'student_id' => $authUser->id ?? null,
+                'errors' => $e->errors(),
+                'request_data' => $request->all()
             ]);
-
             return response()->json([
-                'success' => true,
-                'data' => ['message' => 'Successfully updated the interested course status.'],
-            ]);
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
+            \Log::error('removeInterestedCourse: Unexpected error', [
+                'student_id' => $authUser->id ?? null,
+                'course_id' => $request->course_id ?? null,
+                'type' => $request->type ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Internal Server Error',
-                'error' => $e->getMessage() // Optionally include this for debugging
+                'error' => config('app.debug') ? $e->getMessage() : 'An unexpected error occurred'
             ], 500);
         }
     }
@@ -3836,7 +3878,9 @@ class studentController extends Controller
         try {
             $authUser = Auth::user();
 
-            $getStudentCourseList = stp_courseInterest::where('student_id', $authUser->id)->get()->map(function ($interestedCourse) {
+            $getStudentCourseList = stp_courseInterest::where('student_id', $authUser->id)
+                ->where('status', 1)
+                ->get()->map(function ($interestedCourse) {
                 $featured = $interestedCourse->course->featured->contains(function ($item) {
                     return $item->featured_type == 30 && $item->featured_status == 1 && $item->featured_startTime < now() && $item->featured_endTime > now();
                 });
