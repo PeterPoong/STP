@@ -1030,15 +1030,18 @@ class SchoolController extends Controller
                 throw ValidationException::withMessages(["The provided credentials are incorrect."]);
             }
 
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->newPassword);
             $authUser->update([
                 'school_password' => Hash::make($request->newPassword),
+                'password_security_status' => $passwordSecurityStatus,
                 'school_status' => 1,
                 'updated_by' => $authUser->id
             ]);
 
             return response()->json([
                 'success' => true,
-                'data' => ['messenger' => "Successfully reset password"]
+                'data' => ['messenger' => "Successfully reset password"],
+                'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -1359,14 +1362,17 @@ class SchoolController extends Controller
                 ]);
             };
 
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->newPassword);
             $findSchool->update([
                 'school_password' => Hash::make($request->newPassword),
+                'password_security_status' => $passwordSecurityStatus,
                 'school_status' => 1
             ]);
 
             return response()->json([
                 'success' => true,
-                'data' => ['message' => "successfully activate your account"]
+                'data' => ['message' => "successfully activate your account"],
+                'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
             ]);
         } catch (ValidationException $e) {
             return response()->json([

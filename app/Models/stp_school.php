@@ -41,7 +41,8 @@ class stp_school extends Model
         'school_slug',
         'created_by',
         'updated_by',
-        'free_education_id'
+        'free_education_id',
+        'password_security_status',
     ];
 
     public function freeEducation()

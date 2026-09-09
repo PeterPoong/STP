@@ -46,8 +46,10 @@ class NewPasswordController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) use ($request) {
+                $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
                 $user->forceFill([
                     'password' => Hash::make($request->password),
+                    'password_security_status' => $passwordSecurityStatus,
                     'remember_token' => Str::random(60),
                 ])->save();
 

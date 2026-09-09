@@ -32,7 +32,8 @@ class User extends Authenticatable
         'created_by',
         'updated_by',
         'terms_agreed',
-        'terms_agreed_at'
+        'terms_agreed_at',
+        'password_security_status',
     ];
 
     protected $table = 'stp_users';

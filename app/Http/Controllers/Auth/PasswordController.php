@@ -20,8 +20,10 @@ class PasswordController extends Controller
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
+        $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($validated['password']);
         $request->user()->update([
             'password' => Hash::make($validated['password']),
+            'password_security_status' => $passwordSecurityStatus,
         ]);
 
         return back();

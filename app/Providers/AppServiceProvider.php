@@ -26,8 +26,7 @@ class AppServiceProvider extends ServiceProvider
     // }
     public function boot()
     {
-        Password::defaults(fn () => Password::min(15)
-            ->uncompromised());
+        Password::defaults(fn () => Password::min(8));
 
         RateLimiter::for('api', function ($request) {
             return Limit::perMinute(60);

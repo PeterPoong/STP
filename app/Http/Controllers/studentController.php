@@ -2859,14 +2859,17 @@ class studentController extends Controller
                 throw ValidationException::withMessages(["password does not match"]);
             }
 
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->newPassword);
             $authUser->update([
                 'student_password' => Hash::make($request->newPassword),
+                'password_security_status' => $passwordSecurityStatus,
                 'updated_by' => $authUser->id
             ]);
 
             return response()->json([
                 'success' => true,
-                'data' => ['messenger' => "Successfully reset password"]
+                'data' => ['messenger' => "Successfully reset password"],
+                'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -3623,8 +3626,10 @@ class studentController extends Controller
                 throw ValidationException::withMessages(['account' => 'Account is not dummy anymore']);
             }
 
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->newPassword);
             $findStudent->update([
                 'student_password' => Hash::make($request->newPassword),
+                'password_security_status' => $passwordSecurityStatus,
                 'student_status' => 1
             ]);
 
@@ -3632,7 +3637,8 @@ class studentController extends Controller
                 'success' => true,
                 'data' => [
                     'message' => "Successfully Reset Password"
-                ]
+                ],
+                'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
             ]);
         } catch (validationException $e) {
             return response()->json([

@@ -36,10 +36,12 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'password_security_status' => $passwordSecurityStatus,
         ]);
 
         event(new Registered($user));

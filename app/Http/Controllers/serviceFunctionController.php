@@ -253,8 +253,10 @@ class serviceFunctionController extends Controller
                 ]);
             }
 
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->newPassword);
             $user->update([
                 $passwordType => Hash::make($request->newPassword),
+                'password_security_status' => $passwordSecurityStatus,
                 'updated_by' => $user->id
             ]);
 
@@ -262,7 +264,8 @@ class serviceFunctionController extends Controller
                 'success' => true,
                 'data' => [
                     'message' => "Successfully Reset the password"
-                ]
+                ],
+                'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
             ]);
         } catch (ValidationException $e) {
             return response()->json([

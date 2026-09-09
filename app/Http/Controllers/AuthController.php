@@ -376,6 +376,7 @@ class AuthController extends Controller
             // Generate unique slug
             $schoolSlug = $this->generateSchoolSlug($request->name);
 
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
             $data = [
                 'school_name' => $request->name,
                 'school_slug' => $schoolSlug,
@@ -383,6 +384,7 @@ class AuthController extends Controller
                 'school_countryCode' => $request->country_code,
                 'school_contactNo' => $request->contact_number,
                 'school_password' => Hash::make($request->password),
+                'password_security_status' => $passwordSecurityStatus,
                 'school_fullDesc' => $request->school_fullDesc ?? null,
                 'country_id' => $request->country ?? null,
                 'state_id' => $request->state ?? null,
@@ -406,7 +408,8 @@ class AuthController extends Controller
             return response()->json(
                 [
                     'success' => true,
-                    'data' => ['message' => 'school registered successfully']
+                    'data' => ['message' => 'school registered successfully'],
+                    'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
                 ],
                 201
             );
@@ -469,6 +472,7 @@ class AuthController extends Controller
             // $otp = rand(100000, 999999);
             // $otpExpiredTime = now()->setTimezone('Asia/Kuala_Lumpur')->addMinutes(5)->format('Y-m-d H:i:s');
             
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
             $checkEmailWithSocialLogin = stp_student::where('student_email', $request->email)
                 ->whereNull('student_password')
                 ->first();
@@ -479,6 +483,7 @@ class AuthController extends Controller
                     'student_countryCode' => $request->country_code,
                     'student_contactNo' => $request->contact_number,
                     'student_password' => Hash::make($request->password),
+                    'password_security_status' => $passwordSecurityStatus,
                     // 'otp' => $otp,
                     // 'otp_expired_time' => $otpExpiredTime,
                     // 'otp_status' => 1 // Verified by default
@@ -492,6 +497,7 @@ class AuthController extends Controller
                     'student_countryCode' => $request->country_code,
                     'student_contactNo' => $request->contact_number,
                     'student_password' => Hash::make($request->password),
+                    'password_security_status' => $passwordSecurityStatus,
                     'user_role' => 4,
                     // 'otp' => $otp,
                     // 'otp_expired_time' => $otpExpiredTime,
@@ -513,7 +519,8 @@ class AuthController extends Controller
                         'message' => 'Registration successful.',
                         'student_id' => $student->id,
                         'email' => $request->email
-                    ]
+                    ],
+                    'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
                 ],
                 201
             );
@@ -721,12 +728,14 @@ class AuthController extends Controller
                     'contact_no' => ['Contact has been used'],
                 ]);
             }
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
             $data = [
                 'name' => $request->name,
                 'email' => $request->email,
                 'country_code' => $request->country_code,
                 'contact_no' => $request->contact_number,
                 'password' => Hash::make($request->password),
+                'password_security_status' => $passwordSecurityStatus,
                 'user_role' => 1
             ];
             $newUser = User::create($data);
@@ -736,7 +745,8 @@ class AuthController extends Controller
             return response()->json(
                 [
                     'success' => true,
-                    'data' => ['message' => 'User registered successfully']
+                    'data' => ['message' => 'User registered successfully'],
+                    'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
                 ],
                 201
             );

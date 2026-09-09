@@ -398,9 +398,11 @@ class AdminController extends Controller
                     'email' => ['Email has been taken'],
                 ]);
             }
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
             $student = stp_student::create([
                 "student_userName" => $request->name,
                 "student_password" => Hash::make($request->password),
+                'password_security_status' => $passwordSecurityStatus,
                 'student_icNumber' => $request->ic,
                 'student_email' => $request->email,
                 'student_countryCode' => $request->country_code,
@@ -710,6 +712,7 @@ class AdminController extends Controller
             // Update password only if provided
             if (!empty($request->password)) {
                 $updateData['student_password'] = Hash::make($request->password);
+                $updateData['password_security_status'] = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
             }
 
             $updateingStudent = $student->update($updateData);
@@ -1029,12 +1032,14 @@ class AdminController extends Controller
             // Generate unique slug
             $schoolSlug = $this->generateSchoolSlug($request->name);
 
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
             $school = stp_school::create([
                 'school_name' => $request->name,
                 'school_email' => $request->email,
                 'school_countryCode' => $request->country_code,
                 'school_contactNo' => $request->contact_number,
                 'school_password' => Hash::make($request->password),
+                'password_security_status' => $passwordSecurityStatus,
                 'school_fullDesc' => $request->school_fullDesc,
                 'country_id' => $request->country,
                 'state_id' => $request->state,
@@ -1351,6 +1356,7 @@ class AdminController extends Controller
             // Only update password if it's provided
             if ($request->filled('password')) {
                 $updateData['school_password'] = Hash::make($request->password);
+                $updateData['password_security_status'] = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
             }
 
             $school->update($updateData);
@@ -3658,14 +3664,17 @@ class AdminController extends Controller
                 throw ValidationException::withMessages(["password does not match"]);
             }
 
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->newPassword);
             $authUser->update([
                 'password' => Hash::make($request->newPassword),
+                'password_security_status' => $passwordSecurityStatus,
                 'updated_by' => $authUser->id
             ]);
 
             return response()->json([
                 'success' => true,
-                'data' => ['messenger' => "Successfully reset password"]
+                'data' => ['messenger' => "Successfully reset password"],
+                'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -4777,15 +4786,18 @@ class AdminController extends Controller
                     throw ValidationException::withMessages(["password does not match"]);
                 }
 
+                $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->newPassword);
                 $authUser->update([
                     'password' => Hash::make($request->newPassword),
+                    'password_security_status' => $passwordSecurityStatus,
                     'status' => 1,  // Change status to 1 after resetting password
                     'updated_by' => $authUser->id
                 ]);
 
                 return response()->json([
                     'success' => true,
-                    'data' => ['message' => "Successfully reset password"]
+                    'data' => ['message' => "Successfully reset password"],
+                    'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
                 ]);
             }
 
@@ -5070,6 +5082,7 @@ class AdminController extends Controller
                 throw ValidationException::withMessages($errorMessage);
             }
 
+            $passwordSecurityStatus = app(\App\Services\PasswordSecurityService::class)->assess($request->password);
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -5077,6 +5090,7 @@ class AdminController extends Controller
                 'country_code' => $request->country_code,
                 'contact_no' => $request->contact_no,
                 'password' => $request->password,
+                'password_security_status' => $passwordSecurityStatus,
                 'profile_pic' => '',
                 'user_role' => 1,
                 'status' => 1,
@@ -5099,7 +5113,8 @@ class AdminController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => ['message' => 'Successfully Added the New Admin']
+                'data' => ['message' => 'Successfully Added the New Admin'],
+                'password_security' => app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus),
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -5174,6 +5189,9 @@ class AdminController extends Controller
 
 
             // Update the admin user
+            $passwordSecurityStatus = $request->filled('password')
+                ? app(\App\Services\PasswordSecurityService::class)->assess($request->password)
+                : null;
             $admin->update([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -5181,6 +5199,7 @@ class AdminController extends Controller
                 'country_code' => $request->country_code,
                 'contact_no' => $request->contact_no,
                 'password' => $request->password ? bcrypt($request->password) : $admin->password, // Only update password if provided
+                'password_security_status' => $passwordSecurityStatus ?? $admin->password_security_status,
                 'status' => 1,
                 'updated_by' => $authUser->id,
                 'updated_at' => now(),
@@ -5191,7 +5210,10 @@ class AdminController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => ['message' => "Update Successfully"]
+                'data' => ['message' => "Update Successfully"],
+                'password_security' => $passwordSecurityStatus
+                    ? app(\App\Services\PasswordSecurityService::class)->response($passwordSecurityStatus)
+                    : null,
             ]);
         } catch (ValidationException $e) {
             return response()->json([

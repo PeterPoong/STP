@@ -35,7 +35,8 @@ class stp_student extends Authenticatable
         'updated_by',
         'otp',
         'otp_expired_time',
-        'otp_status'
+        'otp_status',
+        'password_security_status',
     ];
 
     public function role()
