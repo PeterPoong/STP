@@ -115,13 +115,19 @@ class studentController extends Controller
     {
         try {
             $currentYear = now()->year;
+            $offlineCourseCount = $this->nonNegativeStatisticsConfig('studypal.offline_course_count');
+            $offlineApplicationCount = $this->nonNegativeStatisticsConfig('studypal.offline_application_count');
+            $offlineApplicationYear = $this->statisticsYearConfig('studypal.offline_application_year');
+
+            if ($offlineApplicationYear !== $currentYear) {
+                $offlineApplicationCount = 0;
+            }
 
             $statistics = Cache::remember(
-                "public.platform_statistics.{$currentYear}.20_to_25.course_plus_400",
+                "public.platform_statistics.v2.{$currentYear}.{$offlineCourseCount}.{$offlineApplicationCount}.{$offlineApplicationYear}",
                 now()->addMinutes(15),
-                function () {
-                    $today = now()->startOfDay();
-                    $yearStart = $today->copy()->startOfYear();
+                function () use ($offlineCourseCount, $offlineApplicationCount) {
+                    $yearStart = now()->startOfYear();
                     $nextYearStart = $yearStart->copy()->addYear();
 
                     $applicationCount = stp_submited_form::where('form_status', '!=', 0)
@@ -129,30 +135,65 @@ class studentController extends Controller
                         ->where('created_at', '<', $nextYearStart)
                         ->count();
 
-                    // Cycle through 20 to 25 applications per day.
-                    // Because this is derived from the date, it remains stable across
-                    // requests and automatically resets at the start of each year.
-                    $elapsedDays = (int) $yearStart->diffInDays($today);
-                    $completeCycles = intdiv($elapsedDays, 6);
-                    $remainingDays = $elapsedDays % 6;
-                    $syntheticApplicationCount = ($completeCycles * 135)
-                        + ($remainingDays * 20)
-                        + intdiv($remainingDays * ($remainingDays - 1), 2);
-
                     $courseCount = stp_course::where('course_status', 1)
                         ->whereHas('school', function ($query) {
                             $query->whereIn('school_status', [1, 3]);
                         })
                         ->count();
-                    $syntheticCourseCount = 400;
 
                     $institutionCount = stp_school::whereIn('school_status', [1, 3])
                         ->count();
 
+                    $topAvailableFields = stp_courses_category::query()
+                        ->join('stp_courses', 'stp_courses.category_id', '=', 'stp_courses_categories.id')
+                        ->join('stp_schools', 'stp_schools.id', '=', 'stp_courses.school_id')
+                        ->where('stp_courses_categories.category_status', 1)
+                        ->where('stp_courses.course_status', 1)
+                        ->whereIn('stp_schools.school_status', [1, 3])
+                        ->select([
+                            'stp_courses_categories.id as category_id',
+                            'stp_courses_categories.category_name as name',
+                            'stp_courses_categories.category_icon',
+                            DB::raw('COUNT(DISTINCT stp_courses.school_id) as institution_count'),
+                        ])
+                        ->groupBy(
+                            'stp_courses_categories.id',
+                            'stp_courses_categories.category_name',
+                            'stp_courses_categories.category_icon'
+                        )
+                        ->orderByDesc('institution_count')
+                        ->orderBy('stp_courses_categories.category_name')
+                        ->orderBy('stp_courses_categories.id')
+                        ->limit(5)
+                        ->get()
+                        ->values()
+                        ->map(function ($field, $index) use ($institutionCount) {
+                            $icon = trim((string) $field->category_icon);
+
+                            return [
+                                'category_id' => (int) $field->category_id,
+                                'name' => $field->name,
+                                'category_icon' => $icon === ''
+                                    ? null
+                                    : (Str::startsWith($icon, ['http://', 'https://'])
+                                        ? $icon
+                                        : url(Storage::url($icon))),
+                                'institution_count' => (int) $field->institution_count,
+                                'eligible_institution_count' => $institutionCount,
+                                'percentage' => $institutionCount > 0
+                                    ? round(((int) $field->institution_count / $institutionCount) * 100, 1)
+                                    : 0.0,
+                                'rank' => $index + 1,
+                            ];
+                        })
+                        ->all();
+
                     return [
-                        'student_applications' => $applicationCount + $syntheticApplicationCount,
-                        'courses' => $courseCount + $syntheticCourseCount,
+                        'student_applications' => $applicationCount + $offlineApplicationCount,
+                        'courses' => $courseCount + $offlineCourseCount,
                         'institutions' => $institutionCount,
+                        'top_available_fields' => $topAvailableFields,
+                        'calculated_at' => now()->toIso8601String(),
                     ];
                 }
             );
@@ -173,6 +214,38 @@ class studentController extends Controller
                 'message' => 'Unable to load platform statistics.',
             ], 500);
         }
+    }
+
+    private function nonNegativeStatisticsConfig(string $key): int
+    {
+        $value = config($key);
+
+        if ($value === null || $value === '' || filter_var($value, FILTER_VALIDATE_INT) === false || (int) $value < 0) {
+            Log::warning('Invalid homepage statistics configuration; using zero.', [
+                'config_key' => $key,
+                'configured_value' => $value,
+            ]);
+
+            return 0;
+        }
+
+        return (int) $value;
+    }
+
+    private function statisticsYearConfig(string $key): int
+    {
+        $value = config($key);
+
+        if (filter_var($value, FILTER_VALIDATE_INT) === false || (int) $value < 2000 || (int) $value > 9999) {
+            Log::warning('Invalid homepage statistics year configuration; offline applications will be ignored.', [
+                'config_key' => $key,
+                'configured_value' => $value,
+            ]);
+
+            return 0;
+        }
+
+        return (int) $value;
     }
 
     public function checkTermsAgreement()
